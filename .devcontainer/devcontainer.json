@@ -1,0 +1,47 @@
+{
+  "name": "Padeliz Manager (Expo)",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "..",
+    "args": {
+      "NODE_VERSION": "20"
+    }
+  },
+  "runArgs": ["--name", "padeliz-frontend-manager"],
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "mounts": [
+    "source=padeliz_node_modules,target=${containerWorkspaceFolder}/node_modules,type=volume,volume-nocopy",
+    "source=padeliz_expo,target=${containerWorkspaceFolder}/.expo,type=volume,volume-nocopy"
+  ],
+  "containerEnv": {
+    "EXPO_USE_IPV6": "0",
+    "EXPO_DEV_HOST": "host.docker.internal",
+    "REACT_NATIVE_PACKAGER_HOSTNAME": "host.docker.internal",
+    "WATCHPACK_POLLING": "true"
+  },
+  "forwardPorts": [8083, 8084, 20000, 20001, 20002, 20006],
+  "portsAttributes": {
+    "8083": { "label": "Metro" },
+    "8084": { "label": "RN Inspector" },
+    "20000": { "label": "Expo DevTools" },
+    "20001": { "label": "Expo WS" },
+    "20002": { "label": "Expo (legacy)" },
+    "20006": { "label": "Web" }
+  },
+  "postCreateCommand": "git config --global core.autocrlf true && git config --global core.filemode false && git config --global --add safe.directory /workspaces/padeliz-frontend-manager && sudo chown -R node:node ${containerWorkspaceFolder}/node_modules ${containerWorkspaceFolder}/.expo || true && npm install --no-audit --no-fund",
+  "postStartCommand": "sudo chown -R node:node ${containerWorkspaceFolder}/node_modules ${containerWorkspaceFolder}/.expo || true",
+  "remoteUser": "node",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "typescript.tsdk": "node_modules/typescript/lib"
+      },
+      "extensions": [
+        "ms-vscode-remote.remote-containers",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "msjsdiag.vscode-react-native"
+      ]
+    }
+  }
+}

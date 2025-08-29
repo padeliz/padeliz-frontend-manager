@@ -1,0 +1,20 @@
+# Normalize text files and avoid CRLF/LF churn across OSes
+* text=auto eol=lf
+
+# Preserve EOLs for shell/batch scripts where needed
+*.bat eol=crlf
+*.cmd eol=crlf
+*.ps1 eol=crlf
+
+# Mark common binary assets
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary

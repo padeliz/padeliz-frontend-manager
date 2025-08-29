@@ -1,0 +1,18 @@
+# Exclude VCS and local tooling
+.git
+.gitignore
+.devcontainer
+.vscode
+
+# Node artifacts
+node_modules
+npm-debug.log*
+
+# Expo/Metro caches
+.expo
+.expo-shared
+.cache
+
+# OS / editor junk
+*.DS_Store
+Thumbs.db
