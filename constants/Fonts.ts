@@ -1,6 +1,6 @@
-import * as Colors from "./Colors";
+import * as Colors from './Colors';
 
-export const NAME = "sans-serif";
+export const NAME = 'sans-serif';
 
 export const HEADING_1 = 24;
 export const HEADING_2 = 20;
@@ -15,15 +15,15 @@ export const MEDIUM = 500;
 export const REGULAR = 400;
 
 export const BOLD_STYLE = {
-    color: Colors.WHITE,
-    fontFamily: NAME,
-    fontSize: BODY,
-    fontWeight: MEDIUM,
+  color: Colors.WHITE,
+  fontFamily: NAME,
+  fontSize: BODY,
+  fontWeight: MEDIUM,
 };
 
 export const REGULAR_STYLE = {
-    color: Colors.WHITE,
-    fontFamily: NAME,
-    fontSize: BODY_S,
-    fontWeight: REGULAR,
+  color: Colors.WHITE,
+  fontFamily: NAME,
+  fontSize: BODY_S,
+  fontWeight: REGULAR,
 };

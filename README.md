@@ -4,7 +4,6 @@
 
 Expo-based app for https://manager.padeliz.ro
 
-
 ## Development Setup (Windows)
 
 Expo is a React framework for universal native apps — write once for iOS, Android, and web with fast, joyful iteration.
@@ -23,6 +22,7 @@ Expo is a React framework for universal native apps — write once for iOS, Andr
 1. **Install VS Code + “Dev Containers” extension**
 
 2. **Clone the repository**
+
    ```bash
    ## in the VSCode terminal
    git clone https://github.com/padeliz/padeliz-frontend-manager.git
@@ -32,15 +32,15 @@ Expo is a React framework for universal native apps — write once for iOS, Andr
 
 4. **Open the Command Palette and run "Dev Containers: Reopen in Container"**
 
-    Press CTRL + P and type `> Dev Containers: Reopen in Container`
-    - This will open a new window in which the container is initialized.
-    - You're now editing the files directly in the Docker.
+   Press CTRL + P and type `> Dev Containers: Reopen in Container`
+   - This will open a new window in which the container is initialized.
+   - You're now editing the files directly in the Docker.
 
 5. **Install Dependencies**
 
-    *No need to do it manually.*
+   _No need to do it manually._
 
-    *Wait for the container to build and finish the automatic dependency installation.*
+   _Wait for the container to build and finish the automatic dependency installation._
 
 6. **Environment Setup**
    ```bash
@@ -54,21 +54,21 @@ Press CTRL+` inside VSCode to open the terminal. Make sure you're inside the dev
 
 ```bash
 ## run the app (CI=true, some features disabled)
-npx expo start
+npm start
 
 ## run the app (CI-false, all features enabled, including QR code)
-CI=false npx expo start
+CI=false npm start
 ```
 
 ### Project Structure
 
--   `/app` - Main application code using file-based routing
--   `/app/api` - Backend API routes (BFF)
-    -   `/auth` - Authentication endpoints
-    -   `/public` - Public endpoints
-    -   `/protected` - Protected endpoints requiring JWT
--   `/components` - Reusable React components
--   `/utils` - Utility functions and middleware
+- `/app` - Main application code using file-based routing
+- `/app/api` - Backend API routes (BFF)
+  - `/auth` - Authentication endpoints
+  - `/public` - Public endpoints
+  - `/protected` - Protected endpoints requiring JWT
+- `/components` - Reusable React components
+- `/utils` - Utility functions and middleware
 
 ### Troubleshooting
 
@@ -87,6 +87,7 @@ CI=false npx expo start
 ## Contributing
 
 1. Create a new branch for your feature
+
    ```bash
    git checkout -b feature/your-feature-name
    ```
@@ -94,30 +95,35 @@ CI=false npx expo start
 2. Make your changes and test them
 
 3. Commit
+
    ```bash
    git add .
    git commit -m "Description of changes"
    ```
 
-3. Push to your branch
+4. Push to your branch
+
    ```bash
    git push origin feature/your-feature-name
    ```
 
-4. Create a Pull Request on GitHub
+5. Create a Pull Request on GitHub
 
 ## Learn More
 
 About Expo:
--   [Expo documentation](https://docs.expo.dev/)
--   [Expo on GitHub](https://github.com/expo/expo)
+
+- [Expo documentation](https://docs.expo.dev/)
+- [Expo on GitHub](https://github.com/expo/expo)
 
 About auth:
--   [Google OAuth 2.0](https://developers.google.com/identity/protocols/oauth2)
--   [JWT.io](https://jwt.io/)
--   [Sign in with Apple](https://developer.apple.com/sign-in-with-apple/)
+
+- [Google OAuth 2.0](https://developers.google.com/identity/protocols/oauth2)
+- [JWT.io](https://jwt.io/)
+- [Sign in with Apple](https://developer.apple.com/sign-in-with-apple/)
 
 Useful Youtube Videos:
+
 - <a href="https://youtu.be/V2YdhR1hVNw">Expo OAuth with Google</a>
 - <a href="https://youtu.be/tqxTijhYhp8">Expo Sign in with Expo</a>
 

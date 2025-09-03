@@ -4,13 +4,14 @@
   "version": "1.0.0",
   "scripts": {
     "start": "expo start -d --port 8083",
-    "reset-project": "node ./scripts/reset-project.js",
     "android": "expo run:android --port 8083",
     "ios": "expo run:ios --port 8083",
     "web": "expo start --web --port 8083",
     "test": "jest --watchAll",
     "lint": "expo lint",
-    "deploy": "EXPO_PUBLIC_BASE_URL=https://beto-auth-example.expo.app npx expo export --platform web -c && eas deploy --prod"
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint:fix": "eslint . --fix"
   },
   "jest": {
     "preset": "jest-expo"
@@ -29,6 +30,7 @@
     "expo-dev-client": "~5.1.7",
     "expo-font": "~13.3.0",
     "expo-haptics": "~14.1.4",
+    "expo-image-picker": "~16.1.4",
     "expo-linking": "~7.1.4",
     "expo-router": "~5.0.3",
     "expo-secure-store": "~14.2.3",
@@ -48,16 +50,20 @@
     "react-native-safe-area-context": "5.3.0",
     "react-native-screens": "~4.10.0",
     "react-native-web": "^0.20.0",
-    "tailwindcss": "^3.4.17",
-    "expo-image-picker": "~16.1.4"
+    "tailwindcss": "^3.4.17"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@types/jest": "^29.5.12",
     "@types/react": "~19.0.10",
     "@types/react-test-renderer": "^18.3.0",
+    "eslint": "^8.57.1",
+    "eslint-config-expo": "^7.1.2",
+    "eslint-config-prettier": "^9.1.2",
+    "eslint-plugin-prettier": "^5.5.4",
     "jest": "^29.2.1",
     "jest-expo": "~53.0.2",
+    "prettier": "^3.6.2",
     "react-test-renderer": "19.0.0",
     "typescript": "~5.8.3"
   },

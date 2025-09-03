@@ -1,5 +1,5 @@
-import * as SecureStore from "expo-secure-store";
-import { Platform } from "react-native";
+import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 
 /**
  * Creates a token cache for the native platform
@@ -22,11 +22,11 @@ const createTokenCache = (): {
         if (item) {
           console.log(`${key} was used 🔐 \n`);
         } else {
-          console.log("No values stored under key: " + key);
+          console.log('No values stored under key: ' + key);
         }
         return item;
       } catch (error) {
-        console.error("secure store get item error: ", error);
+        console.error('secure store get item error: ', error);
         await SecureStore.deleteItemAsync(key);
         return null;
       }
@@ -51,4 +51,4 @@ const createTokenCache = (): {
 
 // SecureStore is not supported on the web and we use cookies instead
 export const tokenCache =
-  Platform.OS !== "web" ? createTokenCache() : undefined;
+  Platform.OS !== 'web' ? createTokenCache() : undefined;

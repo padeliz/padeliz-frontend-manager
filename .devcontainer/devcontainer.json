@@ -34,13 +34,19 @@
   "customizations": {
     "vscode": {
       "settings": {
-        "typescript.tsdk": "node_modules/typescript/lib"
+        "typescript.tsdk": "node_modules/typescript/lib",
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit"
+        }
       },
       "extensions": [
         "ms-vscode-remote.remote-containers",
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
-        "msjsdiag.vscode-react-native"
+        "msjsdiag.vscode-react-native",
+        "bradlc.vscode-tailwindcss"
       ]
     }
   }

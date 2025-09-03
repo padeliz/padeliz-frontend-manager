@@ -1,0 +1,8 @@
+node_modules/
+.expo/
+dist/
+build/
+*.min.js
+*.min.css
+package-lock.json
+bun.lockb
