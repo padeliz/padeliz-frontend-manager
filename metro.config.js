@@ -14,4 +14,9 @@ config.reporter = {
   update: () => {},
 };
 
-module.exports = withNativeWind(config, { input: './global.css' });
+// Ensure NativeWind processes the global CSS file
+module.exports = withNativeWind(config, {
+  input: './global.css',
+  // Enable CSS processing for web platform
+  inlineRequires: true,
+});

@@ -1,4 +1,4 @@
-import { API_BASE_URL, GOOGLE_CLIENT_ID } from '@/utils/constants';
+import { BASE_URL, GOOGLE_CLIENT_ID } from '@/utils/constants';
 import * as Google from 'expo-auth-session/providers/google';
 import React from 'react';
 import { Image, Pressable, Text, View } from 'react-native';
@@ -29,10 +29,14 @@ export default function SignInWithGoogleButton({
     iosClientId: GOOGLE_CLIENT_ID, // For iOS platform
     androidClientId: GOOGLE_CLIENT_ID, // For Android platform
     scopes: ['openid', 'profile', 'email'],
-    // Configure for ID token flow
-    redirectUri: API_BASE_URL,
+    // For popup flows, use a dedicated callback route
+    redirectUri: `${BASE_URL}/auth/callback`,
     responseType: 'id_token',
+    // Ensure proper popup behavior
+    usePKCE: false,
   });
+
+  // OAuth URL is available when request is ready
 
   // Handle OAuth response when user returns from Google
   React.useEffect(() => {
@@ -41,49 +45,71 @@ export default function SignInWithGoogleButton({
       if (id_token) {
         onPress(id_token);
       } else {
-        console.error('No ID token in response params');
-        onPress(); // Call without token to trigger error handling
+        console.error(
+          '❌ SignInWithGoogleButton: No ID token in response params'
+        );
+        // Call with empty string to indicate error
+        onPress('');
       }
     } else if (response?.type === 'error') {
-      console.error('Google OAuth error:', response.error);
-      onPress(); // Call without token to trigger error handling
+      console.error(
+        '❌ SignInWithGoogleButton: OAuth error response:',
+        response.error
+      );
+      // Call with empty string to indicate error
+      onPress('');
     } else if (response?.type === 'cancel') {
+      // User cancelled the OAuth flow
     } else if (response) {
+      // Handle other response types if needed
     }
   }, [response, onPress]);
 
   // Handle OAuth response from URL parameters (for popup flow)
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.hash.substring(1));
-      const idToken = urlParams.get('id_token');
-
-      if (idToken) {
-        // Check if this is a popup window
-        if (window.opener) {
-          // Notify the parent window about successful authentication
-          window.opener.postMessage(
-            {
-              type: 'GOOGLE_AUTH_SUCCESS',
-              idToken: idToken,
-            },
-            window.location.origin
-          );
-
-          // Close the popup
-          window.close();
-        } else {
-          // This is the main window, proceed with authentication
-          onPress(idToken);
-        }
-
-        // Clean up the URL
-        window.history.replaceState(
-          {},
-          document.title,
-          window.location.pathname
+      // Check if we're on the callback route
+      if (window.location.pathname === '/auth/callback') {
+        // Parse the hash fragment for ID token
+        const urlParams = new URLSearchParams(
+          window.location.hash.substring(1)
         );
+
+        const idToken = urlParams.get('id_token');
+
+        if (idToken) {
+          // Check if this is a popup window
+          if (window.opener) {
+            // Notify the parent window about successful authentication
+            window.opener.postMessage(
+              {
+                type: 'GOOGLE_AUTH_SUCCESS',
+                idToken: idToken,
+              },
+              window.location.origin
+            );
+
+            // Close the popup
+            window.close();
+          } else {
+            // This is the main window, proceed with authentication
+            onPress(idToken);
+          }
+
+          // Clean up the URL
+          window.history.replaceState(
+            {},
+            document.title,
+            window.location.pathname
+          );
+        } else {
+          // No ID token found in URL parameters
+        }
+      } else {
+        // Not on callback route
       }
+    } else {
+      // Not in browser environment
     }
   }, [onPress]);
 
@@ -91,37 +117,97 @@ export default function SignInWithGoogleButton({
   React.useEffect(() => {
     if (typeof window !== 'undefined' && !window.opener) {
       const handleMessage = (event: MessageEvent) => {
-        if (event.origin !== window.location.origin) return;
+        if (event.origin !== window.location.origin) {
+          return;
+        }
 
         if (event.data.type === 'GOOGLE_AUTH_SUCCESS') {
           onPress(event.data.idToken);
+        } else if (event.data.type === 'GOOGLE_AUTH_ERROR') {
+          console.error(
+            '❌ SignInWithGoogleButton: Received GOOGLE_AUTH_ERROR message'
+          );
+          // Call with empty string to indicate error
+          onPress('');
+        } else {
+          // Received message with unexpected type
         }
       };
 
       window.addEventListener('message', handleMessage);
-      return () => window.removeEventListener('message', handleMessage);
+
+      return () => {
+        window.removeEventListener('message', handleMessage);
+      };
+    } else {
+      // Not setting up message listener (not main window or not browser)
     }
   }, [onPress]);
 
   const handlePress = async () => {
     try {
-      if (disabled) return;
+      if (disabled) {
+        return;
+      }
+
+      // Check if we're on web platform and need to handle popup flow
+      if (typeof window !== 'undefined' && request?.url) {
+        // Open OAuth URL in a popup window
+        const popup = window.open(
+          request.url,
+          'google-oauth',
+          'width=500,height=600,scrollbars=yes,resizable=yes'
+        );
+
+        if (!popup) {
+          throw new Error(
+            'Popup blocked by browser. Please allow popups for this site.'
+          );
+        }
+
+        // The popup will handle the OAuth flow and send a message back
+        // We don't need to wait for promptAsync result in this case
+
+        // Add a check to see if the popup is still open
+        const checkPopup = setInterval(() => {
+          if (popup.closed) {
+            clearInterval(checkPopup);
+          }
+        }, 1000);
+
+        return;
+      }
+
+      // Using promptAsync for native platforms
       const result = await promptAsync();
 
       if (result?.type === 'success') {
         // Get the ID token from the result
         const { id_token } = result.params;
-        onPress(id_token);
+        if (id_token) {
+          onPress(id_token);
+        } else {
+          console.error(
+            '❌ SignInWithGoogleButton: No ID token in result params'
+          );
+          onPress('');
+        }
       } else if (result?.type === 'cancel') {
-        console.info('Google sign-in cancelled');
+        // User cancelled the OAuth flow
       } else if (result?.type === 'error') {
-        console.error('Google sign-in error:', result.error);
-        onPress(); // Call without token to trigger error handling
+        console.error(
+          '❌ SignInWithGoogleButton: promptAsync error:',
+          result.error
+        );
+        // Call with empty string to indicate error
+        onPress('');
       } else {
+        // Unexpected promptAsync result type
       }
     } catch (error) {
-      console.error('Google sign-in error:', error);
-      onPress(); // Call without token to trigger error handling
+      console.error('❌ SignInWithGoogleButton: handlePress error:', error);
+      // Call with empty string to indicate error
+      onPress('');
     }
   };
 

@@ -1,0 +1,89 @@
+/**
+ * Page Component Types
+ * Types for page components
+ */
+
+import { UiBulkActionConfig } from './tables';
+
+export interface ResourceListPageConfig<
+  T extends { [key: string]: any } = any,
+> {
+  // Resource identification
+  resourceName: string;
+  resourceDisplayName: string;
+
+  // API service methods
+  fetchData: (params: any) => Promise<{
+    data: T[];
+    meta: any;
+    links: any;
+  }>;
+  bulkDelete?: (ids: (string | number)[]) => Promise<any>;
+
+  // Table configuration
+  excludeFields?: string[];
+
+  // Bulk actions configuration
+  bulkActions?: UiBulkActionConfig[];
+
+  // Page configuration
+  title: string;
+  description?: string;
+  emptyMessage?: string;
+
+  // Action handlers
+  onAdd?: () => void;
+  onView?: (id: number) => void;
+  onExport?: (format: string) => void;
+  onBack?: () => void;
+
+  // Pagination configuration
+  initialPage?: number;
+  initialPerPage?: number;
+  debounceMs?: number;
+
+  // Debug configuration
+  showDebugInfo?: boolean;
+  showInstructions?: boolean;
+}
+
+export interface ResourceListPageProps<T extends { [key: string]: any } = any> {
+  config: ResourceListPageConfig<T>;
+}
+
+export interface LinkedEntityConfig {
+  key: string;
+  label: string;
+  resourceName: string;
+  fetchData: (parentId: number, params: any) => Promise<any>;
+  columns?: any[];
+  excludeFields?: string[];
+  selectedColumns?: string[];
+}
+
+export interface ResourceViewPageConfig<
+  T extends { [key: string]: any } = any,
+> {
+  // Resource identification
+  resourceName: string;
+  resourceDisplayName: string;
+
+  // API methods
+  fetchResource: (id: string | number) => Promise<{ data: T }>;
+  updateResource?: (
+    id: string | number,
+    data: Partial<T>
+  ) => Promise<{ data: T }>;
+
+  // Display configuration
+  excludeFields?: string[];
+
+  // Page configuration
+  title: string;
+  description?: string;
+  onBack?: () => void;
+}
+
+export interface ResourceViewPageProps<T extends { [key: string]: any } = any> {
+  config: ResourceViewPageConfig<T>;
+}

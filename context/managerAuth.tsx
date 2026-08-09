@@ -3,11 +3,12 @@
  * Handles authentication state and operations for the Padeliz Manager app
  */
 
-import { authService, AuthUser } from '@/services/auth';
+import { authService } from '@/services/auth';
+import { ApiAuthUser } from '@/types/api/auth';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 interface AuthContextType {
-  user: AuthUser | null;
+  user: ApiAuthUser | null;
   isLoading: boolean;
   error: string | null;
   signInWithGoogle: (googleToken: string) => Promise<void>;
@@ -30,10 +31,8 @@ interface AuthProviderProps {
   children: React.ReactNode;
 }
 
-export const ManagerAuthProvider: React.FC<AuthProviderProps> = ({
-  children,
-}) => {
-  const [user, setUser] = useState<AuthUser | null>(null);
+export const ManagerAuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const [user, setUser] = useState<ApiAuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,6 +45,7 @@ export const ManagerAuthProvider: React.FC<AuthProviderProps> = ({
     try {
       setIsLoading(true);
       setError(null);
+
       // Check if user is authenticated
       const isAuthenticated = await authService.isAuthenticated();
 
@@ -62,7 +62,7 @@ export const ManagerAuthProvider: React.FC<AuthProviderProps> = ({
       }
     } catch (error) {
       console.error(
-        '🔍 ManagerAuthProvider: Auth initialization error:',
+        '❌ ManagerAuthProvider: Auth initialization error:',
         error
       );
       setError('Failed to initialize authentication');
@@ -81,7 +81,8 @@ export const ManagerAuthProvider: React.FC<AuthProviderProps> = ({
 
       setUser(authResponse.user);
     } catch (error) {
-      console.error('Google sign-in error:', error);
+      console.error('❌ ManagerAuthProvider: Google sign-in error:', error);
+
       setError(
         error instanceof Error ? error.message : 'Google sign-in failed'
       );
@@ -95,11 +96,10 @@ export const ManagerAuthProvider: React.FC<AuthProviderProps> = ({
     try {
       setIsLoading(true);
       setError(null);
-
       await authService.logout();
       setUser(null);
     } catch (error) {
-      console.error('Sign-out error:', error);
+      console.error('❌ ManagerAuthProvider: Sign-out error:', error);
       setError(error instanceof Error ? error.message : 'Sign-out failed');
       // Clear user state even if server logout fails
       setUser(null);
@@ -114,7 +114,7 @@ export const ManagerAuthProvider: React.FC<AuthProviderProps> = ({
       const currentUser = await authService.getCurrentUser();
       setUser(currentUser);
     } catch (error) {
-      console.error('Refresh user error:', error);
+      console.error('❌ ManagerAuthProvider: Refresh user error:', error);
       setError(
         error instanceof Error ? error.message : 'Failed to refresh user data'
       );

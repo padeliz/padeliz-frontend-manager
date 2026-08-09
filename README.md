@@ -60,6 +60,21 @@ npm start
 CI=false npm start
 ```
 
+### Testing
+
+Unit and component tests use Jest, jest-expo, and React Native Testing Library (RNTL v13).
+
+```bash
+## run unit/component tests once
+npm test
+
+## watch mode
+npm run test:watch
+
+## CI-style single run (no coverage gate)
+npm run test:ci
+```
+
 ### Project Structure
 
 - `/app` - Main application code using file-based routing

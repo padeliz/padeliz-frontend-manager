@@ -32,7 +32,7 @@
       [
         "expo-router",
         {
-          "origin": "https://beto.dev"
+          "origin": "https://manager.padeliz.ro"
         }
       ],
       [
@@ -55,7 +55,7 @@
     "owner": "padeliz",
     "extra": {
       "router": {
-        "origin": "https://beto.dev"
+        "origin": "https://manager.padeliz.ro"
       },
       "eas": {
         "projectId": "dbc9eec8-2aba-4de7-a421-f28ade8c85c7"

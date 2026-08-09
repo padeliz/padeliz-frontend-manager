@@ -17,7 +17,7 @@ export const DEBUG_MODE = process.env.EXPO_PUBLIC_DEBUG_MODE === '1';
 export const LOG_LEVEL = process.env.EXPO_PUBLIC_LOG_LEVEL;
 
 // Google OAuth Constants
-export const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID!;
+export const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
 
 // Environment Constants
 export const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL;
