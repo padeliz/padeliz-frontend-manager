@@ -17,6 +17,12 @@ export function useResourceViewPageConfig<T extends { [key: string]: any } = any
   onBack,
   showDebugInfo = false,
   showInstructions = false,
+  embedded = false,
+  resourceIdOverride = null,
+  showLinkedEntities,
+  externalChrome = false,
+  showSave = true,
+  onChromeStateChange,
 }: HookResourceViewPageConfigOptions<T>) {
   // Generate default description if not provided
   const defaultDescription = useMemo(() => {
@@ -57,6 +63,12 @@ export function useResourceViewPageConfig<T extends { [key: string]: any } = any
       onBack,
       showDebugInfo,
       showInstructions,
+      embedded,
+      resourceIdOverride,
+      showLinkedEntities,
+      externalChrome,
+      showSave,
+      onChromeStateChange,
     }),
     [
       resourceName,
@@ -69,6 +81,12 @@ export function useResourceViewPageConfig<T extends { [key: string]: any } = any
       onBack,
       showDebugInfo,
       showInstructions,
+      embedded,
+      resourceIdOverride,
+      showLinkedEntities,
+      externalChrome,
+      showSave,
+      onChromeStateChange,
     ]
   );
 }

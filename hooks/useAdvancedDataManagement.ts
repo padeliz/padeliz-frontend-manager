@@ -5,6 +5,7 @@
 
 import { useToast } from '@/context/ToastContext';
 import { useResourceMetadata } from '@/hooks/useResourceMetadata';
+import { queryKeys } from '@/lib/queryClient';
 import { ApiAdvancedPaginationParams } from '@/types/api/requests';
 import { UtilFilterDefinition } from '@/types/common/filtering';
 import { UtilMultiSortConfig } from '@/types/common/sorting';
@@ -13,6 +14,7 @@ import {
   UseAdvancedDataManagementReturn,
 } from '@/types/hooks/advanced-data-management';
 import { PrimaryKeyService } from '@/utils/primaryKeyService';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export function useAdvancedDataManagement<T extends { [key: string]: any }>({
@@ -25,13 +27,8 @@ export function useAdvancedDataManagement<T extends { [key: string]: any }>({
   debounceMs = 300,
 }: UseAdvancedDataManagementOptions<T>): UseAdvancedDataManagementReturn<T> {
   // State
-  const [data, setData] = useState<T[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [perPage, setPerPage] = useState(initialPerPage);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [sortConfig, setSortConfig] = useState<UtilMultiSortConfig>({});
@@ -43,10 +40,10 @@ export function useAdvancedDataManagement<T extends { [key: string]: any }>({
     resourceName,
   ]);
   const metadata = getMetadata(resourceName);
+  const queryClient = useQueryClient();
 
   // Refs
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
   const fetchDataRef = useRef(fetchData);
   const bulkDeleteRef = useRef(bulkDelete);
 
@@ -58,45 +55,47 @@ export function useAdvancedDataManagement<T extends { [key: string]: any }>({
     fetchDataRef.current = fetchData;
     bulkDeleteRef.current = bulkDelete;
   }, [fetchData, bulkDelete]);
-  // Load data
-  const loadData = useCallback(async () => {
-    // Cancel previous request
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
 
-    abortControllerRef.current = new AbortController();
+  const listParams = useMemo(
+    () => ({
+      page: currentPage,
+      per_page: perPage,
+      q: searchQuery || undefined,
+      sort_by: Object.keys(sortConfig).length > 0 ? sortConfig : undefined,
+      filters:
+        Object.keys(activeFilters).length > 0 ? activeFilters : undefined,
+    }),
+    [currentPage, perPage, searchQuery, sortConfig, activeFilters]
+  );
 
-    try {
-      setLoading(true);
-      setError(null);
-
+  const listQuery = useQuery({
+    queryKey: queryKeys.resourceList(resourceName, listParams),
+    queryFn: async () => {
       const params: ApiAdvancedPaginationParams = {
-        page: currentPage,
-        per_page: perPage,
-        q: searchQuery || undefined,
-        sort_by: Object.keys(sortConfig).length > 0 ? sortConfig : undefined,
-        filters:
-          Object.keys(activeFilters).length > 0 ? activeFilters : undefined,
+        page: listParams.page,
+        per_page: listParams.per_page,
+        q: listParams.q,
+        sort_by: listParams.sort_by,
+        filters: listParams.filters,
       };
+      return fetchDataRef.current(params);
+    },
+  });
 
-      const response = await fetchDataRef.current(params);
+  const data = listQuery.data?.data ?? [];
+  const loading = listQuery.isFetching;
+  const error = listQuery.error
+    ? (listQuery.error as Error).message || 'Failed to load data'
+    : null;
+  const totalPages = listQuery.data?.meta?.last_page || 1;
+  const totalItems =
+    listQuery.data?.meta?.total || listQuery.data?.data?.length || 0;
 
-      setData(response.data);
-      setTotalPages(response.meta.last_page || 1);
-      setTotalItems(response.meta.total || response.data.length);
-    } catch (err: any) {
-      if (err.name === 'AbortError') {
-        return;
-      }
-
-      setError(err.message || 'Failed to load data');
-      // Don't call handleApiError here to avoid dependency issues
-      // The error is already set in state and can be handled by the UI
-    } finally {
-      setLoading(false);
-    }
-  }, [currentPage, perPage, searchQuery, sortConfig, activeFilters]); // Removed fetchData dependency
+  const loadData = useCallback(async () => {
+    await queryClient.invalidateQueries({
+      queryKey: ['resourceList', resourceName],
+    });
+  }, [queryClient, resourceName]);
 
   // Search handlers
   const handleSearchInputChange = useCallback((input: string) => {
@@ -310,19 +309,11 @@ export function useAdvancedDataManagement<T extends { [key: string]: any }>({
     [data, showSuccess]
   );
 
-  // Effects
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
   // Cleanup
   useEffect(() => {
     return () => {
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current);
-      }
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
       }
     };
   }, []);

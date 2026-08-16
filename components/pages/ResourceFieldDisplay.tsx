@@ -3,8 +3,10 @@
  * Displays individual resource fields with proper formatting
  */
 
+import ManagerFileUpload from '@/components/ui/ManagerFileUpload';
 import { ApiResourceMetadata } from '@/types/api/metadata';
 import { formatField } from '@/utils/fieldFormatter';
+import { getUploadConfig } from '@/utils/uploadMetadata';
 import React from 'react';
 import { Text, View } from 'react-native';
 
@@ -13,6 +15,11 @@ export interface ResourceFieldDisplayProps {
   fieldValue: any;
   metadata: ApiResourceMetadata;
   excludeFields?: string[];
+  parentId?: number | null;
+  onUploadChanged?: () => void;
+  uploadDisabled?: boolean;
+  /** Full resource record for nested FK labels */
+  record?: Record<string, any> | null;
 }
 
 export default function ResourceFieldDisplay({
@@ -20,30 +27,44 @@ export default function ResourceFieldDisplay({
   fieldValue,
   metadata,
   excludeFields = [],
+  parentId = null,
+  onUploadChanged,
+  uploadDisabled = false,
+  record = null,
 }: ResourceFieldDisplayProps) {
-  // Skip excluded fields
   if (excludeFields.includes(fieldKey)) {
     return null;
   }
 
-  // Get field definition from metadata
   const fieldDefinition = metadata.swagger_schema.properties[fieldKey];
   if (!fieldDefinition) {
     return null;
   }
 
-  // Skip array fields (relationships); they are rendered as linked-entity
-  // tables further down the page.
+  const uploadCfg = getUploadConfig(fieldDefinition);
+  if (uploadCfg) {
+    return (
+      <ManagerFileUpload
+        label={fieldDefinition.title || fieldKey}
+        config={uploadCfg}
+        parentId={parentId}
+        value={fieldValue}
+        disabled={uploadDisabled}
+        onChanged={onUploadChanged}
+      />
+    );
+  }
+
   if (fieldDefinition.type === 'array') {
     return null;
   }
 
-  // Use unified field formatter for consistent display
   const fieldInfo = formatField({
     metadata,
     fieldKey,
     fieldValue,
     mode: 'display',
+    record,
   });
 
   return (

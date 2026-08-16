@@ -1,7 +1,8 @@
 import { useAuth } from '@/context/managerAuth';
 import { usePathname } from 'expo-router';
 import React, { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 import Breadcrumbs from './Breadcrumbs';
 import Sidebar from './Sidebar';
 import TopNavigation from './TopNavigation';

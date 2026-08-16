@@ -12,6 +12,7 @@ import {
 import React from 'react';
 import { Text } from 'react-native';
 import { ForeignKeyService } from './foreignKeyService';
+import { isNestedRelationProperty } from './nestedRelationProperty';
 
 // Constants for better maintainability
 const NULL_DISPLAY = '-';
@@ -34,6 +35,7 @@ export function formatField({
   fieldKey,
   fieldValue,
   mode,
+  record = null,
 }: FieldFormatterOptions): FieldFormatterResult {
   // Get field definition from metadata
   const fieldDefinition = metadata.swagger_schema.properties[fieldKey];
@@ -54,7 +56,7 @@ export function formatField({
   // Check if field is read-only
   const isReadOnly = fieldDefinition.readOnly;
 
-  // Handle foreign key fields
+  // FK detection: metadata filterable_fields only (no name guessing)
   const isForeignKey = ForeignKeyService.isForeignKeyField(
     fieldKey,
     fieldDefinition,
@@ -71,16 +73,16 @@ export function formatField({
   const result: FieldFormatterResult = {
     displayValue: (
       <Text className={TEXT_STYLES.default}>
-        {String(fieldValue || NULL_DISPLAY)}
+        {String(fieldValue ?? NULL_DISPLAY)}
       </Text>
     ),
-    formattedText: String(fieldValue || NULL_DISPLAY),
+    formattedText: String(fieldValue ?? NULL_DISPLAY),
     label,
     inputType: 'text',
     inputValue: fieldValue,
     apiValue: fieldValue,
     keyboardType: 'default',
-    fieldType: fieldDefinition.type,
+    fieldType: fieldDefinition.type || 'unknown',
     fieldFormat: fieldDefinition.format,
     isEditable,
     isForeignKey,
@@ -89,10 +91,45 @@ export function formatField({
     linkedResourceInfo: linkedResourceInfo || undefined,
   };
 
-  // Handle read-only fields
-  if (isReadOnly) {
+  // Nested relation objects ($ref / oneOf) — not form inputs
+  if (isNestedRelationProperty(fieldDefinition)) {
     result.inputType = 'readonly';
     result.isEditable = false;
+    if (fieldValue && typeof fieldValue === 'object') {
+      const text = labelFromNestedObject(fieldValue, 'name') ?? JSON.stringify(fieldValue);
+      result.displayValue = (
+        <Text className={TEXT_STYLES.muted}>{text}</Text>
+      );
+      result.formattedText = text;
+    }
+    return result;
+  }
+
+  // FK selector for forms (before integer → number path). Save keeps *_id via apiValue.
+  if (isForeignKey && (mode === 'form' || mode === 'both')) {
+    result.inputType = 'foreign_key_selector';
+    result.inputValue = fieldValue;
+    result.apiValue =
+      fieldValue === null || fieldValue === undefined || fieldValue === ''
+        ? null
+        : Number(fieldValue);
+    if (mode === 'both' || mode === 'display') {
+      applyFkDisplayLabel(result, fieldKey, fieldValue, metadata, record);
+    }
+    if (isReadOnly) {
+      result.inputType = 'readonly';
+      result.isEditable = false;
+    }
+    return result;
+  }
+
+  // FK display: label from nested BelongsTo object on the record (no async lookup)
+  if (isForeignKey && mode === 'display') {
+    applyFkDisplayLabel(result, fieldKey, fieldValue, metadata, record);
+    if (isReadOnly) {
+      result.inputType = 'readonly';
+      result.isEditable = false;
+    }
     return result;
   }
 
@@ -107,6 +144,10 @@ export function formatField({
     if (mode === 'form' || mode === 'both') {
       result.inputValue = '';
       result.apiValue = null;
+    }
+    if (isReadOnly) {
+      result.inputType = 'readonly';
+      result.isEditable = false;
     }
     return result;
   }
@@ -149,16 +190,72 @@ export function formatField({
       break;
 
     default:
-      // Unknown field type - this should not happen with proper API schemas
-      console.error(
-        `❌ Unknown field type: ${fieldDefinition.type} for field: ${fieldKey}`
+      console.warn(
+        `Unsupported field type: ${fieldDefinition.type} for field: ${fieldKey}`
       );
-      throw new Error(
-        `Unsupported field type: ${fieldDefinition.type}. Please check the API schema definition.`
-      );
+      result.inputType = 'readonly';
+      result.isEditable = false;
+      finalResult = result;
+  }
+
+  // Apply readOnly after type formatting (timestamps/booleans must still format)
+  if (isReadOnly) {
+    finalResult.inputType = 'readonly';
+    finalResult.isEditable = false;
   }
 
   return finalResult;
+}
+
+function labelFromNestedObject(
+  nest: Record<string, any>,
+  displayField: string
+): string | null {
+  if (!nest || typeof nest !== 'object') return null;
+  const candidates = [
+    displayField,
+    'name',
+    'title',
+    'label',
+    'division_title',
+  ];
+  for (const key of candidates) {
+    if (nest[key] != null && nest[key] !== '') {
+      return String(nest[key]);
+    }
+  }
+  return null;
+}
+
+function applyFkDisplayLabel(
+  result: FieldFormatterResult,
+  fieldKey: string,
+  fieldValue: any,
+  metadata: ApiResourceMetadata,
+  record: Record<string, any> | null | undefined
+): void {
+  if (fieldValue === null || fieldValue === undefined || fieldValue === '') {
+    result.displayValue = (
+      <Text className={TEXT_STYLES.null}>{NULL_DISPLAY}</Text>
+    );
+    result.formattedText = NULL_DISPLAY;
+    return;
+  }
+
+  const displayField =
+    metadata.filterable_fields?.[fieldKey]?.related_schema_field || 'name';
+  const linked = ForeignKeyService.resolveLinkedProperty(fieldKey, metadata);
+  const nest =
+    linked && record ? record[linked.key] : null;
+  const labelText =
+    (nest && typeof nest === 'object'
+      ? labelFromNestedObject(nest, displayField)
+      : null) ?? String(fieldValue);
+
+  result.displayValue = (
+    <Text className={TEXT_STYLES.default}>{labelText}</Text>
+  );
+  result.formattedText = labelText;
 }
 
 /**
@@ -273,46 +370,50 @@ function formatNumberField(
     return result;
   }
 
-  // Handle integer formats (int64) and number formats (float)
-  if (fieldDefinition.format) {
-    if (fieldDefinition.format === 'int64') {
-      // int64 is a valid integer format
-      if (mode === 'form' || mode === 'both') {
-        result.inputType = 'number';
-        result.keyboardType = 'numeric';
-      }
-    } else if (fieldDefinition.format === 'float') {
-      // float is a valid number format
-      if (mode === 'form' || mode === 'both') {
-        result.inputType = 'number';
-        result.keyboardType = 'numeric';
-      }
-    } else {
-      // Unknown format - throw error
-      console.error(
-        `❌ Unknown format: ${fieldDefinition.format} for field: ${result.fieldType}`
-      );
-      throw new Error(
-        `Unknown format: ${fieldDefinition.format} for field: ${result.fieldType}. Please check the API schema definition.`
-      );
+  // Handle integer formats (int64), year, and number formats (float)
+  if (fieldDefinition.format === 'year') {
+    if (mode === 'form' || mode === 'both') {
+      result.inputType = 'year';
+      result.keyboardType = 'numeric';
+      result.inputValue = numValue;
+      result.apiValue = numValue;
     }
-  } else {
+    if (mode === 'display' || mode === 'both') {
+      const text = String(numValue);
+      result.displayValue = <Text className={TEXT_STYLES.mono}>{text}</Text>;
+      result.formattedText = text;
+    }
+  } else if (fieldDefinition.format === 'int64' || fieldDefinition.format === 'float' || !fieldDefinition.format) {
     if (mode === 'form' || mode === 'both') {
       result.inputType = 'number';
       result.keyboardType = 'numeric';
     }
-  }
-
-  if (mode === 'display' || mode === 'both') {
-    result.displayValue = (
-      <Text className={TEXT_STYLES.mono}>{numValue.toLocaleString()}</Text>
+    if (mode === 'display' || mode === 'both') {
+      result.displayValue = (
+        <Text className={TEXT_STYLES.mono}>{numValue.toLocaleString()}</Text>
+      );
+      result.formattedText = numValue.toLocaleString();
+    }
+    if (mode === 'form' || mode === 'both') {
+      result.inputValue = String(fieldValue);
+      result.apiValue = numValue;
+    }
+  } else {
+    console.warn(
+      `Unknown number format: ${fieldDefinition.format} for field type ${result.fieldType}`
     );
-    result.formattedText = numValue.toLocaleString();
-  }
-
-  if (mode === 'form' || mode === 'both') {
-    result.inputValue = String(fieldValue);
-    result.apiValue = numValue;
+    if (mode === 'form' || mode === 'both') {
+      result.inputType = 'number';
+      result.keyboardType = 'numeric';
+      result.inputValue = String(fieldValue);
+      result.apiValue = numValue;
+    }
+    if (mode === 'display' || mode === 'both') {
+      result.displayValue = (
+        <Text className={TEXT_STYLES.mono}>{numValue.toLocaleString()}</Text>
+      );
+      result.formattedText = numValue.toLocaleString();
+    }
   }
 
   // Add constraints
@@ -393,14 +494,18 @@ function formatStringField(
           result.inputType = 'textarea'; // Binary data should be handled as textarea
         }
         break;
+      case 'color':
+        if (mode === 'form' || mode === 'both') {
+          result.inputType = 'color';
+        }
+        break;
       default:
-        // Unknown string format
-        console.error(
-          `❌ Unknown string format: ${fieldDefinition.format} for field: ${result.fieldType}`
+        console.warn(
+          `Unknown string format: ${fieldDefinition.format} for field: ${result.fieldType}`
         );
-        throw new Error(
-          `Unknown string format: ${fieldDefinition.format} for field: ${result.fieldType}. Please check the API schema definition.`
-        );
+        if (mode === 'form' || mode === 'both') {
+          result.inputType = 'text';
+        }
     }
   } else {
     // No format specified - check if it should be a textarea based on maxLength
@@ -423,8 +528,16 @@ function formatStringField(
 
   // Format value for input
   if (mode === 'form' || mode === 'both') {
-    result.inputValue = stringValue;
-    result.apiValue = stringValue === '' ? null : stringValue;
+    if (fieldDefinition.format === 'color' && stringValue) {
+      const normalized = stringValue.startsWith('#')
+        ? stringValue.toUpperCase()
+        : `#${stringValue.toUpperCase()}`;
+      result.inputValue = normalized;
+      result.apiValue = normalized === '#' ? null : normalized;
+    } else {
+      result.inputValue = stringValue;
+      result.apiValue = stringValue === '' ? null : stringValue;
+    }
   }
 
   if (mode === 'display' || mode === 'both') {

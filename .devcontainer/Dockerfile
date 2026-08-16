@@ -12,7 +12,8 @@ RUN apt-get update && \
 # Avoid global expo install; use npx. But install watchman for better FS watching if desired
 # (watchman official packages are not always available; Metro polling is enabled via env)
 
-ENV CI=1
+# Leave CI unset so Metro watch mode works when using docker exec from the host.
+# Dev Containers can still set CI via containerEnv if needed.
 
 # Set working dir
 WORKDIR /workspaces/padeliz-frontend-manager

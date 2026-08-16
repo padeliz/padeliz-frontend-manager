@@ -22,16 +22,19 @@ export interface LinkedEntityServiceConfig {
 }
 
 export interface LinkedEntityFetchFunction {
-  (params: any): Promise<any>;
+  (parentId: number, params: any): Promise<any>;
 }
 
 export interface LinkedEntityService {
-  detectLinkedEntities(config: LinkedEntityServiceConfig): LinkedEntityConfig[];
+  detectLinkedEntities(
+    config: LinkedEntityServiceConfig,
+    getLinkedResourceMetadata: (
+      resourceName: string
+    ) => Promise<ApiResourceMetadata | null>
+  ): Promise<LinkedEntityConfig[]>;
   buildLinkedEntityFetchFunction(
-    linkedResourceName: string,
-    foreignKeyField: string,
-    parentId: string | number
+    resourcePath: string,
+    foreignKeyField: string
   ): LinkedEntityFetchFunction;
   selectLinkedEntityColumns(metadata: ApiResourceMetadata): string[];
-  convertResourceNameToEndpoint(resourceName: string): string;
 }

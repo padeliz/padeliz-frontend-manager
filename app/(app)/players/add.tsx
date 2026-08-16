@@ -1,24 +1,23 @@
-/**
- * Add Player Page
- * Form to create a new player
- */
+import ResourceCreatePage from '@/components/pages/ResourceCreatePage';
+import { useResourceCreatePageConfig } from '@/hooks/useResourceCreatePageConfig';
+import { PlayersApiService } from '@/services/api/playersApi';
+import { ApiPlayer } from '@/types/api/entities';
+import React, { useCallback } from 'react';
 
-import AppLayout from '@/components/layout/AppLayout';
-import { useRouter } from 'expo-router';
-import React from 'react';
-import { Text, View } from 'react-native';
+const api = new PlayersApiService();
 
 export default function AddPlayerPage() {
-  const router = useRouter();
+  const createResource = useCallback(async (data: Partial<ApiPlayer>) => {
+    return api.createPlayer(data);
+  }, []);
 
-  return (
-    <AppLayout title="Add Player">
-      <View className="flex-1 p-4">
-        <Text className="text-lg font-semibold mb-4">Add New Player</Text>
-        <Text className="text-gray-600">
-          Player creation form will be implemented here.
-        </Text>
-      </View>
-    </AppLayout>
-  );
+  const config = useResourceCreatePageConfig<ApiPlayer>({
+    resourceName: 'Player',
+    resourceDisplayName: 'Player',
+    createResource,
+    excludeFields: ['password', 'internal_notes'],
+    getViewPath: id => '/players/' + id,
+  });
+
+  return <ResourceCreatePage config={config} />;
 }

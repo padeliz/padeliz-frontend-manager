@@ -1,16 +1,13 @@
 /**
  * Resource Metadata Hook
- * Fetches and caches resource metadata for multiple schemas in parallel
+ * Fetches and caches resource metadata for multiple schemas in parallel.
+ * Module-scoped cache survives navigations; in-flight requests are deduped.
  */
 
 import { ApiResourceMetadataApiService } from '@/services/api/resourceMetadataApi';
 import { ApiResourceMetadata } from '@/types/api/metadata';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useErrorHandler } from './useErrorHandler';
-
-interface MetadataCache {
-  [schema: string]: ApiResourceMetadata;
-}
 
 interface UseApiResourceMetadataReturn {
   metadata: Record<string, ApiResourceMetadata>;
@@ -27,7 +24,10 @@ interface UseApiResourceMetadataReturn {
 
 const metadataApi = new ApiResourceMetadataApiService();
 
-// Deep equality check for objects
+/** Shared across all hook instances for the browser/app session */
+const sharedCache: Record<string, ApiResourceMetadata> = {};
+const inFlight: Record<string, Promise<ApiResourceMetadata>> = {};
+
 function deepEqual(obj1: any, obj2: any): boolean {
   if (obj1 === obj2) return true;
   if (obj1 == null || obj2 == null) return false;
@@ -36,91 +36,87 @@ function deepEqual(obj1: any, obj2: any): boolean {
 
   const keys1 = Object.keys(obj1);
   const keys2 = Object.keys(obj2);
-
   if (keys1.length !== keys2.length) return false;
-
-  for (let key of keys1) {
+  for (const key of keys1) {
     if (!keys2.includes(key)) return false;
     if (!deepEqual(obj1[key], obj2[key])) return false;
   }
-
   return true;
+}
+
+async function loadSchema(schema: string): Promise<ApiResourceMetadata> {
+  if (sharedCache[schema]) {
+    return sharedCache[schema];
+  }
+  if (inFlight[schema]) {
+    return inFlight[schema];
+  }
+  inFlight[schema] = metadataApi
+    .getApiResourceMetadata(schema)
+    .then(response => {
+      sharedCache[schema] = response.data;
+      delete inFlight[schema];
+      return response.data;
+    })
+    .catch(err => {
+      delete inFlight[schema];
+      throw err;
+    });
+  return inFlight[schema];
+}
+
+/** Test helper */
+export function __resetResourceMetadataModuleCache(): void {
+  Object.keys(sharedCache).forEach(k => delete sharedCache[k]);
+  Object.keys(inFlight).forEach(k => delete inFlight[k]);
 }
 
 export function useResourceMetadata(
   schemas: string[] = []
 ): UseApiResourceMetadataReturn {
-  // Use refs for the actual state to prevent unnecessary re-renders
   const metadataRef = useRef<Record<string, ApiResourceMetadata>>({});
   const loadingRef = useRef<Record<string, boolean>>({});
   const errorsRef = useRef<Record<string, string | null>>({});
-
-  // Use state only for triggering re-renders when absolutely necessary
-  const [renderTrigger, setRenderTrigger] = useState(0);
-
+  const [, setRenderTrigger] = useState(0);
   const { handleApiError } = useErrorHandler();
 
-  // Cache to avoid refetching metadata
-  const cacheRef = useRef<MetadataCache>({});
-  const abortControllersRef = useRef<Record<string, AbortController>>({});
-
-  // Force re-render when needed - stable function
   const forceRender = useCallback(() => {
     setRenderTrigger(prev => prev + 1);
   }, []);
 
   const fetchMetadata = useCallback(
     async (schema: string) => {
-      // Check cache first
-      if (cacheRef.current[schema]) {
-        // Only update if the content is different
-        if (!deepEqual(metadataRef.current[schema], cacheRef.current[schema])) {
-          metadataRef.current[schema] = cacheRef.current[schema];
+      if (sharedCache[schema]) {
+        if (!deepEqual(metadataRef.current[schema], sharedCache[schema])) {
+          metadataRef.current[schema] = sharedCache[schema];
           loadingRef.current[schema] = false;
           errorsRef.current[schema] = null;
           forceRender();
+        } else {
+          loadingRef.current[schema] = false;
         }
         return;
       }
 
-      // Set loading state
       loadingRef.current[schema] = true;
       errorsRef.current[schema] = null;
       forceRender();
 
-      // Cancel previous request if still pending
-      if (abortControllersRef.current[schema]) {
-        abortControllersRef.current[schema].abort();
-      }
-
-      // Create new abort controller
-      abortControllersRef.current[schema] = new AbortController();
-
       try {
-        const response = await metadataApi.getApiResourceMetadata(schema);
-
-        // Cache the metadata
-        cacheRef.current[schema] = response.data;
-
-        // Update state
-        metadataRef.current[schema] = response.data;
+        const data = await loadSchema(schema);
+        metadataRef.current[schema] = data;
         loadingRef.current[schema] = false;
         errorsRef.current[schema] = null;
         forceRender();
       } catch (err: any) {
-        if (err.name === 'AbortError') {
+        if (err?.name === 'AbortError') {
           return;
         }
-
         const errorMessage = err.message || 'Failed to fetch metadata';
         loadingRef.current[schema] = false;
         errorsRef.current[schema] = errorMessage;
         forceRender();
-
-        // Use handleApiError for proper error handling
         handleApiError(err);
-      } finally {
-        delete abortControllersRef.current[schema];
       }
     },
     [handleApiError, forceRender]
@@ -128,8 +124,8 @@ export function useResourceMetadata(
 
   const refetch = useCallback(
     async (schema: string) => {
-      // Clear cache for this schema
-      delete cacheRef.current[schema];
+      delete sharedCache[schema];
+      delete inFlight[schema];
       await fetchMetadata(schema);
     },
     [fetchMetadata]
@@ -139,8 +135,8 @@ export function useResourceMetadata(
     async (schema: string) => {
       try {
         await metadataApi.clearApiResourceMetadataCache(schema);
-        // Clear local cache
-        delete cacheRef.current[schema];
+        delete sharedCache[schema];
+        delete inFlight[schema];
         delete metadataRef.current[schema];
         delete loadingRef.current[schema];
         delete errorsRef.current[schema];
@@ -159,15 +155,14 @@ export function useResourceMetadata(
 
   const clearAllCache = useCallback(async () => {
     try {
-      // Clear all caches on the server
+      const schemasCached = Object.keys(sharedCache);
       await Promise.all(
-        Object.keys(cacheRef.current).map(schema =>
+        schemasCached.map(schema =>
           metadataApi.clearApiResourceMetadataCache(schema)
         )
       );
-
-      // Clear local cache
-      cacheRef.current = {};
+      schemasCached.forEach(k => delete sharedCache[k]);
+      Object.keys(inFlight).forEach(k => delete inFlight[k]);
       metadataRef.current = {};
       loadingRef.current = {};
       errorsRef.current = {};
@@ -178,9 +173,8 @@ export function useResourceMetadata(
     }
   }, [handleApiError, forceRender]);
 
-  // Helper functions - read directly from refs
   const getMetadata = useCallback((schema: string) => {
-    return metadataRef.current[schema] || null;
+    return metadataRef.current[schema] || sharedCache[schema] || null;
   }, []);
 
   const isLoading = useCallback((schema: string) => {
@@ -191,38 +185,27 @@ export function useResourceMetadata(
     return errorsRef.current[schema] || null;
   }, []);
 
-  // Track the last schemas to prevent unnecessary re-fetches
   const lastSchemasRef = useRef<string[]>([]);
 
-  // Fetch metadata for all provided schemas
   useEffect(() => {
-    // Check if schemas have actually changed
-    const schemasChanged = !deepEqual(schemas, lastSchemasRef.current);
-    if (!schemasChanged) {
-      return;
-    }
+    const schemasChanged =
+      schemas.length !== lastSchemasRef.current.length ||
+      schemas.some((s, i) => s !== lastSchemasRef.current[i]);
 
-    // Update the last schemas reference
+    if (!schemasChanged) return;
     lastSchemasRef.current = [...schemas];
 
-    if (schemas.length > 0) {
-      schemas.forEach(schema => {
-        if (schema && !cacheRef.current[schema]) {
-          fetchMetadata(schema);
+    schemas.forEach(schema => {
+      if (schema) {
+        // Hydrate from shared cache immediately
+        if (sharedCache[schema] && !metadataRef.current[schema]) {
+          metadataRef.current[schema] = sharedCache[schema];
         }
-      });
-    }
-
-    // Cleanup on unmount
-    return () => {
-      Object.values(abortControllersRef.current).forEach(controller => {
-        if (controller) {
-          controller.abort();
-        }
-      });
-      abortControllersRef.current = {};
-    };
-  }, [schemas, fetchMetadata]); // Keep fetchMetadata in dependencies but make it stable
+        fetchMetadata(schema);
+      }
+    });
+    forceRender();
+  }, [schemas, fetchMetadata, forceRender]);
 
   return {
     metadata: metadataRef.current,

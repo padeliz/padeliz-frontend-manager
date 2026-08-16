@@ -15,7 +15,7 @@ interface NavigationItem {
   description?: string;
 }
 
-const navigationItems: NavigationItem[] = [
+export const managerNavigationItems: NavigationItem[] = [
   {
     label: 'Dashboard',
     href: '/',
@@ -41,6 +41,12 @@ const navigationItems: NavigationItem[] = [
     description: 'Tournament editions',
   },
   {
+    label: 'Edition Divisions',
+    href: '/edition-divisions',
+    icon: 'git-branch',
+    description: 'Edition–division pairings',
+  },
+  {
     label: 'Players',
     href: '/players',
     icon: 'people',
@@ -53,22 +59,10 @@ const navigationItems: NavigationItem[] = [
     description: 'Court locations',
   },
   {
-    label: 'Prizes',
-    href: '/prizes',
-    icon: 'trophy',
-    description: 'Tournament prizes',
-  },
-  {
-    label: 'Lotteries',
-    href: '/lotteries',
-    icon: 'shuffle',
-    description: 'Tournament lotteries',
-  },
-  {
-    label: 'Lucky Ones',
-    href: '/edition-lucky-ones',
-    icon: 'star',
-    description: 'Lottery winners',
+    label: 'Courts',
+    href: '/courts',
+    icon: 'grid',
+    description: 'Physical courts',
   },
   {
     label: 'Participations',
@@ -77,12 +71,50 @@ const navigationItems: NavigationItem[] = [
     description: 'Player participations',
   },
   {
-    label: 'Matches Teams',
-    href: '/matches-teams',
-    icon: 'people-circle',
-    description: 'Team formations',
+    label: 'Eligibilities',
+    href: '/eligibilities',
+    icon: 'checkmark-done',
+    description: 'Player eligibility reviews',
+  },
+  {
+    label: 'Prizes',
+    href: '/prizes',
+    icon: 'trophy',
+    description: 'Tournament prizes',
+  },
+  {
+    label: 'Prizes from Clubs',
+    href: '/prize-from-clubs',
+    icon: 'gift',
+    description: 'Club prize variants',
+  },
+  {
+    label: 'Lotteries',
+    href: '/edition-lotteries',
+    icon: 'shuffle',
+    description: 'Tournament lotteries',
+  },
+  {
+    label: 'Lottery Rules',
+    href: '/edition-lottery-rules',
+    icon: 'list',
+    description: 'Lottery eligibility rules',
+  },
+  {
+    label: 'Lucky Ones',
+    href: '/edition-lottery-luckies',
+    icon: 'star',
+    description: 'Lottery winners',
+  },
+  {
+    label: 'Templates',
+    href: '/tools/templates',
+    icon: 'construct',
+    description: 'Tools — catalog & scratch schedule',
   },
 ];
+
+const navigationItems = managerNavigationItems;
 
 export default function Sidebar({ currentPath, onNavigate }: SidebarProps) {
   const pathname = usePathname();

@@ -4,25 +4,25 @@ import { BaseApiService } from './baseApi';
 
 export class EditionParticipationsApiService extends BaseApiService {
   /**
-   * Get paginated list of participations for a specific edition
+   * Get paginated list of participations (filters.edition_id etc. via params)
    */
   async getParticipations(
-    editionId: number,
     params: {
       page?: number;
       per_page?: number;
       q?: string;
       filters?: {
         player_id?: number;
-        division_id?: number;
+        edition_id?: number;
+        edition_division_id?: number;
         status?: string;
       };
       sort_by?: {
         player_id?: 'asc' | 'desc';
-        division_id?: 'asc' | 'desc';
         status?: 'asc' | 'desc';
         inserted_at?: 'asc' | 'desc';
         updated_at?: 'asc' | 'desc';
+        sort_order?: 'asc' | 'desc';
       };
     } = {}
   ): Promise<{ data: ApiEditionParticipation[]; meta: any }> {
@@ -105,6 +105,19 @@ export class EditionParticipationsApiService extends BaseApiService {
       {
         edition_participation_ids: ids,
       }
+    );
+  }
+
+  async reorderParticipations(
+    participations: Array<{
+      id_participation: number;
+      edition_division_id: number;
+      sort_order: number;
+    }>
+  ): Promise<{ data: ApiEditionParticipation[] }> {
+    return this.patch<{ data: ApiEditionParticipation[] }>(
+      '/edition-participations/reorder',
+      { participations }
     );
   }
 }

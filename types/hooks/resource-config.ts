@@ -75,4 +75,24 @@ export interface HookResourceViewPageConfigOptions<
   // Debug configuration
   showDebugInfo?: boolean;
   showInstructions?: boolean;
+
+  embedded?: boolean;
+  resourceIdOverride?: number | null;
+  showLinkedEntities?: boolean;
+  externalChrome?: boolean;
+  showSave?: boolean;
+  onChromeStateChange?: (state: any) => void;
+}
+
+export interface HookResourceCreatePageConfigOptions<
+  T extends { [key: string]: any } = any,
+> {
+  resourceName: string;
+  resourceDisplayName: string;
+  createResource: (data: Partial<T>) => Promise<{ data: T }>;
+  excludeFields?: string[];
+  title?: string;
+  description?: string;
+  onBack?: () => void;
+  getViewPath?: (id: number, created: T) => string;
 }

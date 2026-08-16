@@ -46,7 +46,7 @@ export class EditionLuckyOnesApiService extends BaseApiService {
       });
     }
 
-    const endpoint = `/edition-lucky-ones${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const endpoint = `/edition-lottery-luckies${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     return this.get<{ data: ApiEditionLuckyOne[]; meta: any }>(endpoint);
   }
 
@@ -54,7 +54,9 @@ export class EditionLuckyOnesApiService extends BaseApiService {
    * Get a specific lucky one by ID
    */
   async getLuckyOne(id: number): Promise<{ data: ApiEditionLuckyOne }> {
-    return this.get<{ data: ApiEditionLuckyOne }>(`/edition-lucky-ones/${id}`);
+    return this.get<{ data: ApiEditionLuckyOne }>(
+      `/edition-lottery-luckies/${id}`
+    );
   }
 
   /**
@@ -63,7 +65,10 @@ export class EditionLuckyOnesApiService extends BaseApiService {
   async createLuckyOne(
     data: Partial<ApiEditionLuckyOne>
   ): Promise<{ data: ApiEditionLuckyOne }> {
-    return this.post<{ data: ApiEditionLuckyOne }>('/edition-lucky-ones', data);
+    return this.post<{ data: ApiEditionLuckyOne }>(
+      '/edition-lottery-luckies',
+      data
+    );
   }
 
   /**
@@ -74,7 +79,7 @@ export class EditionLuckyOnesApiService extends BaseApiService {
     data: Partial<ApiEditionLuckyOne>
   ): Promise<{ data: ApiEditionLuckyOne }> {
     return this.put<{ data: ApiEditionLuckyOne }>(
-      `/edition-lucky-ones/${id}`,
+      `/edition-lottery-luckies/${id}`,
       data
     );
   }
@@ -83,7 +88,7 @@ export class EditionLuckyOnesApiService extends BaseApiService {
    * Delete a lucky one
    */
   async deleteLuckyOne(id: number): Promise<void> {
-    return this.delete(`/edition-lucky-ones/${id}`);
+    return this.delete(`/edition-lottery-luckies/${id}`);
   }
 
   /**
@@ -93,9 +98,9 @@ export class EditionLuckyOnesApiService extends BaseApiService {
     ids: number[]
   ): Promise<ApiResponse<ApiBulkDeleteResponse>> {
     return this.bulkDelete<ApiResponse<ApiBulkDeleteResponse>>(
-      '/edition-lucky-ones/bulk',
+      '/edition-lottery-luckies/bulk',
       {
-        edition_lucky_one_ids: ids,
+        lucky_ids: ids,
       }
     );
   }

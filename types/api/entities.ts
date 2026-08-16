@@ -31,6 +31,7 @@ export interface ApiEdition {
   students_entry_fee?: number;
   arriving_time?: string;
   closing_time?: string;
+  finalized_at?: number | null;
   inserted_at: number;
   updated_at?: number;
   location?: ApiLocation;
@@ -42,18 +43,22 @@ export interface ApiEditionDivision {
   id_edition_division: number;
   edition_id: number;
   division_id: number;
+  division_title?: string;
   players_limit: number;
-  court: string;
   playing_start_time: string;
   playing_end_time: string;
   player_opponents_nr?: number;
   player_matches_repeat: number;
   include_scores: boolean;
   has_demonstrative_match: boolean;
-  fixed_teams: boolean;
+  allow_replacements?: boolean;
+  points_per_match?: number | null;
+  final_points_target?: number;
+  include_final?: boolean;
   inserted_at: number;
   updated_at?: number;
   division?: ApiDivision;
+  courts?: { id_court: number; name: string; location_id?: number }[];
 }
 
 export interface ApiLocation {
@@ -89,6 +94,7 @@ export interface ApiPlayer {
   facebook_username?: string;
   inserted_at: number;
   updated_at?: number;
+  uploaded_profile_images?: { id: number; url: string }[];
   uploaded_profile_urls?: string[];
   participations?: ApiEditionParticipation[];
 }
@@ -97,7 +103,10 @@ export interface ApiEditionParticipation {
   id_participation: number;
   edition_id: number;
   player_id: number;
+  edition_division_id?: number;
   division_id: number;
+  sort_order?: number;
+  is_collecting_points?: boolean;
   is_minor: boolean;
   is_student: boolean;
   discount?: number;
@@ -108,12 +117,24 @@ export interface ApiEditionParticipation {
   updated_at?: number;
   player?: ApiPlayer;
   division?: ApiDivision;
+  player_history?: {
+    last_played: {
+      division_title: string;
+      rank: number | null;
+      participant_count: number;
+    } | null;
+    participated_count: number;
+    banned_count: number;
+    absented_count: number;
+  };
 }
 
 export interface ApiPrize {
   id_prize: number;
   name: string;
-  image?: string;
+  media_path?: string;
+  url?: string;
+  template?: string;
   box_1_text: string;
   box_1_bg_color: string;
   box_1_text_color: string;
@@ -129,7 +150,9 @@ export interface ApiPrizeFromClub {
   id_club_prize: number;
   club_id: number;
   prize_id: number;
-  image?: string;
+  media_path?: string;
+  url?: string;
+  template?: string;
   box_1_text?: string;
   box_1_bg_color?: string;
   box_1_text_color?: string;
@@ -145,28 +168,28 @@ export interface ApiPrizeFromClub {
 export interface ApiEditionLottery {
   id_lottery: number;
   edition_id: number;
-  orderliness: number;
-  division_id?: number;
-  prize_id?: number;
-  total_draws_nr: number;
+  prize_id?: number | null;
+  prize_quantity: number;
   inserted_at: number;
   updated_at?: number;
   prize?: ApiPrize;
-  division?: ApiDivision;
-  luckyOnes?: ApiEditionLuckyOne[];
+  edition?: ApiEdition;
+  rules?: unknown[];
+  luckies?: ApiEditionLuckyOne[];
 }
 
 export interface ApiEditionLuckyOne {
-  id_lucky_one: number;
-  lottery_id: number;
+  id_lucky: number;
+  lottery_rule_id?: number | null;
   drawn_participation_id: number;
   drawn_at: number;
   available_at: number;
-  announced_at?: number;
-  accepted_at?: number;
-  rejected_at?: number;
+  announced_at?: number | null;
+  accepted_at?: number | null;
+  rejected_at?: number | null;
   inserted_at: number;
   updated_at?: number;
+  lotteryRule?: unknown;
   drawnParticipation?: ApiEditionParticipation;
 }
 
@@ -192,14 +215,4 @@ export interface ApiPlayerEligibility {
   inserted_at: number;
   updated_at?: number;
   resubmitted_at?: number;
-}
-
-export interface ApiMatchesTeam {
-  id_team: number;
-  player_1: string;
-  player_2: string;
-  inserted_at: number;
-  updated_at?: number;
-  player1?: ApiPlayer;
-  player2?: ApiPlayer;
 }

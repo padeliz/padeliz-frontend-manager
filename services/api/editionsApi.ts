@@ -122,4 +122,15 @@ export class EditionsApiService extends BaseApiService {
     const response = await metadataApi.getApiResourceMetadata('Edition');
     return { data: response.data };
   }
+
+  /**
+   * Finalize an edition (irreversible)
+   */
+  async finalizeEdition(
+    id: number
+  ): Promise<{ data: ApiEdition; message?: string }> {
+    return this.post<{ data: ApiEdition; message?: string }>(
+      `/editions/${id}/finalize`
+    );
+  }
 }

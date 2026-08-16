@@ -58,6 +58,7 @@ export default function EditionsPage() {
     description:
       'Manage padel editions with advanced search, filters, and bulk operations',
     onAdd: handleAddEdition,
+    onView: handleViewEdition,
     onExport: handleExportAll,
     initialPage: 1,
     initialPerPage: 10,

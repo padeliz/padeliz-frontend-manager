@@ -58,7 +58,7 @@ describe('formatField', () => {
     expect(result.inputType).toBe('text');
   });
 
-  it('marks timestamp read-only fields as non-editable without asserting relative prose', () => {
+  it('formats timestamp read-only fields instead of raw unix seconds', () => {
     const result = formatField({
       metadata: playerMetadata,
       fieldKey: 'inserted_at',
@@ -69,7 +69,7 @@ describe('formatField', () => {
     expect(result.isEditable).toBe(false);
     expect(result.inputType).toBe('readonly');
     expect(result.label).toBe('Created At');
-    expect(typeof result.formattedText).toBe('string');
+    expect(result.formattedText).not.toBe('1700000000');
     expect(result.formattedText.length).toBeGreaterThan(0);
   });
 });

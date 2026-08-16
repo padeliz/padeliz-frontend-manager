@@ -4,10 +4,13 @@
  */
 
 import AppLayout from '@/components/layout/AppLayout';
+import ManagerFileUpload from '@/components/ui/ManagerFileUpload';
 import { useResourceMetadata } from '@/hooks/useResourceMetadata';
 import { ResourceViewPageProps } from '@/types/ui/pages';
 import { formatField } from '@/utils/fieldFormatter';
 import { LinkedEntityService } from '@/utils/linkedEntityService';
+import { isNestedRelationProperty } from '@/utils/nestedRelationProperty';
+import { getUploadConfig } from '@/utils/uploadMetadata';
 import { validateFormWithSubmission } from '@/utils/validationRules';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -34,32 +37,38 @@ export default function ResourceViewPage<
     title,
     description,
     onBack,
+    embedded = false,
+    resourceIdOverride = null,
+    showLinkedEntities: showLinkedEntitiesProp,
+    externalChrome = false,
+    showSave = true,
+    onChromeStateChange,
   } = config;
 
-  // State
+  const showLinkedEntities =
+    showLinkedEntitiesProp !== undefined
+      ? showLinkedEntitiesProp
+      : !embedded;
+
   const [resource, setResource] = useState<T | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resourceId, setResourceId] = useState<number | null>(null);
-
-  // Edit mode state
   const [isEditing, setIsEditing] = useState(false);
   const [editValues, setEditValues] = useState<Partial<T>>({});
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
-
-  // Auto-detected linked entities state
   const [linkedEntities, setLinkedEntities] = useState<any[]>([]);
 
-  // Get resource ID from URL params
   useEffect(() => {
-    const id = parseInt(params.id);
-    if (id) {
-      setResourceId(id);
+    if (resourceIdOverride != null && Number.isFinite(resourceIdOverride)) {
+      setResourceId(resourceIdOverride);
+      return;
     }
-  }, [params.id]);
+    const id = parseInt(params.id, 10);
+    if (id) setResourceId(id);
+  }, [params.id, resourceIdOverride]);
 
-  // Fetch metadata
   const { getMetadata, getError, isLoading, fetchMetadata } =
     useResourceMetadata([resourceName]);
 
@@ -67,34 +76,26 @@ export default function ResourceViewPage<
   const metadataError = getError(resourceName);
   const metadataLoading = isLoading(resourceName);
 
-  // Fetch resource data
   const loadResource = useCallback(async () => {
     if (!resourceId) return;
-
     try {
       setLoading(true);
       setError(null);
-
       const response = await fetchResource(resourceId);
       setResource(response.data);
     } catch (err: any) {
       setError(err.message || 'Failed to load resource');
-      console.error('Error loading resource:', err);
     } finally {
       setLoading(false);
     }
   }, [fetchResource, resourceId]);
 
-  // Load resource when ID changes
   useEffect(() => {
-    if (resourceId) {
-      loadResource();
-    }
+    if (resourceId) loadResource();
   }, [resourceId, loadResource]);
 
-  // Auto-detect linked entities when metadata loads
   useEffect(() => {
-    if (metadata && resourceId) {
+    if (metadata && resourceId && showLinkedEntities) {
       const detectLinkedEntities = async () => {
         try {
           const detectedEntities =
@@ -105,35 +106,35 @@ export default function ResourceViewPage<
                 metadata,
               },
               async (linkedResourceName: string) => {
-                // Fetch metadata for the linked resource
                 await fetchMetadata(linkedResourceName);
                 return getMetadata(linkedResourceName);
               }
             );
           setLinkedEntities(detectedEntities);
-        } catch (error) {
-          console.error('Error detecting linked entities:', error);
+        } catch {
           setLinkedEntities([]);
         }
       };
-
       detectLinkedEntities();
+    } else if (!showLinkedEntities) {
+      setLinkedEntities([]);
     }
-  }, [metadata, resourceId, resourceName, fetchMetadata, getMetadata]);
+  }, [
+    metadata,
+    resourceId,
+    resourceName,
+    fetchMetadata,
+    getMetadata,
+    showLinkedEntities,
+  ]);
 
   const handleBack = () => {
-    if (onBack) {
-      onBack();
-    } else {
-      router.back();
-    }
+    if (onBack) onBack();
+    else router.back();
   };
 
-  const handleRefresh = () => {
-    loadResource();
-  };
+  const handleRefresh = () => loadResource();
 
-  // Edit mode handlers
   const handleEdit = () => {
     if (resource) {
       setEditValues({ ...resource });
@@ -153,15 +154,14 @@ export default function ResourceViewPage<
       setError('Update functionality not available');
       return;
     }
-
     try {
       setSaving(true);
       setError(null);
       setEditErrors({});
-
-      // Format values for submission
       const formattedValues: Record<string, any> = {};
       for (const [fieldKey, value] of Object.entries(editValues)) {
+        const def = metadata!.swagger_schema.properties[fieldKey];
+        if (getUploadConfig(def)) continue;
         const fieldInfo = formatField({
           metadata: metadata!,
           fieldKey,
@@ -170,24 +170,19 @@ export default function ResourceViewPage<
         });
         formattedValues[fieldKey] = fieldInfo.apiValue;
       }
-
-      // Validate formatted values
       const validationResult = validateFormWithSubmission(
         metadata!.swagger_schema,
         formattedValues,
         metadata!
       );
-
       if (!validationResult.isValid) {
         const fieldErrors: Record<string, string> = {};
-        validationResult.errors.forEach(error => {
-          fieldErrors[error.field] = error.message;
+        validationResult.errors.forEach(err => {
+          fieldErrors[err.field] = err.message;
         });
         setEditErrors(fieldErrors);
         return;
       }
-
-      // Submit to API
       const response = await updateResource(
         resourceId,
         formattedValues as Partial<T>
@@ -207,86 +202,144 @@ export default function ResourceViewPage<
   };
 
   const handleFieldChange = (fieldKey: string, value: any) => {
-    setEditValues(prev => ({
-      ...prev,
-      [fieldKey]: value,
-    }));
-
-    // Clear error for this field when user starts typing
+    setEditValues(prev => ({ ...prev, [fieldKey]: value }));
     if (editErrors[fieldKey]) {
       setEditErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[fieldKey];
-        return newErrors;
+        const next = { ...prev };
+        delete next[fieldKey];
+        return next;
       });
     }
   };
 
-  const handleFieldBlur = (fieldKey: string) => {
-    // Field blur logic can be added here if needed
-  };
+  useEffect(() => {
+    if (!onChromeStateChange) return;
+    const dirty =
+      isEditing &&
+      JSON.stringify(editValues) !== JSON.stringify(resource ?? {});
+    onChromeStateChange({
+      save: handleSave,
+      refresh: handleRefresh,
+      edit: handleEdit,
+      cancel: handleCancel,
+      isEditing,
+      isSaving: saving,
+      canSave: !!updateResource && isEditing,
+      isDirty: dirty,
+    });
+  }, [
+    onChromeStateChange,
+    isEditing,
+    saving,
+    updateResource,
+    editValues,
+    resource,
+  ]);
 
-  // Loading state
+  const wrap = (children: React.ReactNode) =>
+    embedded ? (
+      <View className="flex-1">{children}</View>
+    ) : (
+      <AppLayout title={title}>{children}</AppLayout>
+    );
+
   if (loading || metadataLoading) {
-    return (
-      <AppLayout title={title}>
-        <View className="flex-1 justify-center items-center p-6">
-          <LoadingSpinner text="Loading resource..." />
-        </View>
-      </AppLayout>
+    return wrap(
+      <View className="flex-1 justify-center items-center p-6">
+        <LoadingSpinner text="Loading resource..." />
+      </View>
     );
   }
 
-  // Error state
   if (error || metadataError) {
-    return (
-      <AppLayout title={title}>
-        <View className="flex-1 justify-center items-center p-6">
-          <View className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-sm">
-            <Text className="text-red-800 text-center mb-4">
-              {error || metadataError}
-            </Text>
-            <Pressable
-              onPress={handleRefresh}
-              className="bg-red-600 rounded-lg px-4 py-2"
-            >
-              <Text className="text-white font-semibold text-center">
-                Retry
-              </Text>
-            </Pressable>
-          </View>
+    return wrap(
+      <View className="flex-1 justify-center items-center p-6">
+        <View className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-sm">
+          <Text className="text-red-800 text-center mb-4">
+            {error || metadataError}
+          </Text>
+          <Pressable
+            onPress={handleRefresh}
+            className="bg-red-600 rounded-lg px-4 py-2"
+          >
+            <Text className="text-white font-semibold text-center">Retry</Text>
+          </Pressable>
         </View>
-      </AppLayout>
+      </View>
     );
   }
 
-  // No resource found
   if (!resource || !metadata) {
-    return (
-      <AppLayout title={title}>
-        <View className="flex-1 justify-center items-center p-6">
-          <View className="bg-gray-50 border border-gray-200 rounded-lg p-6 max-w-sm">
-            <Text className="text-gray-800 text-center">
-              Resource not found
-            </Text>
-          </View>
-        </View>
-      </AppLayout>
+    return wrap(
+      <View className="flex-1 justify-center items-center p-6">
+        <Text className="text-gray-800 text-center">Resource not found</Text>
+      </View>
     );
   }
 
-  // Get field keys from metadata, excluding excluded fields
   const fieldKeys = Object.keys(metadata.swagger_schema.properties).filter(
-    key => !excludeFields.includes(key)
+    key => {
+      if (excludeFields.includes(key)) return false;
+      const def = metadata.swagger_schema.properties[key];
+      if (getUploadConfig(def)) return true;
+      if (isNestedRelationProperty(def)) return false;
+      return true;
+    }
   );
 
-  return (
-    <AppLayout title={title}>
-      <View className="flex-1">
-        {/* Header */}
+  const renderField = (fieldKey: string) => {
+    const def = metadata.swagger_schema.properties[fieldKey];
+    const uploadCfg = getUploadConfig(def);
+    if (uploadCfg) {
+      const eligibilityBlocked =
+        resourceName === 'Eligibility' &&
+        (resource as any).review_status === 'approved';
+      return (
+        <ManagerFileUpload
+          key={fieldKey}
+          label={def.title || fieldKey}
+          config={uploadCfg}
+          parentId={resourceId}
+          value={(isEditing ? editValues[fieldKey] : resource[fieldKey]) as any}
+          disabled={saving || eligibilityBlocked}
+          onChanged={handleRefresh}
+          error={editErrors[fieldKey]}
+        />
+      );
+    }
+    if (isEditing) {
+      return (
+        <ResourceFieldEdit
+          key={fieldKey}
+          fieldKey={fieldKey}
+          fieldValue={editValues[fieldKey] ?? resource[fieldKey]}
+          metadata={metadata}
+          onChange={handleFieldChange}
+          onBlur={() => {}}
+          error={editErrors[fieldKey]}
+          excludeFields={excludeFields}
+          disabled={saving}
+        />
+      );
+    }
+    return (
+      <ResourceFieldDisplay
+        key={fieldKey}
+        fieldKey={fieldKey}
+        fieldValue={resource[fieldKey]}
+        metadata={metadata}
+        excludeFields={excludeFields}
+        record={resource}
+      />
+    );
+  };
+
+  return wrap(
+    <View className="flex-1">
+      {!embedded && (
         <View className="flex-row items-center p-4 border-b border-gray-200">
           <Pressable onPress={handleBack} className="mr-3 p-2">
-            <Ionicons name="arrow-back" size={24} className="text-gray-600" />
+            <Ionicons name="arrow-back" size={24} color="#4b5563" />
           </Pressable>
           <View className="flex-1">
             <Text className="text-lg font-semibold text-gray-900">{title}</Text>
@@ -300,12 +353,8 @@ export default function ResourceViewPage<
                 onPress={handleRefresh}
                 className="bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 flex-row items-center"
               >
-                <Ionicons
-                  name="refresh"
-                  size={16}
-                  className="text-gray-600 mr-1"
-                />
-                <Text className="text-gray-700 text-sm">Refresh</Text>
+                <Ionicons name="refresh" size={16} color="#4b5563" />
+                <Text className="text-gray-700 text-sm ml-1">Refresh</Text>
               </Pressable>
             )}
             <EditModeToggle
@@ -318,55 +367,61 @@ export default function ResourceViewPage<
             />
           </View>
         </View>
+      )}
 
-        <ScrollView className="flex-1 p-4">
-          {/* Main Resource Information */}
+      {embedded && (
+        <View className="flex-row justify-end mb-3">
+          <EditModeToggle
+            isEditing={isEditing}
+            onEdit={handleEdit}
+            onSave={handleSave}
+            onCancel={handleCancel}
+            loading={saving}
+            disabled={!updateResource}
+            showSave={externalChrome ? false : showSave}
+          />
+        </View>
+      )}
+
+      {embedded ? (
+        <View className="p-4">
           <View className="mb-8">
             <Text className="text-xl font-semibold text-gray-900 mb-4">
               {resourceDisplayName} Information
             </Text>
-
             <View className="bg-white border rounded-lg p-4">
-              {fieldKeys.map(fieldKey => {
-                if (isEditing) {
-                  return (
-                    <ResourceFieldEdit
-                      key={fieldKey}
-                      fieldKey={fieldKey}
-                      fieldValue={editValues[fieldKey] ?? resource[fieldKey]}
-                      metadata={metadata}
-                      onChange={handleFieldChange}
-                      onBlur={handleFieldBlur}
-                      error={editErrors[fieldKey]}
-                      excludeFields={excludeFields}
-                      disabled={saving}
-                    />
-                  );
-                } else {
-                  return (
-                    <ResourceFieldDisplay
-                      key={fieldKey}
-                      fieldKey={fieldKey}
-                      fieldValue={resource[fieldKey]}
-                      metadata={metadata}
-                      excludeFields={excludeFields}
-                    />
-                  );
-                }
-              })}
+              {fieldKeys.map(fieldKey => renderField(fieldKey))}
             </View>
           </View>
-
-          {/* Auto-detected Linked Entities */}
-          {linkedEntities.map(linkedEntity => (
-            <LinkedEntitySection
-              key={linkedEntity.key}
-              config={linkedEntity}
-              parentId={resourceId!}
-            />
-          ))}
+          {showLinkedEntities &&
+            linkedEntities.map(linkedEntity => (
+              <LinkedEntitySection
+                key={linkedEntity.key}
+                config={linkedEntity}
+                parentId={resourceId!}
+              />
+            ))}
+        </View>
+      ) : (
+        <ScrollView className="flex-1 p-4">
+          <View className="mb-8">
+            <Text className="text-xl font-semibold text-gray-900 mb-4">
+              {resourceDisplayName} Information
+            </Text>
+            <View className="bg-white border rounded-lg p-4">
+              {fieldKeys.map(fieldKey => renderField(fieldKey))}
+            </View>
+          </View>
+          {showLinkedEntities &&
+            linkedEntities.map(linkedEntity => (
+              <LinkedEntitySection
+                key={linkedEntity.key}
+                config={linkedEntity}
+                parentId={resourceId!}
+              />
+            ))}
         </ScrollView>
-      </View>
-    </AppLayout>
+      )}
+    </View>
   );
 }

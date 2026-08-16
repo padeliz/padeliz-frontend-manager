@@ -14,6 +14,8 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import DateTimeFormInput from './DateTimeFormInput';
+import ColorFormInput from './ColorFormInput';
+import YearFormInput from './YearFormInput';
 
 export default function ValidationField({
   field,
@@ -190,6 +192,32 @@ export default function ValidationField({
                 ? new Date(fieldInfo.constraints.max)
                 : undefined
             }
+          />
+        );
+
+      case 'color':
+        return (
+          <ColorFormInput
+            value={String(fieldInfo.inputValue || '')}
+            onChange={hex => handleChange(hex)}
+            onBlur={handleBlur}
+            disabled={disabled}
+            placeholder={fieldPlaceholder}
+            error={displayError}
+          />
+        );
+
+      case 'year':
+        return (
+          <YearFormInput
+            value={fieldInfo.inputValue}
+            onChange={year => handleChange(year)}
+            onBlur={handleBlur}
+            disabled={disabled}
+            min={fieldInfo.constraints?.min ?? 1900}
+            max={fieldInfo.constraints?.max ?? 9999}
+            error={displayError}
+            placeholder={fieldPlaceholder}
           />
         );
 

@@ -82,8 +82,53 @@ export interface ResourceViewPageConfig<
   title: string;
   description?: string;
   onBack?: () => void;
+
+  /** When true, omit AppLayout (e.g. Editions Details tab) */
+  embedded?: boolean;
+  /** Query param id override when not using route [id] */
+  resourceIdOverride?: number | null;
+  /** Show linked entities even when embedded (default: !embedded) */
+  showLinkedEntities?: boolean;
+  /**
+   * Parent owns Save/Refresh via onChromeStateChange.
+   * Still renders in-page Edit/Cancel (Save hidden via showSave=false).
+   */
+  externalChrome?: boolean;
+  /** When false, EditModeToggle omits Save. Default true. */
+  showSave?: boolean;
+  onChromeStateChange?: (state: {
+    save: () => void | Promise<void>;
+    refresh: () => void | Promise<void>;
+    edit: () => void;
+    cancel: () => void;
+    isEditing: boolean;
+    isSaving: boolean;
+    canSave: boolean;
+    isDirty: boolean;
+  }) => void;
 }
 
 export interface ResourceViewPageProps<T extends { [key: string]: any } = any> {
   config: ResourceViewPageConfig<T>;
 }
+
+export interface ResourceCreatePageConfig<
+  T extends { [key: string]: any } = any,
+> {
+  resourceName: string;
+  resourceDisplayName: string;
+  createResource: (data: Partial<T>) => Promise<{ data: T }>;
+  excludeFields?: string[];
+  title: string;
+  description?: string;
+  onBack?: () => void;
+  /** Path after successful create (default: list-style /{resource}/{id}) */
+  getViewPath?: (id: number, created: T) => string;
+}
+
+export interface ResourceCreatePageProps<
+  T extends { [key: string]: any } = any,
+> {
+  config: ResourceCreatePageConfig<T>;
+}
+

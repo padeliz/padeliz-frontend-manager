@@ -1,175 +1,195 @@
 /**
  * Foreign Key Service
- * Handles foreign key relationships and linked resource data fetching
+ * Detects FKs from metadata.filterable_fields and loads options via resource_path.
  */
 
 import { ApiResourceMetadata } from '@/types/api/metadata';
 import { LinkedResourceInfo } from '@/types/utils/field-formatter';
+import { ApiResourceMetadataApiService } from '@/services/api/resourceMetadataApi';
+import { BaseApiService } from '@/services/api/baseApi';
+import { PrimaryKeyService } from './primaryKeyService';
+
+const metadataApi = new ApiResourceMetadataApiService();
+const listApi = new BaseApiService();
+
+const relatedMetadataCache: Record<string, ApiResourceMetadata> = {};
+const optionsCache: Record<string, Array<{ id: number; label: string }>> = {};
 
 export class ForeignKeyService {
-  /**
-   * Check if a field is a foreign key based on naming convention and type
-   */
-  static isForeignKeyField(
-    fieldKey: string,
-    fieldDefinition: any,
-    metadata: ApiResourceMetadata
-  ): boolean {
-    // Add null checks to prevent runtime errors
-    if (!fieldKey || !fieldDefinition || !metadata) {
-      return false;
-    }
-
-    // Check if it's a foreign key based on naming convention and type
-    if (
-      fieldKey.endsWith('_id') &&
-      fieldDefinition.type === 'integer' &&
-      fieldDefinition.format === 'int64'
-    ) {
-      // Look for corresponding linked resource field
-      const linkedResourceKey = fieldKey.replace('_id', '');
-      const linkedResource = metadata.swagger_schema?.properties?.[linkedResourceKey];
-
-      return linkedResource?.oneOf?.some((ref: any) => ref.$ref) ?? false;
-    }
-
-    return false;
+  /** edition_division_id → editionDivision */
+  static toCamelLinkedKey(fieldKey: string): string {
+    const withoutId = fieldKey.replace(/_id$/, '');
+    return withoutId.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
   }
 
-  /**
-   * Get linked resource information for a foreign key field
-   */
+  static resolveLinkedProperty(
+    fieldKey: string,
+    metadata: ApiResourceMetadata
+  ): { key: string; definition: any } | null {
+    const props = metadata.swagger_schema?.properties;
+    if (!props) return null;
+
+    const camel = this.toCamelLinkedKey(fieldKey);
+    const snake = fieldKey.replace(/_id$/, '');
+    for (const key of [camel, snake]) {
+      const def = props[key];
+      if (def?.oneOf?.some((ref: any) => ref.$ref) || def?.$ref) {
+        return { key, definition: def };
+      }
+    }
+    return null;
+  }
+
+  /** FK iff filterable_fields marks foreign_key (no field-name guessing). */
+  static isForeignKeyField(
+    fieldKey: string,
+    _fieldDefinition: any,
+    metadata: ApiResourceMetadata
+  ): boolean {
+    if (!fieldKey || !metadata?.filterable_fields) {
+      return false;
+    }
+    return metadata.filterable_fields[fieldKey]?.type === 'foreign_key';
+  }
+
+  static getRelatedSchemaName(
+    fieldKey: string,
+    metadata: ApiResourceMetadata
+  ): string | null {
+    const fromFilter =
+      metadata.filterable_fields?.[fieldKey]?.related_schema_name;
+    if (fromFilter) return fromFilter;
+
+    const linked = this.resolveLinkedProperty(fieldKey, metadata);
+    if (linked) {
+      const ref =
+        linked.definition.oneOf?.find((r: any) => r.$ref)?.$ref ||
+        linked.definition.$ref;
+      const name = ref?.split('/').pop();
+      if (name) return name;
+    }
+    return null;
+  }
+
   static getLinkedResourceInfo(
     fieldKey: string,
     metadata: ApiResourceMetadata
   ): LinkedResourceInfo | null {
-    // Add null checks to prevent runtime errors
-    if (!fieldKey || !metadata || !metadata.swagger_schema?.properties) {
+    if (!this.isForeignKeyField(fieldKey, null, metadata)) {
       return null;
     }
 
-    const fieldDefinition = metadata.swagger_schema.properties[fieldKey];
+    const schemaName = this.getRelatedSchemaName(fieldKey, metadata);
+    if (!schemaName) return null;
 
-    if (!this.isForeignKeyField(fieldKey, fieldDefinition, metadata)) {
-      return null;
-    }
-
-    const linkedResourceKey = fieldKey.replace('_id', '');
-    const linkedResource = metadata.swagger_schema.properties[linkedResourceKey];
-
-    if (!linkedResource) {
-      return null;
-    }
-
-    // Extract resource name from the $ref
-    const ref = linkedResource.oneOf?.find((ref: any) => ref.$ref);
-    if (!ref?.$ref) {
-      return null;
-    }
-
-    // Extract resource name from reference (e.g., "#/components/schemas/Player" -> "Player")
-    const resourceName = ref.$ref.split('/').pop()?.toLowerCase() || '';
-
-    // Get display field from metadata or fallback to 'id'
-    const displayField = metadata.display_field || 'id';
+    const relatedSchemaField =
+      metadata.filterable_fields?.[fieldKey]?.related_schema_field;
 
     return {
-      resourceName,
-      displayField,
-      fetchOptions: () => this.fetchLinkedResourceOptions(resourceName, displayField)
+      resourceName: schemaName,
+      displayField: relatedSchemaField || 'name',
+      fetchOptions: () =>
+        this.fetchLinkedResourceOptions(schemaName, relatedSchemaField),
     };
   }
 
-  /**
-   * Fetch options for a linked resource
-   */
-  static async fetchLinkedResourceOptions(
-    resourceName: string,
-    displayField: string
-  ): Promise<Array<{id: number, label: string}>> {
+  static async getRelatedMetadata(
+    schemaName: string
+  ): Promise<ApiResourceMetadata | null> {
+    if (relatedMetadataCache[schemaName]) {
+      return relatedMetadataCache[schemaName];
+    }
     try {
-      // Import API services dynamically to avoid circular dependencies
-      const { PlayersApiService } = await import('@/services/api/playersApi');
-      const { LocationsApiService } = await import('@/services/api/locationsApi');
-      const { EditionsApiService } = await import('@/services/api/editionsApi');
-      const { ClubsApiService } = await import('@/services/api/clubsApi');
-      const { DivisionsApiService } = await import('@/services/api/divisionsApi');
+      const response = await metadataApi.getApiResourceMetadata(schemaName);
+      relatedMetadataCache[schemaName] = response.data;
+      return response.data;
+    } catch (e) {
+      console.warn(`Failed to load metadata for ${schemaName}`, e);
+      return null;
+    }
+  }
 
-      let service: any;
-      let fetchMethod: string;
+  static extractOptionId(
+    item: any,
+    relatedMetadata: ApiResourceMetadata
+  ): number | null {
+    return PrimaryKeyService.extractId(item, relatedMetadata);
+  }
 
-      // Map resource names to their corresponding API services
-      switch (resourceName) {
-        case 'player':
-          service = new PlayersApiService();
-          fetchMethod = 'getPlayers';
-          break;
-        case 'location':
-          service = new LocationsApiService();
-          fetchMethod = 'getLocations';
-          break;
-        case 'edition':
-          service = new EditionsApiService();
-          fetchMethod = 'getEditions';
-          break;
-        case 'club':
-          service = new ClubsApiService();
-          fetchMethod = 'getClubs';
-          break;
-        case 'division':
-          service = new DivisionsApiService();
-          fetchMethod = 'getDivisions';
-          break;
-        default:
-          console.warn(`Unknown resource type: ${resourceName}`);
-          throw new Error(`Unknown resource type: ${resourceName}`);
+  static async fetchLinkedResourceOptions(
+    schemaName: string,
+    displayFieldOverride?: string | null
+  ): Promise<Array<{ id: number; label: string }>> {
+    try {
+      const relatedMeta = await this.getRelatedMetadata(schemaName);
+      if (!relatedMeta?.resource_path) {
+        console.warn(`No resource_path for schema ${schemaName}`);
+        return [];
       }
 
-      // Fetch data with reasonable limits for dropdowns
-      const response = await service[fetchMethod]({
-        page: 1,
-        per_page: 100, // Reasonable limit for dropdown options
-        sort_by: { [displayField]: 'asc' }
-      });
+      const path = relatedMeta.resource_path;
+      if (optionsCache[path]) {
+        return optionsCache[path];
+      }
 
-      // Transform data to the expected format
-      return response.data.map((item: any) => ({
-        id: item.id,
-        label: item[displayField] || `Item ${item.id}`
-      }));
+      const displayField =
+        displayFieldOverride ||
+        relatedMeta.display_field ||
+        PrimaryKeyService.detectPrimaryKey(relatedMeta) ||
+        'id';
 
+      const params = new URLSearchParams();
+      params.set('page', '1');
+      params.set('per_page', '100');
+      if (displayField && !displayField.startsWith('id_')) {
+        params.set(`sort_by[${displayField}]`, 'asc');
+      }
+
+      const response = await listApi.listResource<any>(
+        `/${path}?${params.toString()}`
+      );
+      const rows = Array.isArray(response?.data) ? response.data : [];
+
+      const options = rows
+        .map((item: any) => {
+          const id = this.extractOptionId(item, relatedMeta);
+          if (id == null) return null;
+          const label =
+            item[displayField] != null && item[displayField] !== ''
+              ? String(item[displayField])
+              : String(id);
+          return { id, label };
+        })
+        .filter(Boolean) as Array<{ id: number; label: string }>;
+
+      optionsCache[path] = options;
+      return options;
     } catch (error) {
-      console.error(`Error fetching ${resourceName} options:`, error);
+      console.error(`Error fetching options for ${schemaName}:`, error);
       return [];
     }
   }
 
-  /**
-   * Get the current display value for a foreign key
-   */
   static getForeignKeyDisplayValue(
     fieldKey: string,
     fieldValue: any,
     metadata: ApiResourceMetadata
-  ): string {
-    if (!fieldValue) return '';
-
-    // Add null checks to prevent runtime errors
-    if (!fieldKey || !metadata || !metadata.filterable_fields) {
-      console.error(`Invalid parameters for field: ${fieldKey}`);
-      throw new Error(`Invalid parameters for field: ${fieldKey}`);
+  ): string | null {
+    const filter = metadata.filterable_fields?.[fieldKey];
+    if (filter?.type !== 'foreign_key' || !filter.values) {
+      return null;
     }
-
-    // Try to get the display value from filterable fields
-    const filterField = metadata.filterable_fields[fieldKey];
-    if (filterField?.type === 'foreign_key' && filterField.values) {
-      const displayValue = (filterField.values as Record<string, string>)[String(fieldValue)];
-      if (displayValue) {
-        return displayValue;
-      }
+    const values = filter.values;
+    if (Array.isArray(values)) {
+      return null;
     }
+    const key = String(fieldValue);
+    return values[key] ?? values[fieldValue] ?? null;
+  }
 
-    console.error(`No display value found for field: ${fieldKey}`);
-    throw new Error(`No display value found for field: ${fieldKey}`);
+  /** Test helper — clear in-memory caches */
+  static clearCaches(): void {
+    Object.keys(relatedMetadataCache).forEach(k => delete relatedMetadataCache[k]);
+    Object.keys(optionsCache).forEach(k => delete optionsCache[k]);
   }
 }

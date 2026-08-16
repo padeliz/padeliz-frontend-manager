@@ -7,7 +7,22 @@
       "NODE_VERSION": "20"
     }
   },
-  "runArgs": ["--name", "padeliz-frontend-manager"],
+  "runArgs": [
+    "--name",
+    "padeliz-frontend-manager",
+    "-p",
+    "8083:8083",
+    "-p",
+    "8084:8084",
+    "-p",
+    "20000:20000",
+    "-p",
+    "20001:20001",
+    "-p",
+    "20002:20002",
+    "-p",
+    "20006:20006"
+  ],
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
   "mounts": [
     "source=padeliz_node_modules,target=${containerWorkspaceFolder}/node_modules,type=volume,volume-nocopy",
@@ -17,7 +32,8 @@
     "EXPO_USE_IPV6": "0",
     "EXPO_DEV_HOST": "host.docker.internal",
     "REACT_NATIVE_PACKAGER_HOSTNAME": "host.docker.internal",
-    "WATCHPACK_POLLING": "true"
+    "WATCHPACK_POLLING": "true",
+    "CI": "false"
   },
   "forwardPorts": [8083, 8084, 20000, 20001, 20002, 20006],
   "portsAttributes": {

@@ -3,8 +3,11 @@
  * Displays individual resource fields as editable form fields
  */
 
+import ManagerFileUpload from '@/components/ui/ManagerFileUpload';
 import { ApiResourceMetadata } from '@/types/api/metadata';
 import { formatField } from '@/utils/fieldFormatter';
+import { isNestedRelationProperty } from '@/utils/nestedRelationProperty';
+import { getUploadConfig } from '@/utils/uploadMetadata';
 import React from 'react';
 import { Text, View } from 'react-native';
 import FormFieldSelector from '../ui/FormFieldSelector';
@@ -20,6 +23,8 @@ export interface ResourceFieldEditProps {
   error?: string;
   excludeFields?: string[];
   disabled?: boolean;
+  parentId?: number | null;
+  onUploadChanged?: () => void;
 }
 
 export default function ResourceFieldEdit({
@@ -31,25 +36,41 @@ export default function ResourceFieldEdit({
   error,
   excludeFields = [],
   disabled = false,
+  parentId = null,
+  onUploadChanged,
 }: ResourceFieldEditProps) {
-  // Skip excluded fields
   if (excludeFields.includes(fieldKey)) {
     return null;
   }
 
-  // Get field definition from metadata
   const fieldDefinition = metadata.swagger_schema.properties[fieldKey];
   if (!fieldDefinition) {
     return null;
   }
 
-  // Skip array fields (relationships); they are rendered as linked-entity
-  // tables further down the page.
+  const uploadCfg = getUploadConfig(fieldDefinition);
+  if (uploadCfg) {
+    return (
+      <ManagerFileUpload
+        label={fieldDefinition.title || fieldKey}
+        config={uploadCfg}
+        parentId={parentId}
+        value={fieldValue}
+        disabled={disabled}
+        onChanged={onUploadChanged}
+        error={error}
+      />
+    );
+  }
+
   if (fieldDefinition.type === 'array') {
     return null;
   }
 
-  // Use unified formatter to determine field configuration
+  if (isNestedRelationProperty(fieldDefinition)) {
+    return null;
+  }
+
   const fieldInfo = formatField({
     metadata,
     fieldKey,
@@ -57,9 +78,6 @@ export default function ResourceFieldEdit({
     mode: 'form',
   });
 
-  // Read-only fields stay visible while editing, rendered with the same
-  // gray-pill display the view mode uses so toggling Edit doesn't change
-  // the visible field set.
   if (!fieldInfo.isEditable) {
     return (
       <ResourceFieldDisplay
@@ -71,12 +89,10 @@ export default function ResourceFieldEdit({
     );
   }
 
-  // Handle field value change
   const handleChange = (value: any) => {
     onChange(fieldKey, value);
   };
 
-  // Handle field blur
   const handleBlur = () => {
     onBlur(fieldKey);
   };
@@ -92,31 +108,27 @@ export default function ResourceFieldEdit({
 
       <View>
         {fieldInfo.inputType === 'foreign_key_selector' ? (
-          <>
-            <FormFieldSelector
-              fieldKey={fieldKey}
-              fieldValue={fieldValue}
-              metadata={metadata}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              error={error}
-              disabled={disabled}
-              placeholder={fieldInfo.placeholder}
-            />
-          </>
+          <FormFieldSelector
+            fieldKey={fieldKey}
+            fieldValue={fieldValue}
+            metadata={metadata}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            error={error}
+            disabled={disabled}
+            placeholder={fieldInfo.placeholder}
+          />
         ) : (
-          <>
-            <ValidationField
-              field={{ ...fieldDefinition, name: fieldKey }}
-              metadata={metadata}
-              value={fieldInfo.inputValue}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              error={error}
-              disabled={disabled}
-              placeholder={fieldInfo.placeholder}
-            />
-          </>
+          <ValidationField
+            field={{ ...fieldDefinition, name: fieldKey }}
+            metadata={metadata}
+            value={fieldInfo.inputValue}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            error={error}
+            disabled={disabled}
+            placeholder={fieldInfo.placeholder}
+          />
         )}
       </View>
     </View>

@@ -14,6 +14,9 @@ import {
   View,
 } from 'react-native';
 
+/** Above TopNavigation z-[99999] on web */
+const MODAL_Z_INDEX = 200000;
+
 export default function FloatingDropdown({
   trigger,
   isOpen,
@@ -27,55 +30,63 @@ export default function FloatingDropdown({
   footer,
 }: FloatingDropdownProps) {
   const screenHeight = Dimensions.get('window').height;
-  const maxModalHeight = maxHeight ? Math.min(maxHeight, screenHeight * 0.8) : screenHeight * 0.8;
+  const maxModalHeight = maxHeight
+    ? Math.min(maxHeight, screenHeight * 0.8)
+    : screenHeight * 0.8;
+
   return (
     <>
-      {/* Trigger */}
-      <Pressable
-        onPress={() => !disabled && onOpen()}
-        disabled={disabled}
-      >
+      <Pressable onPress={() => !disabled && onOpen()} disabled={disabled}>
         {trigger}
       </Pressable>
 
-      {/* Floating Modal */}
       <Modal
         visible={isOpen}
         transparent={true}
         animationType="fade"
         onRequestClose={onClose}
         statusBarTranslucent={Platform.OS === 'android'}
+        {...(Platform.OS === 'web'
+          ? ({ style: { zIndex: MODAL_Z_INDEX } } as any)
+          : {})}
       >
         <Pressable
           className="flex-1 bg-black bg-opacity-50 justify-center items-center"
+          style={
+            Platform.OS === 'web'
+              ? ({ zIndex: MODAL_Z_INDEX } as any)
+              : undefined
+          }
           onPress={onClose}
         >
-          <View
+          <Pressable
+            onPress={e => {
+              // Prevent backdrop dismiss when interacting with the panel
+              e?.stopPropagation?.();
+            }}
             className="bg-white rounded-lg shadow-lg"
             style={{
               minWidth,
               maxHeight: maxModalHeight,
+              ...(Platform.OS === 'web'
+                ? ({ zIndex: MODAL_Z_INDEX + 1 } as any)
+                : {}),
             }}
           >
-            {/* Header */}
             <View className="px-4 py-3 border-b border-gray-200">
               <Text className="text-lg font-semibold text-gray-900">
                 {title}
               </Text>
             </View>
 
-            {/* Content */}
-            <View className="flex-1 bg-white">
-              {children}
-            </View>
+            <View className="flex-1 bg-white">{children}</View>
 
-            {/* Footer */}
             {footer && (
               <View className="px-4 py-3 border-t border-gray-200 bg-white">
                 {footer}
               </View>
             )}
-          </View>
+          </Pressable>
         </Pressable>
       </Modal>
     </>

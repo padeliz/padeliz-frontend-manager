@@ -11,6 +11,8 @@ export interface FieldFormatterOptions {
   fieldKey: string;
   fieldValue: any;
   mode: 'display' | 'form' | 'both';
+  /** Full API record — used to resolve BelongsTo nest labels for FK fields */
+  record?: Record<string, any> | null;
 }
 
 export interface FieldFormatterResult {
@@ -62,6 +64,8 @@ export type FormInputType =
   | 'date'
   | 'datetime'
   | 'time'
+  | 'year'
+  | 'color'
   | 'select'
   | 'checkbox'
   | 'foreign_key_selector'

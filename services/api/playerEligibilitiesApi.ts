@@ -44,7 +44,7 @@ export class PlayerEligibilitiesApiService extends BaseApiService {
       });
     }
 
-    const endpoint = `/player-eligibilities${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const endpoint = `/eligibilities${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     return this.get<{ data: ApiPlayerEligibility[]; meta: any }>(endpoint);
   }
 
@@ -54,9 +54,7 @@ export class PlayerEligibilitiesApiService extends BaseApiService {
   async getPlayerEligibility(
     id: number
   ): Promise<{ data: ApiPlayerEligibility }> {
-    return this.get<{ data: ApiPlayerEligibility }>(
-      `/player-eligibilities/${id}`
-    );
+    return this.get<{ data: ApiPlayerEligibility }>(`/eligibilities/${id}`);
   }
 
   /**
@@ -65,10 +63,7 @@ export class PlayerEligibilitiesApiService extends BaseApiService {
   async createPlayerEligibility(
     data: Partial<ApiPlayerEligibility>
   ): Promise<{ data: ApiPlayerEligibility }> {
-    return this.post<{ data: ApiPlayerEligibility }>(
-      '/player-eligibilities',
-      data
-    );
+    return this.post<{ data: ApiPlayerEligibility }>('/eligibilities', data);
   }
 
   /**
@@ -79,7 +74,7 @@ export class PlayerEligibilitiesApiService extends BaseApiService {
     data: Partial<ApiPlayerEligibility>
   ): Promise<{ data: ApiPlayerEligibility }> {
     return this.put<{ data: ApiPlayerEligibility }>(
-      `/player-eligibilities/${id}`,
+      `/eligibilities/${id}`,
       data
     );
   }
@@ -88,7 +83,7 @@ export class PlayerEligibilitiesApiService extends BaseApiService {
    * Delete an player eligibility
    */
   async deletePlayerEligibility(id: number): Promise<void> {
-    return this.delete(`/player-eligibilities/${id}`);
+    return this.delete(`/eligibilities/${id}`);
   }
 
   /**
@@ -98,9 +93,9 @@ export class PlayerEligibilitiesApiService extends BaseApiService {
     ids: number[]
   ): Promise<ApiResponse<ApiBulkDeleteResponse>> {
     return this.bulkDelete<ApiResponse<ApiBulkDeleteResponse>>(
-      '/player-eligibilities/bulk',
+      '/eligibilities/bulk',
       {
-        player_eligibility_ids: ids,
+        eligibility_ids: ids,
       }
     );
   }

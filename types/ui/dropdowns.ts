@@ -34,6 +34,9 @@ export interface SingleSelectDropdownProps {
   maxHeight?: number;
   minWidth?: number;
   defaultValue?: string | number | boolean;
+  searchable?: boolean;
+  onSearch?: (query: string) => void;
+  loading?: boolean;
 }
 
 export interface MultiSelectDropdownProps {

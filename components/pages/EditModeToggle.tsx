@@ -14,6 +14,8 @@ export interface EditModeToggleProps {
   onCancel: () => void;
   loading?: boolean;
   disabled?: boolean;
+  /** When false, hide Save (parent chrome owns it). Default true. */
+  showSave?: boolean;
 }
 
 export default function EditModeToggle({
@@ -23,6 +25,7 @@ export default function EditModeToggle({
   onCancel,
   loading = false,
   disabled = false,
+  showSave = true,
 }: EditModeToggleProps) {
   if (isEditing) {
     return (
@@ -45,27 +48,23 @@ export default function EditModeToggle({
           </Text>
         </Pressable>
 
-        <Pressable
-          onPress={onSave}
-          disabled={loading || disabled}
-          className={`px-4 py-2 rounded-lg ${
-            loading || disabled
-              ? 'bg-gray-300'
-              : 'bg-blue-600'
-          } flex-row items-center`}
-        >
-          {loading && (
-            <View className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-          )}
-          <Ionicons
-            name="checkmark"
-            size={16}
-            className="text-white mr-1"
-          />
-          <Text className="text-white text-sm font-medium">
-            {loading ? 'Saving...' : 'Save'}
-          </Text>
-        </Pressable>
+        {showSave && (
+          <Pressable
+            onPress={onSave}
+            disabled={loading || disabled}
+            className={`px-4 py-2 rounded-lg ${
+              loading || disabled ? 'bg-gray-300' : 'bg-blue-600'
+            } flex-row items-center`}
+          >
+            {loading && (
+              <View className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+            )}
+            <Ionicons name="checkmark" size={16} className="text-white mr-1" />
+            <Text className="text-white text-sm font-medium">
+              {loading ? 'Saving...' : 'Save'}
+            </Text>
+          </Pressable>
+        )}
       </View>
     );
   }
@@ -78,13 +77,8 @@ export default function EditModeToggle({
         disabled ? 'bg-gray-300' : 'bg-blue-600'
       } flex-row items-center`}
     >
-      <Ionicons
-        name="create-outline"
-        size={16}
-        className="text-white mr-1"
-      />
+      <Ionicons name="create-outline" size={16} className="text-white mr-1" />
       <Text className="text-white text-sm font-medium">Edit</Text>
     </Pressable>
   );
 }
-

@@ -173,6 +173,7 @@ function mapInputTypeToColumnType(
       return 'boolean';
 
     case 'number':
+    case 'year':
       return 'number';
 
     case 'date':
@@ -185,6 +186,7 @@ function mapInputTypeToColumnType(
     case 'url':
     case 'textarea':
     case 'select':
+    case 'color':
     case 'foreign_key_selector':
     case 'readonly':
     default:
@@ -213,12 +215,15 @@ function identifyForeignKeyMappings(
 
   Object.entries(properties).forEach(([key, field]: [string, any]) => {
     if (ForeignKeyService.isForeignKeyField(key, field, metadata)) {
+      const filterRelated =
+        metadata.filterable_fields?.[key]?.related_schema_name || null;
       const linkedResourceField = key.replace(/_id$/, '');
       const linkedResourceDefinition = properties[linkedResourceField];
       const ref: string | undefined = linkedResourceDefinition?.oneOf?.find(
         (entry: any) => entry?.$ref
       )?.$ref;
-      const linkedSchemaName = ref ? ref.split('/').pop() || null : null;
+      const linkedSchemaName =
+        filterRelated || (ref ? ref.split('/').pop() || null : null);
 
       mappings.set(key, {
         linkedResourceField,
@@ -249,6 +254,12 @@ export function extractLinkedResourceSchemaNames(
       schemas.add(linkedSchemaName);
     }
   });
+  // Also include related_schema_name from filterable FK defs without nested props
+  Object.entries(metadata.filterable_fields || {}).forEach(([, def]) => {
+    if (def?.type === 'foreign_key' && def.related_schema_name) {
+      schemas.add(def.related_schema_name);
+    }
+  });
   return Array.from(schemas);
 }
 
@@ -271,8 +282,13 @@ function createLinkedResourceColumn(
     }
 
     let displayValue: any;
+    let linkedId: number | null = null;
 
     if (linkedResourceMetadata) {
+      linkedId = PrimaryKeyService.extractId(
+        linkedResource,
+        linkedResourceMetadata
+      );
       const displayField = linkedResourceMetadata.display_field;
       if (displayField && linkedResource[displayField] !== undefined && linkedResource[displayField] !== null) {
         displayValue = linkedResource[displayField];
@@ -289,6 +305,25 @@ function createLinkedResourceColumn(
       return <Text className="text-sm text-gray-500">-</Text>;
     }
 
+    const path = linkedResourceMetadata?.resource_path;
+    if (path && linkedId != null) {
+      const LinkedViewLink = () => {
+        const router = useRouter();
+        return (
+          <Pressable
+            onPress={() => router.push(`/${path}/${linkedId}` as any)}
+            className="flex-row items-center"
+          >
+            <Text className="text-blue-600 text-sm underline mr-1">
+              {String(displayValue)}
+            </Text>
+            <Ionicons name="open-outline" size={14} className="text-blue-600" />
+          </Pressable>
+        );
+      };
+      return <LinkedViewLink />;
+    }
+
     return (
       <Text className="text-sm text-gray-900">{String(displayValue)}</Text>
     );
@@ -296,7 +331,7 @@ function createLinkedResourceColumn(
 
   const fieldInfo = formatField({
     metadata,
-    fieldKey: linkedResourceField,
+    fieldKey: foreignKeyField,
     fieldValue: null,
     mode: 'display',
   });
@@ -347,10 +382,8 @@ function createViewLinkRenderer(
         if (onView) {
           // Use custom view handler if provided
           onView(resourceId);
-        } else {
-          // Fallback to default navigation
-          const resourceName = metadata.schema_name.toLowerCase();
-          router.push(`/${resourceName}/${resourceId}` as any);
+        } else if (metadata.resource_path) {
+          router.push(`/${metadata.resource_path}/${resourceId}` as any);
         }
       };
 
@@ -417,7 +450,13 @@ export function generateColumnsFromMetadata(
       return;
     }
 
-    if (field.readOnly && key !== primaryKeyField) {
+    // Keep display_field even when readOnly (e.g. Player computed `name`)
+    // so view-link columns still appear.
+    if (
+      field.readOnly &&
+      key !== primaryKeyField &&
+      metadata.display_field !== key
+    ) {
       return;
     }
 
@@ -462,6 +501,12 @@ export function generateColumnsFromMetadata(
     if (!isForeignKey) {
       if (metadata.display_field === key) {
         column.render = createViewLinkRenderer(key, metadata, onView);
+      } else if (
+        !metadata.display_field &&
+        onView &&
+        key === primaryKeyField
+      ) {
+        column.render = createViewLinkRenderer(key, metadata, onView);
       } else {
         column.render = (item: any) => {
           const fieldInfo = formatField({
@@ -478,22 +523,25 @@ export function generateColumnsFromMetadata(
     columns.push(column);
   });
 
-  // Sort columns: primary key first, then required fields, then others
+  // Sort columns: primary key first, then display_field, then required, then others
   columns.sort((a, b) => {
     const aKey = a.key;
     const bKey = b.key;
 
-    // Primary key first
     if (aKey === primaryKeyField) return -1;
     if (bKey === primaryKeyField) return 1;
 
-    // Required fields next
+    const displayField = metadata.display_field;
+    if (displayField) {
+      if (aKey === displayField) return -1;
+      if (bKey === displayField) return 1;
+    }
+
     const aRequired = required.includes(aKey);
     const bRequired = required.includes(bKey);
     if (aRequired && !bRequired) return -1;
     if (!aRequired && bRequired) return 1;
 
-    // Then by name
     return aKey.localeCompare(bKey);
   });
 

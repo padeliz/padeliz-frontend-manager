@@ -6,6 +6,8 @@
 export interface ApiResourceMetadata {
   version: string;
   schema_name: string;
+  /** Manager API + Expo UI path segment, e.g. "locations", "edition-divisions" */
+  resource_path: string;
   swagger_schema: {
     required: string[];
     properties: Record<string, any>;

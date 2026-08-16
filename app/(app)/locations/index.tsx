@@ -58,6 +58,7 @@ export default function LocationsPage() {
     description:
       'Manage padel locations with advanced search, filters, and bulk operations',
     onAdd: handleAddLocation,
+    onView: handleViewLocation,
     onExport: handleExportAll,
     initialPage: 1,
     initialPerPage: 10,

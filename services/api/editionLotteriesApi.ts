@@ -46,7 +46,7 @@ export class EditionLotteriesApiService extends BaseApiService {
       });
     }
 
-    const endpoint = `/lotteries${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const endpoint = `/edition-lotteries${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     return this.get<{ data: ApiEditionLottery[]; meta: any }>(endpoint);
   }
 
@@ -63,7 +63,7 @@ export class EditionLotteriesApiService extends BaseApiService {
   async createLottery(
     data: Partial<ApiEditionLottery>
   ): Promise<{ data: ApiEditionLottery }> {
-    return this.post<{ data: ApiEditionLottery }>('/lotteries', data);
+    return this.post<{ data: ApiEditionLottery }>('/edition-lotteries', data);
   }
 
   /**
@@ -95,7 +95,7 @@ export class EditionLotteriesApiService extends BaseApiService {
     return this.bulkDelete<ApiResponse<ApiBulkDeleteResponse>>(
       '/edition-lotteries/bulk',
       {
-        edition_lottery_ids: ids,
+        lottery_ids: ids,
       }
     );
   }

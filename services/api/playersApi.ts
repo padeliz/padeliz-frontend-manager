@@ -116,6 +116,18 @@ export class PlayersApiService extends BaseApiService {
   }
 
   /**
+   * Generate or refresh cached PDF circular avatar for a player.
+   */
+  async generatePdfAvatar(
+    playerId: number,
+    isCollectingPoints: boolean
+  ): Promise<{ success: boolean; data: { pdf_avatar_url: string | null } }> {
+    return this.post(`/players/${playerId}/pdf-avatar`, {
+      is_collecting_points: isCollectingPoints,
+    });
+  }
+
+  /**
    * Get players metadata
    */
   async getMetadata(): Promise<{ data: any }> {
