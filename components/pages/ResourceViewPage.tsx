@@ -117,7 +117,7 @@ export default function ResourceViewPage<
       };
       detectLinkedEntities();
     } else if (!showLinkedEntities) {
-      setLinkedEntities([]);
+      setLinkedEntities(prev => (prev.length === 0 ? prev : []));
     }
   }, [
     metadata,
@@ -220,9 +220,10 @@ export default function ResourceViewPage<
     onChromeStateChange({
       save: handleSave,
       refresh: handleRefresh,
-      edit: handleEdit,
-      cancel: handleCancel,
-      isEditing,
+      ...(updateResource
+        ? { edit: handleEdit, cancel: handleCancel }
+        : {}),
+      isEditing: !!updateResource && isEditing,
       isSaving: saving,
       canSave: !!updateResource && isEditing,
       isDirty: dirty,
@@ -282,6 +283,7 @@ export default function ResourceViewPage<
       if (excludeFields.includes(key)) return false;
       const def = metadata.swagger_schema.properties[key];
       if (getUploadConfig(def)) return true;
+      if (def?.type === 'array') return false;
       if (isNestedRelationProperty(def)) return false;
       return true;
     }
@@ -357,19 +359,20 @@ export default function ResourceViewPage<
                 <Text className="text-gray-700 text-sm ml-1">Refresh</Text>
               </Pressable>
             )}
-            <EditModeToggle
-              isEditing={isEditing}
-              onEdit={handleEdit}
-              onSave={handleSave}
-              onCancel={handleCancel}
-              loading={saving}
-              disabled={!updateResource}
-            />
+            {updateResource && (
+              <EditModeToggle
+                isEditing={isEditing}
+                onEdit={handleEdit}
+                onSave={handleSave}
+                onCancel={handleCancel}
+                loading={saving}
+              />
+            )}
           </View>
         </View>
       )}
 
-      {embedded && (
+      {embedded && updateResource && (
         <View className="flex-row justify-end mb-3">
           <EditModeToggle
             isEditing={isEditing}
@@ -377,7 +380,6 @@ export default function ResourceViewPage<
             onSave={handleSave}
             onCancel={handleCancel}
             loading={saving}
-            disabled={!updateResource}
             showSave={externalChrome ? false : showSave}
           />
         </View>

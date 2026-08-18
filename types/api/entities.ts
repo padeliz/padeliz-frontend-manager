@@ -92,6 +92,12 @@ export interface ApiPlayer {
   user_types?: string[];
   instagram_username?: string;
   facebook_username?: string;
+  created_via?: 'app' | 'manager' | 'csv' | null;
+  created_via_format?: string | null;
+  created_via_import_id?: number | null;
+  pdf_avatar_url?: string | null;
+  emails?: { id_player_email: number; email: string; purposes?: string[]; is_primary?: boolean }[];
+  phones?: { id_player_phone: number; phone: string; purposes?: string[]; is_primary?: boolean }[];
   inserted_at: number;
   updated_at?: number;
   uploaded_profile_images?: { id: number; url: string }[];
@@ -266,4 +272,51 @@ export interface ApiPlayerEligibility {
   inserted_at: number;
   updated_at?: number;
   resubmitted_at?: number;
+}
+
+export interface ApiPlayerImportRow {
+  id_player_import_row: number;
+  player_import_id: number;
+  row_index: number;
+  first_name?: string | null;
+  middle_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  player_id?: number | null;
+  action: 'created' | 'attached';
+  inserted_at: number;
+  updated_at?: number;
+}
+
+export interface ApiPlayerImport {
+  id_player_import: number;
+  imported_by_player_id?: number | null;
+  format: string;
+  original_filename: string;
+  included_count: number;
+  created_count: number;
+  attached_count: number;
+  inserted_at: number;
+  updated_at?: number;
+  importedByPlayer?: ApiPlayer | null;
+  rows?: ApiPlayerImportRow[];
+}
+
+export interface ApiPlayerImportPreviewMapping {
+  status: 'mapped' | 'unmapped' | 'conflict';
+  matched_by: 'email' | 'phone' | null;
+  player: ApiPlayer | null;
+  candidates: ApiPlayer[];
+  name_matches: ApiPlayer[];
+}
+
+export interface ApiPlayerImportPreviewRow {
+  index: number;
+  first_name: string;
+  middle_name: string | null;
+  last_name: string | null;
+  email: string;
+  phone: string;
+  mapping: ApiPlayerImportPreviewMapping;
 }

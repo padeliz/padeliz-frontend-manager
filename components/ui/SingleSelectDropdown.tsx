@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   ScrollView,
   Text,
@@ -30,6 +31,7 @@ export default function SingleSelectDropdown({
   searchable = false,
   onSearch,
   loading = false,
+  clearable = false,
 }: SingleSelectDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -56,24 +58,51 @@ export default function SingleSelectDropdown({
     return options.filter(opt => opt.label.toLowerCase().includes(needle));
   }, [options, query, searchable]);
 
-  const getDisplayText = () => {
-    const currentValue = selectedValue !== null && selectedValue !== undefined
+  const currentValue =
+    selectedValue !== null && selectedValue !== undefined
       ? selectedValue
       : defaultValue;
 
+  const selectedOption = options.find(
+    opt =>
+      opt.value === currentValue ||
+      String(opt.value) === String(currentValue) ||
+      (typeof opt.value === 'number' &&
+        Number(opt.value) === Number(currentValue) &&
+        Number.isFinite(Number(currentValue)))
+  );
+
+  const getDisplayText = () => {
     if (currentValue === null || currentValue === undefined) {
       return placeholder;
     }
+    return selectedOption?.label || String(currentValue);
+  };
 
-    const option = options.find(
-      opt =>
-        opt.value === currentValue ||
-        String(opt.value) === String(currentValue) ||
-        (typeof opt.value === 'number' &&
-          Number(opt.value) === Number(currentValue) &&
-          Number.isFinite(Number(currentValue)))
+  const showClear =
+    clearable && currentValue !== null && currentValue !== undefined;
+
+  const avatar = (url?: string | null, testID?: string) => {
+    if (url === undefined) return null;
+    if (url) {
+      return (
+        <Image
+          testID={testID}
+          source={{ uri: url }}
+          className="w-6 h-6 rounded-full mr-2"
+          style={{ width: 24, height: 24, borderRadius: 12, marginRight: 8 }}
+        />
+      );
+    }
+    return (
+      <View
+        testID={testID}
+        className="w-6 h-6 rounded-full mr-2 bg-gray-200 items-center justify-center"
+        style={{ width: 24, height: 24, borderRadius: 12, marginRight: 8 }}
+      >
+        <Ionicons name="person" size={14} className="text-gray-500" />
+      </View>
     );
-    return option?.label || String(currentValue);
   };
 
   const trigger = (
@@ -86,6 +115,7 @@ export default function SingleSelectDropdown({
       `}
       style={{ minWidth: 60 }}
     >
+      {selectedOption ? avatar(selectedOption.imageUrl, 'dropdown-trigger-image') : null}
       <Text
         className={`
           text-base flex-1
@@ -97,6 +127,19 @@ export default function SingleSelectDropdown({
       >
         {getDisplayText()}
       </Text>
+      {showClear ? (
+        <Pressable
+          testID="dropdown-clear"
+          onPress={e => {
+            e?.stopPropagation?.();
+            onSelectionChange(null);
+          }}
+          hitSlop={8}
+          className="mr-1 p-1"
+        >
+          <Ionicons name="close-circle" size={18} className="text-gray-400" />
+        </Pressable>
+      ) : null}
       <Ionicons
         name="chevron-down"
         size={20}
@@ -164,6 +207,8 @@ export default function SingleSelectDropdown({
                     <View className="w-2 h-2 bg-white rounded-full" />
                   )}
                 </View>
+
+                {avatar(option.imageUrl, `dropdown-option-image-${option.value}`)}
 
                 <Text
                   className={`

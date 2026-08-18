@@ -23,6 +23,12 @@ type Props = {
   onBeforeNavigate?: () => boolean | Promise<boolean>;
 };
 
+function isSegmentActive(pathname: string, match: string): boolean {
+  const segment = match.replace(/^\/+|\/+$/g, '');
+  if (!segment) return false;
+  return pathname.split('/').includes(segment);
+}
+
 export default function EditionTabsBar({ tabs, onBeforeNavigate }: Props) {
   const pathname = usePathname();
   const router = useRouter();
@@ -37,7 +43,7 @@ export default function EditionTabsBar({ tabs, onBeforeNavigate }: Props) {
       {tabs.map(tab => {
         const isAction = typeof tab.onPress === 'function';
         const isLive = tab.variant === 'live';
-        const isActive = !isAction && pathname.includes(tab.match);
+        const isActive = !isAction && isSegmentActive(pathname, tab.match);
         return (
           <Pressable
             key={isAction ? `action-${tab.label}` : tab.href}

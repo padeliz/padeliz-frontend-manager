@@ -8,6 +8,7 @@ import { ReactNode } from 'react';
 export interface DropdownOption {
   label: string;
   value: string | number | boolean;
+  imageUrl?: string | null;
 }
 
 export interface FloatingDropdownProps {
@@ -37,6 +38,8 @@ export interface SingleSelectDropdownProps {
   searchable?: boolean;
   onSearch?: (query: string) => void;
   loading?: boolean;
+  /** When true, a clear control calls onSelectionChange(null). Default false. */
+  clearable?: boolean;
 }
 
 export interface MultiSelectDropdownProps {

@@ -1,6 +1,5 @@
 /**
- * Players Management Page
- * Complete players resource management using the reusable system
+ * Players list (hub tab).
  */
 
 import ResourceListPage from '@/components/pages/ResourceListPage';
@@ -12,12 +11,9 @@ import React, { useCallback } from 'react';
 
 const playersApi = new PlayersApiService();
 
-export default function PlayersPage() {
+export default function PlayersListPage() {
   const router = useRouter();
 
-  // Columns will be generated dynamically from metadata
-
-  // Stable fetch functions using useCallback
   const fetchData = useCallback(async (params: any) => {
     const response = await playersApi.getPlayers(params);
     return {
@@ -28,11 +24,9 @@ export default function PlayersPage() {
   }, []);
 
   const bulkDelete = useCallback(async (ids: (string | number)[]) => {
-    const response = await playersApi.bulkDeletePlayers(ids as number[]);
-    return response;
+    return playersApi.bulkDeletePlayers(ids as number[]);
   }, []);
 
-  // Action handlers
   const handleAddPlayer = useCallback(() => {
     router.push('/players/add' as any);
   }, [router]);
@@ -44,11 +38,6 @@ export default function PlayersPage() {
     [router]
   );
 
-  const handleExportAll = useCallback((format: string) => {
-    // Custom export logic can be implemented here
-  }, []);
-
-  // Create resource page configuration using the hook
   const config = useResourcePageConfig<ApiPlayer>({
     resourceName: 'Player',
     resourceDisplayName: 'Player',
@@ -60,7 +49,6 @@ export default function PlayersPage() {
       'Manage padel players with advanced search, filters, and bulk operations',
     onAdd: handleAddPlayer,
     onView: handleViewPlayer,
-    onExport: handleExportAll,
     initialPage: 1,
     initialPerPage: 10,
     debounceMs: 300,
@@ -68,6 +56,7 @@ export default function PlayersPage() {
     showInstructions: false,
     enableBulkDelete: true,
     enableBulkExport: true,
+    embedded: true,
   });
 
   return <ResourceListPage config={config} />;

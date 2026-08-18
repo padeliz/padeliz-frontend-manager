@@ -48,4 +48,48 @@ describe('SingleSelectDropdown', () => {
     expect(queryByText('Bob')).toBeNull();
     expect(queryByText('Carol')).toBeNull();
   });
+
+  it('clearable defaults false and does not render dropdown-clear', () => {
+    const { getByText, queryByTestId } = render(
+      <SingleSelectDropdown
+        options={OPTIONS}
+        selectedValue={1}
+        onSelectionChange={() => undefined}
+        placeholder="Pick one"
+        title="Players"
+      />
+    );
+    expect(getByText('Alice')).toBeTruthy();
+    expect(queryByTestId('dropdown-clear')).toBeNull();
+  });
+
+  it('clearable true calls onSelectionChange(null) without selecting an option', () => {
+    const onSelectionChange = jest.fn();
+    const { getByTestId, queryByText } = render(
+      <SingleSelectDropdown
+        options={OPTIONS}
+        selectedValue={1}
+        onSelectionChange={onSelectionChange}
+        placeholder="Pick one"
+        title="Players"
+        clearable
+      />
+    );
+    fireEvent.press(getByTestId('dropdown-clear'));
+    expect(onSelectionChange).toHaveBeenCalledWith(null);
+    expect(queryByText('None')).toBeNull();
+  });
+
+  it('renders imageUrl on the selected option', () => {
+    const { getByTestId } = render(
+      <SingleSelectDropdown
+        options={[{ label: 'Ada', value: 1, imageUrl: 'https://img.test/a.png' }]}
+        selectedValue={1}
+        onSelectionChange={() => undefined}
+        placeholder="Pick one"
+        title="Players"
+      />
+    );
+    expect(getByTestId('dropdown-trigger-image')).toBeTruthy();
+  });
 });

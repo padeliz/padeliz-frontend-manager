@@ -20,7 +20,15 @@ function playerName(player: ApiPlayer): string {
 }
 
 function toOption(player: ApiPlayer): DropdownOption {
-  return { label: playerName(player), value: player.id_player };
+  return {
+    label: playerName(player),
+    value: player.id_player,
+    imageUrl: player.pdf_avatar_url ?? null,
+  };
+}
+
+export function playerToDropdownOption(player: ApiPlayer): DropdownOption {
+  return toOption(player);
 }
 
 export function usePlayerPicker({
