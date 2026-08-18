@@ -13,11 +13,12 @@ import { ResourceCreatePageProps } from '@/types/ui/pages';
 import { formatField } from '@/utils/fieldFormatter';
 import { isNestedRelationProperty } from '@/utils/nestedRelationProperty';
 import { PrimaryKeyService } from '@/utils/primaryKeyService';
+import { seedFormValuesFromQuery } from '@/utils/seedFormValuesFromQuery';
 import { getUploadConfig } from '@/utils/uploadMetadata';
 import { validateFormWithSubmission } from '@/utils/validationRules';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import ResourceFieldEdit from './ResourceFieldEdit';
 
@@ -34,7 +35,11 @@ export default function ResourceCreatePage<
     description,
     onBack,
     getViewPath,
+    seedFromQuery,
   } = config;
+
+  const searchParams = useLocalSearchParams();
+  const seededRef = useRef(false);
 
   const [values, setValues] = useState<Partial<T>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -51,6 +56,24 @@ export default function ResourceCreatePage<
   const metadata = getMetadata(resourceName);
   const metadataError = getError(resourceName);
   const metadataLoading = isLoading(resourceName);
+
+  useEffect(() => {
+    if (!seedFromQuery || !metadata || seededRef.current) return;
+    seededRef.current = true;
+    setValues(prev => {
+      const next = seedFormValuesFromQuery(
+        searchParams as Record<string, any>,
+        metadata,
+        {
+          seedFromQuery,
+          excludeFields,
+          currentValues: prev,
+        }
+      );
+      if (Object.keys(next).length === 0) return prev;
+      return { ...next, ...prev };
+    });
+  }, [excludeFields, metadata, searchParams, seedFromQuery]);
 
   const fieldKeys = useMemo(() => {
     if (!metadata?.swagger_schema?.properties) return [];

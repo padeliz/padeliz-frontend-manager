@@ -6,9 +6,13 @@ describe('Sidebar manager routes match API resource paths', () => {
 
     expect(hrefs).toContain('/edition-lotteries');
     expect(hrefs).toContain('/edition-lottery-luckies');
-    expect(hrefs).toContain('/prize-from-clubs');
-    expect(hrefs).toContain('/edition-lottery-rules');
+    expect(hrefs).toContain('/sponsors');
+    expect(hrefs).toContain('/sponsor-prizes');
+    expect(hrefs).toContain('/edition-lottery-prizes');
+    expect(hrefs).toContain('/edition-participations');
+    expect(hrefs).toContain('/edition-registrations');
 
+    expect(hrefs).not.toContain('/prize-from-clubs');
     expect(hrefs).not.toContain('/lotteries');
     expect(hrefs).not.toContain('/edition-lucky-ones');
     expect(hrefs).not.toContain('/prizes-from-clubs');

@@ -8,9 +8,15 @@ export class EditionLotteryRulesApiService extends BaseApiService {
       page?: number;
       per_page?: number;
       q?: string;
-      filters?: Record<string, string | number | boolean | undefined>;
+      filters?: {
+        lottery_id?: number;
+        lottery_prize_id?: number;
+        edition_division_id?: number;
+        gender?: string;
+        has_social_status?: string | boolean;
+        legal_age?: string | boolean;
+      };
       sort_by?: Record<string, 'asc' | 'desc' | undefined>;
-      with_luckies?: boolean;
     } = {}
   ): Promise<{ data: ApiEditionLotteryRule[]; meta: any }> {
     const queryParams = new URLSearchParams();
@@ -18,7 +24,6 @@ export class EditionLotteryRulesApiService extends BaseApiService {
     if (params.per_page)
       queryParams.append('per_page', params.per_page.toString());
     if (params.q) queryParams.append('q', params.q);
-    if (params.with_luckies) queryParams.append('with_luckies', '1');
     if (params.filters) {
       Object.entries(params.filters).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {

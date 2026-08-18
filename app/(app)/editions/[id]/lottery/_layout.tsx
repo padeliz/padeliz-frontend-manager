@@ -4,7 +4,9 @@ import EditionTabsBar, {
 import { usePageChrome } from '@/components/chrome/PageChromeProvider';
 import {
   parseEditionDivisionIdOptimistic,
+  parseLotteryId,
   withEdQuery,
+  withLotteryQuery,
 } from '@/utils/editionWorkspace';
 import {
   Slot,
@@ -23,10 +25,19 @@ const editionDivisionsApi = new EditionDivisionsApiService();
 
 export default function LotteryLayout() {
   const router = useRouter();
-  const localParams = useLocalSearchParams<{ id: string; ed?: string }>();
-  const globalParams = useGlobalSearchParams<{ id?: string; ed?: string }>();
+  const localParams = useLocalSearchParams<{
+    id: string;
+    ed?: string;
+    lottery?: string;
+  }>();
+  const globalParams = useGlobalSearchParams<{
+    id?: string;
+    ed?: string;
+    lottery?: string;
+  }>();
   const editionId = Number(localParams.id ?? globalParams.id);
   const edParam = globalParams.ed ?? localParams.ed;
+  const lotteryParam = globalParams.lottery ?? localParams.lottery;
   const { actions } = usePageChrome();
   const divisionsQuery = useQuery({
     queryKey: queryKeys.editionDivisions(editionId),
@@ -46,6 +57,8 @@ export default function LotteryLayout() {
     divisionsLoaded
   );
 
+  const lotteryId = parseLotteryId(lotteryParam);
+
   const onBeforeNavigate = useCallback(async () => {
     if (!actions?.isDirty) return true;
     const ok = await confirmDiscardDirty();
@@ -55,7 +68,7 @@ export default function LotteryLayout() {
   }, [actions]);
 
   const openLiveLottery = useCallback(() => {
-    const path = `/lottery-live/${editionId}`;
+    const path = withLotteryQuery(`/lottery-live/${editionId}`, lotteryId);
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       const url =
         typeof window.location?.origin === 'string'
@@ -65,35 +78,37 @@ export default function LotteryLayout() {
       return;
     }
     router.push(path as any);
-  }, [editionId, router]);
+  }, [editionId, lotteryId, router]);
 
   const tabs = useMemo((): EditionTabLink[] => {
     const base = `/editions/${editionId}/lottery`;
+    const href = (path: string) =>
+      withLotteryQuery(withEdQuery(`${base}${path}`, edId), lotteryId);
     return [
       {
         label: 'Prizes',
-        href: withEdQuery(`${base}/prizes`, edId),
+        href: href('/prizes'),
         match: '/lottery/prizes',
       },
       {
         label: 'Rules',
-        href: withEdQuery(`${base}/rules`, edId),
+        href: href('/rules'),
         match: '/lottery/rules',
       },
       {
         label: 'Luckies',
-        href: withEdQuery(`${base}/luckies`, edId),
+        href: href('/luckies'),
         match: '/lottery/luckies',
       },
       {
         label: 'Open LIVE lottery',
-        href: `/lottery-live/${editionId}`,
+        href: withLotteryQuery(`/lottery-live/${editionId}`, lotteryId),
         match: '/lottery-live',
         variant: 'live',
         onPress: openLiveLottery,
       },
     ];
-  }, [editionId, edId, openLiveLottery]);
+  }, [editionId, edId, lotteryId, openLiveLottery]);
 
   return (
     <View className="flex-1">

@@ -28,6 +28,8 @@ export function useResourcePageConfig<T extends { [key: string]: any } = any>({
   enableBulkDelete = true,
   enableBulkExport = true,
   customBulkActions = [],
+  embedded = false,
+  mutationsDisabled = false,
 }: HookResourcePageConfigOptions<T>) {
   // Generate default bulk actions based on configuration
   const bulkActions = useMemo(() => {
@@ -92,6 +94,8 @@ export function useResourcePageConfig<T extends { [key: string]: any } = any>({
       debounceMs,
       showDebugInfo,
       showInstructions,
+      embedded,
+      mutationsDisabled,
     }),
     [
       resourceName,
@@ -112,6 +116,8 @@ export function useResourcePageConfig<T extends { [key: string]: any } = any>({
       debounceMs,
       showDebugInfo,
       showInstructions,
+      embedded,
+      mutationsDisabled,
     ]
   );
 }

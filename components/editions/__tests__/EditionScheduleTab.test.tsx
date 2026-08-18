@@ -1,9 +1,10 @@
-import { PageChromeProvider } from '@/components/chrome/PageChromeProvider';
+import { PageChromeProvider, usePageChrome } from '@/components/chrome/PageChromeProvider';
 import EditionScheduleTab, {
   mergeCourtSelection,
 } from '@/components/editions/EditionScheduleTab';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
+import { Pressable } from 'react-native';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 const mockGetSchedule = jest.fn();
@@ -30,13 +31,21 @@ jest.mock('@/services/api/courtsApi', () => ({
   },
 }));
 
+function ChromeSaveProbe() {
+  const { actions } = usePageChrome();
+  return <Pressable testID="chrome-save" onPress={() => void actions?.save?.()} />;
+}
+
 function renderTab(ui: React.ReactElement) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
-      <PageChromeProvider>{ui}</PageChromeProvider>
+      <PageChromeProvider>
+        <ChromeSaveProbe />
+        {ui}
+      </PageChromeProvider>
     </QueryClientProvider>
   );
 }
@@ -149,19 +158,76 @@ describe('EditionScheduleTab', () => {
     expect(await findByText('2. Court A')).toBeTruthy();
   });
 
-  it('renders participations and allows collecting toggle', async () => {
-    const { findByText, getAllByText } = renderTab(
+  it('omits collecting flags and participation_ids from chrome Save', async () => {
+    const { findByText, getByTestId } = renderTab(
       <EditionScheduleTab
         editionDivisionId={9}
         locationId={3}
-        section="participations"
+        section="knobs"
       />
     );
-    expect(await findByText(/Alice/)).toBeTruthy();
-    expect(await findByText(/Bob/)).toBeTruthy();
-    const collectingLabels = getAllByText('Collecting points');
-    expect(collectingLabels.length).toBeGreaterThanOrEqual(2);
-    fireEvent.press(collectingLabels[1]);
+    await findByText('Courts');
+
+    fireEvent.press(getByTestId('chrome-save'));
+    await waitFor(() => {
+      expect(mockUpdateForm).toHaveBeenCalled();
+    });
+    const saveBody = mockUpdateForm.mock.calls[0][1];
+    expect(saveBody).not.toHaveProperty('is_collecting_points');
+    expect(saveBody).not.toHaveProperty('participation_ids');
+  });
+
+  it('omits collecting flags and participation_ids from Preview persist and preview body', async () => {
+    const { findByText, getByText } = renderTab(
+      <EditionScheduleTab
+        editionDivisionId={9}
+        locationId={3}
+        section="knobs"
+      />
+    );
+    await findByText('Courts');
+    fireEvent.press(getByText('Preview'));
+    await waitFor(() => {
+      expect(mockUpdateForm).toHaveBeenCalled();
+      expect(mockPreview).toHaveBeenCalled();
+    });
+    const previewPersist = mockUpdateForm.mock.calls[0][1];
+    expect(previewPersist).not.toHaveProperty('is_collecting_points');
+    expect(previewPersist).not.toHaveProperty('participation_ids');
+    const previewBody = mockPreview.mock.calls[0][1];
+    expect(previewBody).not.toHaveProperty('is_collecting_points');
+    expect(previewBody).not.toHaveProperty('participation_ids');
+  });
+
+  it('omits collecting flags and participation_ids from Generate', async () => {
+    const { findByText, getByText } = renderTab(
+      <EditionScheduleTab
+        editionDivisionId={9}
+        locationId={3}
+        section="knobs"
+      />
+    );
+    await findByText('Courts');
+    fireEvent.press(getByText('Generate'));
+    await waitFor(() => {
+      expect(mockGenerate).toHaveBeenCalled();
+    });
+    const generateBody = mockGenerate.mock.calls[0][1];
+    expect(generateBody).not.toHaveProperty('is_collecting_points');
+    expect(generateBody).not.toHaveProperty('participation_ids');
+  });
+
+  it('does not render a participations section', async () => {
+    const { findByText, queryByText } = renderTab(
+      <EditionScheduleTab
+        editionDivisionId={9}
+        locationId={3}
+        section="knobs"
+      />
+    );
+    await findByText('Schedule knobs');
+    expect(queryByText('Participations order')).toBeNull();
+    expect(queryByText('Collecting points')).toBeNull();
   });
 
   it('disables generate when scores exist', async () => {

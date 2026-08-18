@@ -16,6 +16,7 @@ export function useResourceCreatePageConfig<
   description,
   onBack,
   getViewPath,
+  seedFromQuery,
 }: HookResourceCreatePageConfigOptions<T>) {
   const defaultTitle = useMemo(
     () => title || `Add ${resourceDisplayName}`,
@@ -38,6 +39,7 @@ export function useResourceCreatePageConfig<
       description: defaultDescription,
       onBack,
       getViewPath,
+      seedFromQuery,
     }),
     [
       resourceName,
@@ -48,6 +50,7 @@ export function useResourceCreatePageConfig<
       defaultDescription,
       onBack,
       getViewPath,
+      seedFromQuery,
     ]
   );
 }

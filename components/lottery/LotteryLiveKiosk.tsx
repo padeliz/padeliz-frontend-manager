@@ -4,7 +4,6 @@
 
 import { resolveBoardAsset } from '@/components/editions/editionLotteryUtils';
 import { queryKeys } from '@/lib/queryClient';
-import { EditionLotteriesApiService } from '@/services/api/editionLotteriesApi';
 import { EditionsApiService } from '@/services/api/editionsApi';
 import { lotteryLiveApi } from '@/services/api/lotteryLiveApi';
 import { LotteryLiveState, LotteryLucky } from '@/types/api/edition';
@@ -24,11 +23,11 @@ import {
   View,
 } from 'react-native';
 
-const lotteriesApi = new EditionLotteriesApiService();
 const editionsApi = new EditionsApiService();
 
 type Props = {
   editionId: number;
+  lotteryId?: number | null;
 };
 
 function getFirstTextSize(text: string, hasImage: boolean): number {
@@ -376,12 +375,20 @@ function InProgressLayout({
   );
 }
 
-export default function LotteryLiveKiosk({ editionId }: Props) {
+export default function LotteryLiveKiosk({
+  editionId,
+  lotteryId: lotteryIdProp = null,
+}: Props) {
   const [live, setLive] = useState<LotteryLiveState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(0);
   const announcedIds = useRef<Set<number>>(new Set());
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const lotteryId =
+    lotteryIdProp != null && Number.isFinite(Number(lotteryIdProp))
+      ? Number(lotteryIdProp)
+      : null;
 
   const editionQuery = useQuery({
     queryKey: queryKeys.edition(editionId),
@@ -392,19 +399,6 @@ export default function LotteryLiveKiosk({ editionId }: Props) {
     enabled: Number.isFinite(editionId),
   });
   const finalized = !!(editionQuery.data as any)?.finalized_at;
-
-  const lotteryIdQuery = useQuery({
-    queryKey: queryKeys.editionLotteries(editionId),
-    queryFn: async () => {
-      const res = await lotteriesApi.getLotteries({
-        per_page: 20,
-        filters: { edition_id: editionId },
-      });
-      return res.data || [];
-    },
-    enabled: Number.isFinite(editionId),
-  });
-  const lotteryId = lotteryIdQuery.data?.[0]?.id_lottery ?? null;
 
   const refreshLive = useCallback(async () => {
     if (!lotteryId) return;
@@ -514,7 +508,11 @@ export default function LotteryLiveKiosk({ editionId }: Props) {
       <View style={styles.body}>
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        {!live && (lotteryIdQuery.isLoading || !lotteryId) ? (
+        {lotteryId == null ? (
+          <Text testID="lottery-live-empty" style={styles.finishedText}>
+            Select a lottery to open LIVE.
+          </Text>
+        ) : !live ? (
           <ActivityIndicator color="#fff" />
         ) : finished && !lucky ? (
           <View style={{ alignItems: 'center', gap: 16, paddingHorizontal: 16 }}>

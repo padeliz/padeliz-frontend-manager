@@ -13,13 +13,13 @@ export class EditionLotteriesApiService extends BaseApiService {
       q?: string;
       filters?: {
         name?: string;
-        club_id?: number;
         edition_id?: number;
+        display_order?: number;
       };
       sort_by?: {
         name?: 'asc' | 'desc';
-        club_id?: 'asc' | 'desc';
         edition_id?: 'asc' | 'desc';
+        display_order?: 'asc' | 'desc';
         inserted_at?: 'asc' | 'desc';
         updated_at?: 'asc' | 'desc';
       };

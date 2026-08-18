@@ -18,16 +18,6 @@ type Props = {
   section: ScheduleSection;
 };
 
-function playerLabel(p: any): string {
-  const player = p?.player;
-  if (!player) return `Participation #${p?.id_participation ?? '?'}`;
-  return (
-    player.name ||
-    [player.first_name, player.last_name].filter(Boolean).join(' ') ||
-    `Player #${player.id_player}`
-  );
-}
-
 function divisionTitle(d: ApiEditionDivision): string {
   return d.division_title || `ED #${d.id_edition_division}`;
 }
@@ -64,32 +54,6 @@ function KnobsReadonly({ state }: { state: ScheduleState }) {
           ? 'none'
           : courts.map((c: any) => c.name || `#${c.id_court}`).join(', ')}
       </Text>
-    </View>
-  );
-}
-
-function ParticipationsReadonly({ state }: { state: ScheduleState }) {
-  const parts = Array.isArray(state.participations)
-    ? [...state.participations].sort(
-        (a: any, b: any) =>
-          (a.sort_order ?? 0) - (b.sort_order ?? 0) ||
-          (a.id_participation ?? 0) - (b.id_participation ?? 0)
-      )
-    : [];
-  if (parts.length === 0) {
-    return <Text className="text-sm text-gray-500">No participations.</Text>;
-  }
-  return (
-    <View>
-      {parts.map((p: any, index: number) => (
-        <Text
-          key={p.id_participation}
-          className="text-sm text-gray-800 py-1 border-b border-gray-100"
-        >
-          {index + 1}. {playerLabel(p)}
-          {p.is_collecting_points ? ' · collecting' : ''}
-        </Text>
-      ))}
     </View>
   );
 }
@@ -153,8 +117,6 @@ export default function EditionScheduleGeneralView({
             <Text className="text-sm text-gray-500">No schedule</Text>
           ) : section === 'knobs' ? (
             <KnobsReadonly state={state} />
-          ) : section === 'participations' ? (
-            <ParticipationsReadonly state={state} />
           ) : (
             <MatchesReadonly state={state} />
           )}

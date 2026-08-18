@@ -1,12 +1,14 @@
-import EditionDivisionsTab from '@/components/editions/EditionDivisionsTab';
-import { PageChromeProvider } from '@/components/chrome/PageChromeProvider';
+import EditionParticipationsTab from '@/components/editions/EditionParticipationsTab';
+import { PageChromeProvider, usePageChrome } from '@/components/chrome/PageChromeProvider';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
+import { Pressable, Text } from 'react-native';
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 const mockCreate = jest.fn();
 const mockDelete = jest.fn();
 const mockReorder = jest.fn();
+const mockUpdate = jest.fn();
 const mockGetPlayers = jest.fn(async () => ({
   data: [{ id_player: 1, name: 'Alice' }],
 }));
@@ -16,6 +18,7 @@ jest.mock('@/services/api/editionParticipationsApi', () => ({
     createParticipation: (...args: unknown[]) => mockCreate(...args),
     deleteParticipation: (...args: unknown[]) => mockDelete(...args),
     reorderParticipations: (...args: unknown[]) => mockReorder(...args),
+    updateParticipation: (...args: unknown[]) => mockUpdate(...args),
   })),
 }));
 
@@ -108,10 +111,8 @@ const participations = [
     edition_division_id: 9,
     division_id: 2,
     sort_order: 0,
-    is_minor: false,
-    is_student: false,
-    payment: 0,
     inserted_at: 1,
+    is_collecting_points: true,
     player: { id_player: 1, name: 'Alice' },
   },
   {
@@ -121,13 +122,22 @@ const participations = [
     edition_division_id: 10,
     division_id: 3,
     sort_order: 0,
-    is_minor: false,
-    is_student: false,
-    payment: 0,
     inserted_at: 1,
+    is_collecting_points: false,
     player: { id_player: 2, name: 'Bob' },
   },
 ];
+
+function ChromeProbe() {
+  const { actions } = usePageChrome();
+  return (
+    <>
+      <Text testID="chrome-is-dirty">{actions?.isDirty ? 'yes' : 'no'}</Text>
+      <Text testID="chrome-can-save">{actions?.canSave ? 'yes' : 'no'}</Text>
+      <Pressable testID="chrome-save" onPress={() => void actions?.save?.()} />
+    </>
+  );
+}
 
 function renderTab(opts: {
   editionFinalized: boolean;
@@ -139,7 +149,8 @@ function renderTab(opts: {
   return render(
     <QueryClientProvider client={client}>
       <PageChromeProvider>
-        <EditionDivisionsTab
+        <ChromeProbe />
+        <EditionParticipationsTab
           editionId={1}
           editionFinalized={opts.editionFinalized}
           divisions={divisions as any}
@@ -152,29 +163,31 @@ function renderTab(opts: {
   );
 }
 
-describe('EditionDivisionsTab finalized lock', () => {
+describe('EditionParticipationsTab finalized lock', () => {
   afterEach(() => {
     cleanup();
     jest.clearAllMocks();
   });
 
   it('shows add form and delete when not finalized', () => {
-    const { getByTestId, queryByTestId } = renderTab({
+    const { getByTestId, queryByTestId, getByText } = renderTab({
       editionFinalized: false,
       selectedDivisionId: 9,
     });
-    expect(getByTestId('divisions-add-form')).toBeTruthy();
-    expect(getByTestId('divisions-add-form-row')).toBeTruthy();
-    expect(getByTestId('divisions-add-form-row').props.className).toContain(
+    expect(getByText('Participations')).toBeTruthy();
+    expect(getByTestId('participations-add-form')).toBeTruthy();
+    expect(getByText('Participations')).toBeTruthy();
+    expect(getByTestId('participations-add-form-row')).toBeTruthy();
+    expect(getByTestId('participations-add-form-row').props.className).toContain(
       'flex-row'
     );
-    expect(getByTestId('divisions-add-form-row').props.className).toContain(
+    expect(getByTestId('participations-add-form-row').props.className).toContain(
       'flex-wrap'
     );
-    expect(getByTestId('divisions-add-button')).toBeTruthy();
+    expect(getByTestId('participations-add-button')).toBeTruthy();
     expect(getByTestId('delete-participation-100')).toBeTruthy();
     expect(getByTestId('participation-row-100')).toBeTruthy();
-    expect(queryByTestId('divisions-finalized-hint')).toBeNull();
+    expect(queryByTestId('participations-finalized-hint')).toBeNull();
   });
 
   it('shows division color square or warning when color missing', () => {
@@ -195,15 +208,15 @@ describe('EditionDivisionsTab finalized lock', () => {
       editionFinalized: true,
       selectedDivisionId: 9,
     });
-    expect(getByTestId('divisions-finalized-hint')).toBeTruthy();
-    expect(queryByTestId('divisions-add-form')).toBeNull();
-    expect(queryByTestId('divisions-add-button')).toBeNull();
+    expect(getByTestId('participations-finalized-hint')).toBeTruthy();
+    expect(queryByTestId('participations-add-form')).toBeNull();
+    expect(queryByTestId('participations-add-button')).toBeNull();
     expect(queryByTestId('delete-participation-100')).toBeNull();
     expect(queryByTestId('move-up-100')).toBeNull();
   });
 });
 
-describe('EditionDivisionsTab General DnD UI', () => {
+describe('EditionParticipationsTab General DnD UI', () => {
   afterEach(() => {
     cleanup();
     jest.clearAllMocks();
@@ -235,7 +248,7 @@ describe('EditionDivisionsTab General DnD UI', () => {
       editionFinalized: false,
       selectedDivisionId: 9,
     });
-    expect(getByTestId('divisions-player-picker')).toBeTruthy();
+    expect(getByTestId('participations-player-picker')).toBeTruthy();
     fireEvent.press(getByText('Select player'));
     expect(getByTestId('dropdown-search')).toBeTruthy();
     await waitFor(() => expect(mockGetPlayers).toHaveBeenCalled());
@@ -246,7 +259,7 @@ describe('EditionDivisionsTab General DnD UI', () => {
   });
 });
 
-describe('EditionDivisionsTab player history', () => {
+describe('EditionParticipationsTab player history', () => {
   afterEach(() => {
     cleanup();
     jest.clearAllMocks();
@@ -287,7 +300,7 @@ describe('EditionDivisionsTab player history', () => {
     const { getByText, queryByText, getByTestId, getAllByTestId } = render(
       <QueryClientProvider client={client}>
         <PageChromeProvider>
-          <EditionDivisionsTab
+          <EditionParticipationsTab
             editionId={1}
             editionFinalized={false}
             divisions={divisions as any}
@@ -335,7 +348,7 @@ describe('EditionDivisionsTab player history', () => {
     const { queryByTestId, getByText } = render(
       <QueryClientProvider client={client}>
         <PageChromeProvider>
-          <EditionDivisionsTab
+          <EditionParticipationsTab
             editionId={1}
             editionFinalized={false}
             divisions={divisions as any}
@@ -348,5 +361,100 @@ describe('EditionDivisionsTab player history', () => {
     );
     expect(getByText('Alice')).toBeTruthy();
     expect(queryByTestId('player-history-100')).toBeNull();
+  });
+});
+
+describe('EditionParticipationsTab collecting points', () => {
+  afterEach(() => {
+    cleanup();
+    jest.clearAllMocks();
+    mockUpdate.mockResolvedValue({ data: {} });
+    mockReorder.mockResolvedValue({ data: [] });
+  });
+
+  it('shows a collecting toggle per row and marks dirty on change', () => {
+    const { getByTestId } = renderTab({
+      editionFinalized: false,
+      selectedDivisionId: 9,
+    });
+    expect(getByTestId('collecting-points-100')).toBeTruthy();
+    expect(getByTestId('chrome-is-dirty')).toHaveTextContent('no');
+    fireEvent.press(getByTestId('collecting-points-100'));
+    expect(getByTestId('chrome-is-dirty')).toHaveTextContent('yes');
+    expect(getByTestId('chrome-can-save')).toHaveTextContent('yes');
+  });
+
+  it('saves collecting-only changes via updateParticipation', async () => {
+    mockUpdate.mockResolvedValue({ data: {} });
+    const { getByTestId } = renderTab({
+      editionFinalized: false,
+      selectedDivisionId: 9,
+    });
+    fireEvent.press(getByTestId('collecting-points-100'));
+    fireEvent.press(getByTestId('chrome-save'));
+    await waitFor(() => {
+      expect(mockUpdate).toHaveBeenCalledWith(100, {
+        edition_id: 1,
+        edition_division_id: 9,
+        player_id: 1,
+        is_collecting_points: false,
+      });
+    });
+    expect(mockReorder).not.toHaveBeenCalled();
+  });
+
+  it('saves order-only changes via reorderParticipations', async () => {
+    mockReorder.mockResolvedValue({ data: [] });
+    const twoInSameEd = [
+      participations[0],
+      {
+        ...participations[0],
+        id_participation: 102,
+        player_id: 3,
+        sort_order: 1,
+        is_collecting_points: true,
+        player: { id_player: 3, name: 'Cara' },
+      },
+    ];
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const { getByTestId } = render(
+      <QueryClientProvider client={client}>
+        <PageChromeProvider>
+          <ChromeProbe />
+          <EditionParticipationsTab
+            editionId={1}
+            editionFinalized={false}
+            divisions={divisions as any}
+            participations={twoInSameEd as any}
+            selectedDivisionId={9}
+            onRefresh={async () => {}}
+          />
+        </PageChromeProvider>
+      </QueryClientProvider>
+    );
+    fireEvent.press(getByTestId('move-down-100'));
+    expect(getByTestId('chrome-is-dirty')).toHaveTextContent('yes');
+    fireEvent.press(getByTestId('chrome-save'));
+    await waitFor(() => {
+      expect(mockReorder).toHaveBeenCalled();
+    });
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it('keeps the toggle visible when finalized but press does not dirty or call APIs', async () => {
+    const { getByTestId } = renderTab({
+      editionFinalized: true,
+      selectedDivisionId: 9,
+    });
+    expect(getByTestId('collecting-points-100')).toBeTruthy();
+    fireEvent.press(getByTestId('collecting-points-100'));
+    expect(getByTestId('chrome-is-dirty')).toHaveTextContent('no');
+    fireEvent.press(getByTestId('chrome-save'));
+    await waitFor(() => {
+      expect(mockUpdate).not.toHaveBeenCalled();
+      expect(mockReorder).not.toHaveBeenCalled();
+    });
   });
 });

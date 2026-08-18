@@ -3,13 +3,15 @@
  */
 
 import LotteryLiveKiosk from '@/components/lottery/LotteryLiveKiosk';
+import { parseLotteryId } from '@/utils/editionWorkspace';
 import { useLocalSearchParams } from 'expo-router';
 import React from 'react';
 import { Text, View } from 'react-native';
 
 export default function LotteryLivePage() {
-  const params = useLocalSearchParams<{ editionId: string }>();
+  const params = useLocalSearchParams<{ editionId: string; lottery?: string }>();
   const editionId = Number(params.editionId);
+  const lotteryId = parseLotteryId(params.lottery);
 
   if (!Number.isFinite(editionId)) {
     return (
@@ -19,5 +21,5 @@ export default function LotteryLivePage() {
     );
   }
 
-  return <LotteryLiveKiosk editionId={editionId} />;
+  return <LotteryLiveKiosk editionId={editionId} lotteryId={lotteryId} />;
 }

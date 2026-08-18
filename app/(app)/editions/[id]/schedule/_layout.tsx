@@ -57,11 +57,6 @@ export default function ScheduleLayout() {
         match: '/schedule/knobs',
       },
       {
-        label: 'Participations',
-        href: withEdQuery(`${base}/participations`, edId),
-        match: '/schedule/participations',
-      },
-      {
         label: 'Matches',
         href: withEdQuery(`${base}/matches`, edId),
         match: '/schedule/matches',

@@ -1,5 +1,5 @@
 /**
- * Divisions tab: players per ED with arrows + drag-and-drop reorder/move.
+ * Participations tab: players per ED with arrows + drag-and-drop reorder/move.
  */
 
 import { useRegisterPageActions } from '@/components/chrome/PageChromeProvider';
@@ -221,7 +221,7 @@ function SortableRow({
   );
 }
 
-export default function EditionDivisionsTab({
+export default function EditionParticipationsTab({
   editionId,
   editionFinalized,
   divisions,
@@ -230,7 +230,6 @@ export default function EditionDivisionsTab({
   onRefresh,
 }: Props) {
   const [local, setLocal] = useState(participations);
-  const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
@@ -243,7 +242,6 @@ export default function EditionDivisionsTab({
 
   useEffect(() => {
     setLocal(participations);
-    setDirty(false);
   }, [participations]);
 
   useEffect(() => {
@@ -331,7 +329,6 @@ export default function EditionDivisionsTab({
       const others = prev.filter(p => p.edition_division_id !== edId);
       return [...others, ...reindexed];
     });
-    setDirty(true);
   }, []);
 
   const moveWithin = (edId: number, index: number, dir: -1 | 1) => {
@@ -371,14 +368,13 @@ export default function EditionDivisionsTab({
       return;
     }
     setLocal(prev => applyDrop(prev, fromEd, fromIndex, targetEd, toIndex));
-    setDirty(true);
   };
 
   const onDelete = (p: ApiEditionParticipation) => {
     if (editionFinalized) return;
     confirmAction(
       'Delete participation',
-      `Remove ${playerLabel(p)} from this division?`,
+      `Remove ${playerLabel(p)} from this participation?`,
       async () => {
         try {
           await participationsApi.deleteParticipation(p.id_participation);
@@ -415,56 +411,108 @@ export default function EditionDivisionsTab({
     }
   };
 
+  const originalById = useMemo(
+    () => new Map(participations.map(p => [p.id_participation, p])),
+    [participations]
+  );
+
+  const orderDirty = useMemo(() => {
+    return local.some(p => {
+      const orig = originalById.get(p.id_participation);
+      if (!orig) return true;
+      return (
+        orig.edition_division_id !== p.edition_division_id ||
+        (orig.sort_order ?? 0) !== (p.sort_order ?? 0)
+      );
+    });
+  }, [local, originalById]);
+
+  const collectingDirty = useMemo(() => {
+    return local.some(p => {
+      const orig = originalById.get(p.id_participation);
+      if (!orig) return false;
+      return !!orig.is_collecting_points !== !!p.is_collecting_points;
+    });
+  }, [local, originalById]);
+
+  const isDirty = orderDirty || collectingDirty;
+
+  const toggleCollecting = (p: ApiEditionParticipation) => {
+    if (editionFinalized) return;
+    setLocal(prev =>
+      prev.map(row =>
+        row.id_participation === p.id_participation
+          ? { ...row, is_collecting_points: !row.is_collecting_points }
+          : row
+      )
+    );
+  };
+
   const save = useCallback(async () => {
     if (editionFinalized) return;
     setSaving(true);
     try {
-      const originalById = new Map(
+      const origById = new Map(
         participations.map(p => [p.id_participation, p])
       );
       const affected = local.filter(p => {
-        const orig = originalById.get(p.id_participation);
+        const orig = origById.get(p.id_participation);
         if (!orig) return true;
         return (
           orig.edition_division_id !== p.edition_division_id ||
           (orig.sort_order ?? 0) !== (p.sort_order ?? 0)
         );
       });
-      if (affected.length === 0) {
-        setDirty(false);
-        return;
-      }
-      const touchedEds = new Set(affected.map(p => p.edition_division_id!));
-      for (const p of local) {
-        const orig = originalById.get(p.id_participation);
-        if (orig && orig.edition_division_id !== p.edition_division_id) {
-          touchedEds.add(orig.edition_division_id!);
+      const collectingChanged = local.filter(p => {
+        const orig = origById.get(p.id_participation);
+        if (!orig) return false;
+        return !!orig.is_collecting_points !== !!p.is_collecting_points;
+      });
+
+      if (affected.length > 0) {
+        const touchedEds = new Set(affected.map(p => p.edition_division_id!));
+        for (const p of local) {
+          const orig = origById.get(p.id_participation);
+          if (orig && orig.edition_division_id !== p.edition_division_id) {
+            touchedEds.add(orig.edition_division_id!);
+          }
         }
-      }
-      const payload: Array<{
-        id_participation: number;
-        edition_division_id: number;
-        sort_order: number;
-      }> = [];
-      for (const edId of touchedEds) {
-        const list = local
-          .filter(p => p.edition_division_id === edId)
-          .sort(
-            (a, b) =>
-              (a.sort_order ?? 0) - (b.sort_order ?? 0) ||
-              a.id_participation - b.id_participation
-          );
-        list.forEach((p, i) => {
-          payload.push({
-            id_participation: p.id_participation,
-            edition_division_id: edId,
-            sort_order: i,
+        const payload: Array<{
+          id_participation: number;
+          edition_division_id: number;
+          sort_order: number;
+        }> = [];
+        for (const edId of touchedEds) {
+          const list = local
+            .filter(p => p.edition_division_id === edId)
+            .sort(
+              (a, b) =>
+                (a.sort_order ?? 0) - (b.sort_order ?? 0) ||
+                a.id_participation - b.id_participation
+            );
+          list.forEach((p, i) => {
+            payload.push({
+              id_participation: p.id_participation,
+              edition_division_id: edId,
+              sort_order: i,
+            });
           });
+        }
+        await participationsApi.reorderParticipations(payload);
+      }
+
+      for (const p of collectingChanged) {
+        await participationsApi.updateParticipation(p.id_participation, {
+          edition_id: p.edition_id,
+          edition_division_id: p.edition_division_id,
+          player_id: p.player_id,
+          is_collecting_points: !!p.is_collecting_points,
         });
       }
-      await participationsApi.reorderParticipations(payload);
-      setDirty(false);
-      await onRefresh();
+
+      if (affected.length > 0 || collectingChanged.length > 0) {
+        await onRefresh();
+      }
     } finally {
       setSaving(false);
     }
@@ -473,8 +521,8 @@ export default function EditionDivisionsTab({
   useRegisterPageActions({
     save,
     refresh: onRefresh,
-    canSave: dirty && !editionFinalized,
-    isDirty: dirty && !editionFinalized,
+    canSave: isDirty && !editionFinalized,
+    isDirty: isDirty && !editionFinalized,
     isSaving: saving,
   });
 
@@ -483,12 +531,12 @@ export default function EditionDivisionsTab({
   return (
     <View>
       <Text className="text-lg font-semibold text-gray-900 mb-3">
-        Divisions & players
+        Participations
       </Text>
 
       {editionFinalized && (
         <Text
-          testID="divisions-finalized-hint"
+          testID="participations-finalized-hint"
           className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2 mb-3"
         >
           Edition is finalized — participations are read-only.
@@ -497,15 +545,15 @@ export default function EditionDivisionsTab({
 
       {!editionFinalized && (
         <View
-          testID="divisions-add-form"
+          testID="participations-add-form"
           className="mb-4 border border-gray-200 rounded-lg p-3 bg-white gap-2"
         >
           <Text className="font-semibold text-gray-900">Add player</Text>
           <View
-            testID="divisions-add-form-row"
+            testID="participations-add-form-row"
             className="flex-row flex-wrap items-end gap-2"
           >
-            <View testID="divisions-player-picker" className="flex-1" style={{ minWidth: 160 }}>
+            <View testID="participations-player-picker" className="flex-1" style={{ minWidth: 160 }}>
               <SingleSelectDropdown
                 options={playerPicker.options}
                 selectedValue={playerId}
@@ -531,7 +579,7 @@ export default function EditionDivisionsTab({
               </View>
             )}
             <Pressable
-              testID="divisions-add-button"
+              testID="participations-add-button"
               disabled={adding}
               onPress={() => void onAdd()}
               className={`px-3 py-2 rounded-lg ${
@@ -619,6 +667,24 @@ export default function EditionDivisionsTab({
                     <Text className="text-gray-800 flex-1 mr-2 shrink">
                       {playerLabel(p)}
                     </Text>
+                    <Pressable
+                      testID={`collecting-points-${p.id_participation}`}
+                      onPress={() => toggleCollecting(p)}
+                      className="flex-row items-center mr-2"
+                    >
+                      <Ionicons
+                        name={
+                          p.is_collecting_points
+                            ? 'checkbox'
+                            : 'square-outline'
+                        }
+                        size={18}
+                        color={locked ? '#9ca3af' : '#2563eb'}
+                      />
+                      <Text className="ml-1 text-xs text-gray-600">
+                        Collecting points
+                      </Text>
+                    </Pressable>
                     <View className="flex-row flex-wrap items-center justify-end gap-1">
                       <PlayerHistoryText p={p} />
                       {!locked && (

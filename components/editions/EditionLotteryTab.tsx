@@ -1,15 +1,26 @@
 import SingleSelectDropdown from '@/components/ui/SingleSelectDropdown';
 import { queryKeys } from '@/lib/queryClient';
 import { EditionLotteriesApiService } from '@/services/api/editionLotteriesApi';
+import { EditionLotteryPrizesApiService } from '@/services/api/editionLotteryPrizesApi';
 import { EditionLotteryRulesApiService } from '@/services/api/editionLotteryRulesApi';
 import { lotteryLiveApi } from '@/services/api/lotteryLiveApi';
 import { PlayersApiService } from '@/services/api/playersApi';
 import { ApiError } from '@/services/api/baseApi';
-import { ApiEditionDivision } from '@/types/api/entities';
+import { ApiEditionDivision, ApiEditionLottery, ApiEditionLotteryPrize } from '@/types/api/entities';
 import { ApiEditionLotteryRule } from '@/types/api/edition';
+import {
+  parseLotteryId,
+  withEdQuery,
+  withLotteryQuery,
+} from '@/utils/editionWorkspace';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
+import {
+  useGlobalSearchParams,
+  useLocalSearchParams,
+  usePathname,
+  useRouter,
+} from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -28,10 +39,8 @@ import {
   formatLastRefreshRelative,
   formatLotteryTimestamp,
   luckyLifecycleRows,
-  maxLuckyGroupActivity,
   phoneNumbersFromLucky,
   primaryLuckyLifecycle,
-  rulesHaveUnresolvedLucky,
 } from './editionLotteryUtils';
 
 export type EditionLotteryMode = 'prizes' | 'rules' | 'luckies';
@@ -115,6 +124,21 @@ function LotteryDeepLinks({
           label="Add prize"
           href="/prizes/add"
         />
+        <DeepLinkButton
+          testID="lottery-link-lottery-prizes"
+          label="Manage lottery prizes"
+          href="/edition-lottery-prizes"
+        />
+        <DeepLinkButton
+          testID="lottery-link-add-lottery-prize"
+          label="Add lottery prize"
+          href="/edition-lottery-prizes/add"
+        />
+        <DeepLinkButton
+          testID="lottery-link-sponsors"
+          label="Manage sponsors"
+          href="/sponsors"
+        />
       </View>
     );
   }
@@ -144,6 +168,7 @@ function LotteryDeepLinks({
 }
 
 const lotteriesApi = new EditionLotteriesApiService();
+const lotteryPrizesApi = new EditionLotteryPrizesApiService();
 const rulesApi = new EditionLotteryRulesApiService();
 const playersApi = new PlayersApiService();
 
@@ -173,57 +198,70 @@ function isLuckyPending(lucky: any): boolean {
   );
 }
 
-function luckyLotteryId(lucky: any, rulesById: Map<number, ApiEditionLotteryRule>): number | null {
-  const fromRule = lucky?.lotteryRule?.lottery_id ?? lucky?.lottery_rule?.lottery_id;
-  if (fromRule != null) return Number(fromRule);
-  const ruleId = lucky?.lottery_rule_id;
-  if (ruleId != null) {
-    const rule = rulesById.get(Number(ruleId));
-    if (rule?.lottery_id != null) return rule.lottery_id;
-  }
+function luckyLotteryId(
+  lucky: any,
+  selectedLotteryId?: number | null
+): number | null {
+  if (selectedLotteryId != null) return selectedLotteryId;
+  const fromPrize =
+    lucky?.lotteryRule?.lottery_prize?.lottery_id ??
+    lucky?.lottery_rule?.lottery_prize?.lottery_id ??
+    lucky?.lotteryRule?.lottery_id ??
+    lucky?.lottery_rule?.lottery_id;
+  if (fromPrize != null) return Number(fromPrize);
   return null;
 }
 
-function luckyEditionDivisionId(
-  lucky: any,
-  rulesById: Map<number, ApiEditionLotteryRule>
-): number | null | undefined {
-  const fromRule =
+function luckyEditionDivisionId(lucky: any): number | null | undefined {
+  return (
     lucky?.lotteryRule?.edition_division_id ??
-    lucky?.lottery_rule?.edition_division_id;
-  if (fromRule !== undefined) return fromRule;
-  const ruleId = lucky?.lottery_rule_id;
-  if (ruleId != null) return rulesById.get(Number(ruleId))?.edition_division_id;
-  return undefined;
+    lucky?.lottery_rule?.edition_division_id
+  );
 }
 
-async function fetchEditionRules(
-  editionId: number,
-  editionDivisionId: number | null,
-  opts?: { withLuckies?: boolean }
+async function fetchLotteryRules(
+  lotteryId: number,
+  editionDivisionId: number | null
 ): Promise<ApiEditionLotteryRule[]> {
-  const lotRes = await lotteriesApi.getLotteries({
-    per_page: 50,
-    filters: { edition_id: editionId },
+  const res = await rulesApi.getRules({
+    per_page: 100,
+    filters: {
+      lottery_id: lotteryId,
+      ...(editionDivisionId != null
+        ? { edition_division_id: editionDivisionId }
+        : {}),
+    },
   });
-  const lotteryIds = (lotRes.data || []).map(l => l.id_lottery);
-  if (lotteryIds.length === 0) return [];
+  return res.data || [];
+}
 
-  const batches = await Promise.all(
-    lotteryIds.map(lotteryId =>
-      rulesApi.getRules({
-        per_page: 100,
-        with_luckies: opts?.withLuckies ? true : undefined,
-        filters: {
-          lottery_id: lotteryId,
-          ...(editionDivisionId != null
-            ? { edition_division_id: editionDivisionId }
-            : {}),
-        },
-      })
-    )
+function sortLotteries(lotteries: ApiEditionLottery[]): ApiEditionLottery[] {
+  return [...lotteries].sort(
+    (a, b) =>
+      (a.display_order ?? 0) - (b.display_order ?? 0) ||
+      a.id_lottery - b.id_lottery
   );
-  return batches.flatMap(b => b.data || []);
+}
+
+function prizeLuckiesHeader(line: ApiEditionLotteryPrize | any): string {
+  const prizeName = line?.prize?.name;
+  const sponsorName = line?.sponsor?.name;
+  const qty = Number(line?.rule_prize_quantity_total ?? 0);
+  if (prizeName == null || String(prizeName).trim() === '') {
+    return String(qty || '');
+  }
+  const namePart = sponsorName
+    ? `${prizeName} · ${sponsorName}`
+    : String(prizeName);
+  return `${namePart} × ${qty}`;
+}
+
+function prizeLineLabel(line: ApiEditionLotteryPrize | any): string {
+  const prizeName =
+    line?.prize?.name ||
+    (line?.prize_id != null ? `Prize #${line.prize_id}` : 'prize');
+  const sponsorName = line?.sponsor?.name || line?.prize?.sponsor?.name;
+  return sponsorName ? `${prizeName} · ${sponsorName}` : prizeName;
 }
 
 function LotteryPicker({
@@ -231,14 +269,14 @@ function LotteryPicker({
   lotteryId,
   onSelect,
 }: {
-  lotteries: any[];
+  lotteries: ApiEditionLottery[];
   lotteryId: number | null;
   onSelect: (id: number) => void;
 }) {
   const options = useMemo(
     () =>
-      lotteries.map(l => ({
-        label: `Lottery #${l.id_lottery}${l.prize?.name ? ` · ${l.prize.name}` : ''}`,
+      sortLotteries(lotteries).map(l => ({
+        label: l.name?.trim() ? l.name : `Lottery #${l.id_lottery}`,
         value: l.id_lottery,
       })),
     [lotteries]
@@ -246,19 +284,23 @@ function LotteryPicker({
 
   if (lotteries.length === 0) {
     return (
-      <Text className="text-sm text-gray-500">No lotteries for this edition.</Text>
+      <Text testID="lottery-picker-empty" className="text-sm text-gray-500">
+        No lotteries for this edition.
+      </Text>
     );
   }
 
   return (
-    <SingleSelectDropdown
-      options={options}
-      selectedValue={lotteryId}
-      onSelectionChange={v => onSelect(Number(v))}
-      placeholder="Select lottery"
-      title="Lottery"
-      minWidth={240}
-    />
+    <View testID="lottery-picker">
+      <SingleSelectDropdown
+        options={options}
+        selectedValue={lotteryId}
+        onSelectionChange={v => onSelect(Number(v))}
+        placeholder="Select lottery"
+        title="Lottery"
+        minWidth={240}
+      />
+    </View>
   );
 }
 
@@ -278,8 +320,7 @@ function PrizesBoardView({ board }: { board: any }) {
             </Text>
             {(interval.prizes || []).map((p: any, pIdx: number) => (
               <Text key={pIdx} className="text-sm text-gray-700 pl-2">
-                {p.prize?.name || p.id_lottery || 'prize'} — qty{' '}
-                {p.interval_quantity ?? '—'} — luckies{' '}
+                {prizeLineLabel(p)} — qty {p.interval_quantity ?? '—'} — luckies{' '}
                 {(p.luckies || []).length}
               </Text>
             ))}
@@ -292,43 +333,39 @@ function PrizesBoardView({ board }: { board: any }) {
 
 function EditionLotteryPrizesMode({
   editionId,
-  lotteries,
-  isLoading,
+  lotteryId,
   editionFinalized,
 }: {
   editionId: number;
-  lotteries: any[];
-  isLoading: boolean;
+  lotteryId: number;
   editionFinalized: boolean;
 }) {
   const queryClient = useQueryClient();
-  const [lotteryId, setLotteryId] = useState<number | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const selectedLotteryId = useMemo(() => {
-    if (
-      lotteryId != null &&
-      lotteries.some(l => Number(l.id_lottery) === Number(lotteryId))
-    ) {
-      return Number(lotteryId);
-    }
-    const first = lotteries[0]?.id_lottery;
-    return first != null ? Number(first) : null;
-  }, [lotteryId, lotteries]);
+  const linesQuery = useQuery({
+    queryKey: queryKeys.editionLotteryPrizes(lotteryId),
+    queryFn: async () => {
+      const res = await lotteryPrizesApi.getLotteryPrizes({
+        per_page: 100,
+        filters: { lottery_id: lotteryId },
+        sort_by: { display_order: 'asc' },
+      });
+      return res.data || [];
+    },
+  });
 
   const boardQuery = useQuery({
-    queryKey: queryKeys.lotteryPrizesBoard(selectedLotteryId ?? 'none'),
+    queryKey: queryKeys.lotteryPrizesBoard(lotteryId),
     queryFn: async () => {
-      const res = await lotteryLiveApi.prizesBoard(selectedLotteryId!);
+      const res = await lotteryLiveApi.prizesBoard(lotteryId);
       return res.data;
     },
-    enabled: selectedLotteryId != null,
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => lotteriesApi.deleteLottery(id),
     onSuccess: async () => {
-      setLotteryId(null);
       await queryClient.invalidateQueries({
         queryKey: queryKeys.editionLotteries(editionId),
       });
@@ -336,14 +373,14 @@ function EditionLotteryPrizesMode({
   });
 
   const onDelete = () => {
-    if (editionFinalized || selectedLotteryId == null) return;
+    if (editionFinalized) return;
     confirmAction(
       'Delete lottery',
-      `Delete lottery #${selectedLotteryId}?`,
+      `Delete lottery #${lotteryId}?`,
       async () => {
         setActionError(null);
         try {
-          await deleteMutation.mutateAsync(selectedLotteryId);
+          await deleteMutation.mutateAsync(lotteryId);
         } catch (e: any) {
           setActionError(e?.message || 'Delete failed');
         }
@@ -351,39 +388,55 @@ function EditionLotteryPrizesMode({
     );
   };
 
-  if (isLoading) return <ActivityIndicator />;
+  const lines = linesQuery.data || [];
 
   return (
     <View className="gap-3">
-      <LotteryDeepLinks mode="prizes" lotteryId={selectedLotteryId} />
+      <LotteryDeepLinks mode="prizes" lotteryId={lotteryId} />
       <View className="bg-white border border-gray-200 rounded-lg p-3 gap-2">
         <Text className="font-semibold text-gray-900">Edition lotteries</Text>
-        <LotteryPicker
-          lotteries={lotteries}
-          lotteryId={selectedLotteryId}
-          onSelect={setLotteryId}
-        />
         <Text className="text-xs text-gray-500">
           Edition #{editionId} · prizes are edition-scoped (division filter ignored).
         </Text>
         <Pressable
           testID="lottery-delete-lottery"
-          disabled={
-            editionFinalized ||
-            selectedLotteryId == null ||
-            deleteMutation.isPending
-          }
+          disabled={editionFinalized || deleteMutation.isPending}
           onPress={onDelete}
           className={`self-start px-3 py-2 rounded-lg ${
-            editionFinalized || selectedLotteryId == null
-              ? 'bg-gray-300'
-              : 'bg-red-600'
+            editionFinalized ? 'bg-gray-300' : 'bg-red-600'
           }`}
         >
           <Text className="text-white text-sm">Delete lottery</Text>
         </Pressable>
         {actionError && (
           <Text className="text-sm text-red-600">{actionError}</Text>
+        )}
+      </View>
+      <View className="bg-white border border-gray-200 rounded-lg p-3 gap-2">
+        <Text className="font-semibold text-gray-900">Prize lines</Text>
+        {linesQuery.isLoading ? (
+          <ActivityIndicator />
+        ) : lines.length === 0 ? (
+          <Text className="text-sm text-gray-500">
+            No prize lines for this lottery.
+          </Text>
+        ) : (
+          lines.map(line => (
+            <View
+              key={line.id_lottery_prize}
+              testID={`lottery-prize-line-${line.id_lottery_prize}`}
+              className="flex-row items-center gap-2 py-1"
+            >
+              <Text className="text-sm text-gray-800 flex-1">
+                {prizeLineLabel(line)} — qty {line.prize_quantity}
+              </Text>
+              <DeepLinkButton
+                testID={`lottery-edit-prize-line-${line.id_lottery_prize}`}
+                label="Edit"
+                href={`/edition-lottery-prizes/${line.id_lottery_prize}`}
+              />
+            </View>
+          ))
         )}
       </View>
       {boardQuery.isLoading ? (
@@ -402,11 +455,13 @@ function EditionLotteryPrizesMode({
 function EditionLotteryRulesMode({
   editionId,
   editionDivisionId,
+  lotteryId,
   divisions,
   editionFinalized,
 }: {
   editionId: number;
   editionDivisionId: number | null;
+  lotteryId: number;
   divisions: ApiEditionDivision[];
   editionFinalized: boolean;
 }) {
@@ -415,8 +470,12 @@ function EditionLotteryRulesMode({
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const rulesQuery = useQuery({
-    queryKey: queryKeys.editionLotteryRules(editionId, editionDivisionId),
-    queryFn: () => fetchEditionRules(editionId, editionDivisionId),
+    queryKey: queryKeys.editionLotteryRules(
+      editionId,
+      editionDivisionId,
+      lotteryId
+    ),
+    queryFn: () => fetchLotteryRules(lotteryId, editionDivisionId),
   });
 
   const grouped = useMemo(() => {
@@ -461,7 +520,8 @@ function EditionLotteryRulesMode({
           await queryClient.invalidateQueries({
             queryKey: queryKeys.editionLotteryRules(
               editionId,
-              editionDivisionId
+              editionDivisionId,
+              lotteryId
             ),
           });
         } catch (e: any) {
@@ -519,7 +579,10 @@ function EditionLotteryRulesMode({
               >
                 <View className="flex-1 min-w-0">
                   <Text className="text-sm text-gray-800">
-                    Rule #{rule.id_lottery_rule} · lottery #{rule.lottery_id}
+                    Rule #{rule.id_lottery_rule}
+                    {rule.lottery_prize?.prize?.name
+                      ? ` · ${prizeLineLabel(rule.lottery_prize)}`
+                      : ''}
                   </Text>
                   <Text className="text-xs text-gray-500">
                     {ruleSummary(rule)}
@@ -633,11 +696,13 @@ function LuckyPdfAvatar({
 function EditionLotteryLuckiesMode({
   editionId,
   editionDivisionId,
+  lotteryId,
   divisions,
   editionFinalized,
 }: {
   editionId: number;
   editionDivisionId: number | null;
+  lotteryId: number;
   divisions: ApiEditionDivision[];
   editionFinalized: boolean;
 }) {
@@ -660,45 +725,37 @@ function EditionLotteryLuckiesMode({
   const [avatarErrors, setAvatarErrors] = useState<Record<number, string>>({});
   const [nowTick, setNowTick] = useState(() => Date.now());
 
-  const needsEditionPendingQuery = editionDivisionId != null;
-
-  const editionPendingQuery = useQuery({
-    queryKey: queryKeys.editionLotteryRulesWithLuckies(editionId, null),
-    queryFn: () => fetchEditionRules(editionId, null, { withLuckies: true }),
-    enabled: needsEditionPendingQuery,
-  });
-
-  const rulesQuery = useQuery({
-    queryKey: queryKeys.editionLotteryRulesWithLuckies(
+  const prizesQuery = useQuery({
+    queryKey: queryKeys.editionLotteryPrizesWithLuckies(
       editionId,
-      editionDivisionId
+      editionDivisionId,
+      lotteryId
     ),
-    queryFn: () =>
-      fetchEditionRules(editionId, editionDivisionId, { withLuckies: true }),
+    queryFn: async () => {
+      const res = await lotteryPrizesApi.getLotteryPrizes({
+        per_page: 100,
+        include: 'luckies',
+        edition_division_id: editionDivisionId,
+        filters: { lottery_id: lotteryId },
+        sort_by: { display_order: 'asc' },
+      });
+      return res;
+    },
   });
 
-  const displayRules = rulesQuery.data || [];
-  const pendingSourceRules = needsEditionPendingQuery
-    ? editionPendingQuery.data || []
-    : displayRules;
-  const hasUnresolved = rulesHaveUnresolvedLucky(pendingSourceRules as any);
+  const prizeLines = prizesQuery.data?.data || [];
+  const hasUnresolved = Boolean(
+    prizesQuery.data?.meta?.has_unresolved_pending
+  );
   const shouldPoll = !editionFinalized && hasUnresolved;
 
   useEffect(() => {
     if (!shouldPoll) return;
     const id = setInterval(() => {
-      void rulesQuery.refetch();
-      if (needsEditionPendingQuery) {
-        void editionPendingQuery.refetch();
-      }
+      void prizesQuery.refetch();
     }, 30_000);
     return () => clearInterval(id);
-  }, [
-    shouldPoll,
-    needsEditionPendingQuery,
-    rulesQuery.refetch,
-    editionPendingQuery.refetch,
-  ]);
+  }, [shouldPoll, prizesQuery.refetch]);
 
   useEffect(() => {
     if (!shouldPoll) return;
@@ -706,24 +763,14 @@ function EditionLotteryLuckiesMode({
     return () => clearInterval(id);
   }, [shouldPoll]);
 
-  const rulesById = useMemo(() => {
-    const map = new Map<number, ApiEditionLotteryRule>();
-    displayRules.forEach(r => map.set(r.id_lottery_rule, r));
-    return map;
-  }, [displayRules]);
-
   const invalidateLuckiesBoard = () => {
     void queryClient.invalidateQueries({
-      queryKey: queryKeys.editionLotteryRulesWithLuckies(
+      queryKey: queryKeys.editionLotteryPrizesWithLuckies(
         editionId,
-        editionDivisionId
+        editionDivisionId,
+        lotteryId
       ),
     });
-    if (needsEditionPendingQuery) {
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.editionLotteryRulesWithLuckies(editionId, null),
-      });
-    }
   };
 
   const decideMutation = useMutation({
@@ -748,8 +795,8 @@ function EditionLotteryLuckiesMode({
 
   const onDecide = (action: 'accept' | 'reject', lucky: any) => {
     if (editionFinalized) return;
-    const lotteryId = luckyLotteryId(lucky, rulesById);
-    if (!lotteryId) {
+    const lotteryIdForLucky = luckyLotteryId(lucky, lotteryId);
+    if (!lotteryIdForLucky) {
       setActionError('Could not resolve lottery for this lucky.');
       return;
     }
@@ -765,7 +812,7 @@ function EditionLotteryLuckiesMode({
         try {
           await decideMutation.mutateAsync({
             action,
-            lotteryId,
+            lotteryId: lotteryIdForLucky,
             idLucky: lucky.id_lucky,
           });
         } catch (e: any) {
@@ -842,39 +889,19 @@ function EditionLotteryLuckiesMode({
     }
   };
 
-  const luckyGroups = useMemo(() => {
-    const groups = displayRules.map(rule => {
-      const prizeName = rule?.lottery?.prize?.name ?? null;
-      const qty = Number(rule?.rule_prize_quantity ?? 0);
-      const header =
-        prizeName != null && String(prizeName).trim() !== ''
-          ? `${prizeName} × ${qty}`
-          : String(qty || '');
-      const items = Array.isArray(rule.luckies) ? rule.luckies : [];
-      return {
-        ruleId: rule.id_lottery_rule,
-        rule,
-        items: items as Array<Record<string, unknown>>,
-        header,
-        activity: maxLuckyGroupActivity(items as Array<Record<string, unknown>>),
-      };
-    });
-    groups.sort((a, b) => {
-      if (a.activity === 0 && b.activity === 0) return 0;
-      if (a.activity === 0) return 1;
-      if (b.activity === 0) return -1;
-      return b.activity - a.activity;
-    });
-    return groups;
-  }, [displayRules]);
+  const luckyGroups = prizeLines.map(line => ({
+    prizeId: line.id_lottery_prize,
+    items: Array.isArray(line.luckies) ? line.luckies : [],
+    header: prizeLuckiesHeader(line),
+  }));
 
-  if (rulesQuery.isLoading) {
+  if (prizesQuery.isLoading) {
     return <ActivityIndicator />;
   }
 
   const lastRefreshLabel =
-    shouldPoll && rulesQuery.dataUpdatedAt
-      ? formatLastRefreshRelative(rulesQuery.dataUpdatedAt, nowTick)
+    shouldPoll && prizesQuery.dataUpdatedAt
+      ? formatLastRefreshRelative(prizesQuery.dataUpdatedAt, nowTick)
       : null;
 
   return (
@@ -889,32 +916,30 @@ function EditionLotteryLuckiesMode({
           {lastRefreshLabel}
         </Text>
       ) : null}
-      {displayRules.length === 0 ? (
+      {prizeLines.length === 0 ? (
         <Text className="text-sm text-gray-500">
-          {editionDivisionId != null
-            ? 'No lottery rules for this edition division.'
-            : 'No lottery rules for this edition.'}
+          No lottery prizes for this edition.
         </Text>
       ) : (
         luckyGroups.map(group => (
           <View
-            key={`lucky-group-${group.ruleId}`}
-            testID={`lucky-group-${group.ruleId}`}
+            key={`lucky-group-${group.prizeId}`}
+            testID={`lucky-group-${group.prizeId}`}
             className="gap-2"
           >
             <Text
-              testID={`lucky-group-header-${group.ruleId}`}
+              testID={`lucky-group-header-${group.prizeId}`}
               className="text-sm font-semibold text-gray-900"
             >
               {group.header}
             </Text>
             <View
-              testID={`lucky-group-cards-${group.ruleId}`}
+              testID={`lucky-group-cards-${group.prizeId}`}
               className="flex-row flex-wrap gap-2"
             >
               {group.items.map((lucky: any) => {
                 const pending = isLuckyPending(lucky);
-                const edId = luckyEditionDivisionId(lucky, rulesById);
+                const edId = luckyEditionDivisionId(lucky);
                 const divisionPart =
                   edId != null ? divisionLabel(edId, divisions) : 'General';
                 const name =
@@ -1122,19 +1147,42 @@ export default function EditionLotteryTab({
   divisions = [],
   editionFinalized = false,
 }: Props) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const localParams = useLocalSearchParams<{ lottery?: string; ed?: string }>();
+  const globalParams = useGlobalSearchParams<{ lottery?: string; ed?: string }>();
+  const lotteryParam = globalParams.lottery ?? localParams.lottery;
+  const edParam = globalParams.ed ?? localParams.ed;
+
   const lotteriesQuery = useQuery({
     queryKey: queryKeys.editionLotteries(editionId),
     queryFn: async () => {
       const res = await lotteriesApi.getLotteries({
         per_page: 50,
         filters: { edition_id: editionId },
+        sort_by: { display_order: 'asc' },
       });
       return res.data || [];
     },
     enabled: Number.isFinite(editionId),
   });
 
-  const lotteries = lotteriesQuery.data || [];
+  const lotteries = sortLotteries(lotteriesQuery.data || []);
+  const lotteriesLoaded = !lotteriesQuery.isLoading && !!lotteriesQuery.data;
+  const selectedLotteryId = lotteriesLoaded
+    ? parseLotteryId(
+        lotteryParam,
+        lotteries.map(l => l.id_lottery)
+      )
+    : parseLotteryId(lotteryParam);
+
+  const edKeep = parseLotteryId(edParam);
+
+  const onSelectLottery = (id: number) => {
+    router.replace(
+      withLotteryQuery(withEdQuery(pathname, edKeep), id) as any
+    );
+  };
 
   return (
     <View className="gap-3">
@@ -1148,31 +1196,55 @@ export default function EditionLotteryTab({
         </Text>
       )}
 
-      {mode === 'prizes' && (
-        <EditionLotteryPrizesMode
-          editionId={editionId}
-          lotteries={lotteries}
-          isLoading={lotteriesQuery.isLoading}
-          editionFinalized={editionFinalized}
-        />
-      )}
+      <View className="bg-white border border-gray-200 rounded-lg p-3 gap-2">
+        <Text className="font-semibold text-gray-900">Lottery</Text>
+        {lotteriesQuery.isLoading && lotteries.length === 0 ? (
+          <ActivityIndicator />
+        ) : (
+          <LotteryPicker
+            lotteries={lotteries}
+            lotteryId={selectedLotteryId}
+            onSelect={onSelectLottery}
+          />
+        )}
+      </View>
 
-      {mode === 'rules' && (
-        <EditionLotteryRulesMode
-          editionId={editionId}
-          editionDivisionId={editionDivisionId}
-          divisions={divisions}
-          editionFinalized={editionFinalized}
-        />
-      )}
+      {selectedLotteryId == null ? (
+        lotteries.length > 0 ? (
+          <Text testID="lottery-select-empty" className="text-sm text-gray-500">
+            Select a lottery to view prizes, rules, and luckies.
+          </Text>
+        ) : null
+      ) : (
+        <>
+          {mode === 'prizes' && (
+            <EditionLotteryPrizesMode
+              editionId={editionId}
+              lotteryId={selectedLotteryId}
+              editionFinalized={editionFinalized}
+            />
+          )}
 
-      {mode === 'luckies' && (
-        <EditionLotteryLuckiesMode
-          editionId={editionId}
-          editionDivisionId={editionDivisionId}
-          divisions={divisions}
-          editionFinalized={editionFinalized}
-        />
+          {mode === 'rules' && (
+            <EditionLotteryRulesMode
+              editionId={editionId}
+              editionDivisionId={editionDivisionId}
+              lotteryId={selectedLotteryId}
+              divisions={divisions}
+              editionFinalized={editionFinalized}
+            />
+          )}
+
+          {mode === 'luckies' && (
+            <EditionLotteryLuckiesMode
+              editionId={editionId}
+              editionDivisionId={editionDivisionId}
+              lotteryId={selectedLotteryId}
+              divisions={divisions}
+              editionFinalized={editionFinalized}
+            />
+          )}
+        </>
       )}
     </View>
   );

@@ -40,13 +40,22 @@ export const queryKeys = {
     ['editionLotteries', editionId] as const,
   editionLotteryRules: (
     editionId: number | string,
-    editionDivisionId: number | null
-  ) => ['editionLotteryRules', editionId, editionDivisionId] as const,
-  editionLotteryRulesWithLuckies: (
+    editionDivisionId: number | null,
+    lotteryId: number | string | null = null
+  ) => ['editionLotteryRules', editionId, editionDivisionId, lotteryId] as const,
+  editionLotteryPrizes: (lotteryId: number | string) =>
+    ['editionLotteryPrizes', lotteryId] as const,
+  editionLotteryPrizesWithLuckies: (
     editionId: number | string,
-    editionDivisionId: number | null
+    editionDivisionId: number | null,
+    lotteryId: number | string | null = null
   ) =>
-    ['editionLotteryRulesWithLuckies', editionId, editionDivisionId] as const,
+    [
+      'editionLotteryPrizesWithLuckies',
+      editionId,
+      editionDivisionId,
+      lotteryId,
+    ] as const,
   editionLotteryLuckies: (
     editionId: number | string,
     editionDivisionId: number | null

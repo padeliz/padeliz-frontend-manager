@@ -23,25 +23,28 @@ describe('EditionLotteryRulesApiService', () => {
     (storageUtils.get as jest.Mock).mockResolvedValue('test-token');
   });
 
-  it('appends with_luckies=1 when requested', async () => {
+  it('does not send with_luckies', async () => {
     fetchMock.mockResolvedValue({
       ok: true,
       json: async () => ({ data: [], meta: {} }),
     });
     const api = new EditionLotteryRulesApiService();
-    await api.getRules({ with_luckies: true, per_page: 100 });
-    expect(fetchMock.mock.calls[0][0]).toContain('with_luckies=1');
+    await api.getRules({ per_page: 100 });
+    expect(fetchMock.mock.calls[0][0]).not.toContain('with_luckies');
   });
 
-  it('omits with_luckies when absent or false', async () => {
+  it('appends filters[lottery_id] when provided', async () => {
     fetchMock.mockResolvedValue({
       ok: true,
       json: async () => ({ data: [], meta: {} }),
     });
     const api = new EditionLotteryRulesApiService();
-    await api.getRules({ per_page: 50 });
-    expect(fetchMock.mock.calls[0][0]).not.toContain('with_luckies');
-    await api.getRules({ with_luckies: false });
-    expect(fetchMock.mock.calls[1][0]).not.toContain('with_luckies');
+    await api.getRules({
+      per_page: 100,
+      filters: { lottery_id: 7, edition_division_id: 2 },
+    });
+    const url = String(fetchMock.mock.calls[0][0]);
+    expect(url).toContain('filters%5Blottery_id%5D=7');
+    expect(url).toContain('filters%5Bedition_division_id%5D=2');
   });
 });

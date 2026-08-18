@@ -26,19 +26,32 @@ import {
 import { Platform } from 'react-native';
 
 const mockGetRules = jest.fn();
+const mockGetLotteryPrizes = jest.fn();
 const mockAccept = jest.fn();
 const mockReject = jest.fn();
-const mockGetLotteries = jest.fn(async () => ({ data: [] }));
+const mockGetLotteries = jest.fn(async () => ({
+  data: [{ id_lottery: 3, name: 'Alpha Draw', display_order: 1 }],
+}));
 const mockGeneratePdfAvatar = jest.fn();
+let mockSearchParams: Record<string, string | undefined> = { lottery: '3' };
 
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ push: jest.fn() }),
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
+  usePathname: () => '/editions/1/lottery/luckies',
+  useLocalSearchParams: () => mockSearchParams,
+  useGlobalSearchParams: () => mockSearchParams,
 }));
 
 jest.mock('@/services/api/editionLotteriesApi', () => ({
   EditionLotteriesApiService: jest.fn().mockImplementation(() => ({
     getLotteries: (...args: unknown[]) => mockGetLotteries(...args),
     deleteLottery: jest.fn(),
+  })),
+}));
+
+jest.mock('@/services/api/editionLotteryPrizesApi', () => ({
+  EditionLotteryPrizesApiService: jest.fn().mockImplementation(() => ({
+    getLotteryPrizes: (...args: unknown[]) => mockGetLotteryPrizes(...args),
   })),
 }));
 
@@ -77,6 +90,10 @@ function pendingUnannouncedLucky(overrides: Record<string, unknown> = {}) {
     rejected_at: null,
     inserted_at: 100,
     updated_at: 100,
+    lottery_rule: {
+      id_lottery_rule: 7,
+      edition_division_id: 2,
+    },
     drawn_participation: {
       id_participation: 11,
       player_id: 103,
@@ -86,13 +103,13 @@ function pendingUnannouncedLucky(overrides: Record<string, unknown> = {}) {
         name: 'Chris Pending',
         phones: [{ phone: '+40888' }],
       },
-      edition_division_id: 2,
+      edition_division_id: 9,
     },
     ...overrides,
   };
 }
 
-function nestedRulesFixture(extraLuckies: any[] = []) {
+function nestedRulesFixture() {
   return {
     data: [
       {
@@ -102,7 +119,11 @@ function nestedRulesFixture(extraLuckies: any[] = []) {
         rule_prize_quantity: 1,
         orderliness: 0,
         lottery: { id_lottery: 3, prize: { name: 'Mug' } },
-        luckies: [],
+        lottery_prize: {
+          lottery_id: 3,
+          prize: { name: 'Mug' },
+          sponsor_id: null,
+        },
       },
       {
         id_lottery_rule: 7,
@@ -111,6 +132,28 @@ function nestedRulesFixture(extraLuckies: any[] = []) {
         rule_prize_quantity: 2,
         orderliness: 1,
         lottery: { id_lottery: 3, prize: { name: 'Towel' } },
+        lottery_prize: {
+          lottery_id: 3,
+          prize: { name: 'Towel' },
+          sponsor_id: null,
+        },
+      },
+    ],
+  };
+}
+
+function prizeLinesWithLuckiesFixture(extraLuckies: any[] = []) {
+  return {
+    data: [
+      {
+        id_lottery_prize: 20,
+        lottery_id: 3,
+        prize_id: 1,
+        prize_quantity: 2,
+        prize: { name: 'Towel' },
+        sponsor: null,
+        rule_prize_quantity_total: 2,
+        activity_at: 9000,
         luckies: [
           {
             id_lucky: 50,
@@ -125,6 +168,10 @@ function nestedRulesFixture(extraLuckies: any[] = []) {
             rejected_at: null,
             inserted_at: 100,
             updated_at: 100,
+            lottery_rule: {
+              id_lottery_rule: 7,
+              edition_division_id: 2,
+            },
             drawn_participation: {
               id_participation: 9,
               player_id: 101,
@@ -134,7 +181,7 @@ function nestedRulesFixture(extraLuckies: any[] = []) {
                 name: 'Alice Wonder',
                 phones: [{ phone: '+40111' }, { phone: '+40222' }],
               },
-              edition_division_id: 2,
+              edition_division_id: 9,
             },
           },
           {
@@ -150,6 +197,10 @@ function nestedRulesFixture(extraLuckies: any[] = []) {
             rejected_at: null,
             inserted_at: 200,
             updated_at: 9000,
+            lottery_rule: {
+              id_lottery_rule: 7,
+              edition_division_id: 2,
+            },
             drawn_participation: {
               id_participation: 10,
               player_id: 102,
@@ -159,13 +210,25 @@ function nestedRulesFixture(extraLuckies: any[] = []) {
                 name: 'Bob Builder',
                 phones: [{ phone: '+40999' }],
               },
-              edition_division_id: 2,
+              edition_division_id: 9,
             },
           },
           ...extraLuckies,
         ],
       },
+      {
+        id_lottery_prize: 21,
+        lottery_id: 3,
+        prize_id: 2,
+        prize_quantity: 1,
+        prize: { name: 'Mug' },
+        sponsor: null,
+        rule_prize_quantity_total: 1,
+        activity_at: null,
+        luckies: [],
+      },
     ],
+    meta: { current_page: 1, has_unresolved_pending: true },
   };
 }
 
@@ -262,10 +325,12 @@ describe('EditionLotteryTab rules/luckies', () => {
       get: () => 'web',
     });
     (window as any).confirm = jest.fn(() => true);
+    mockSearchParams = { lottery: '3' };
     mockGetLotteries.mockResolvedValue({
-      data: [{ id_lottery: 3, orderliness: 1 }],
+      data: [{ id_lottery: 3, name: 'Alpha Draw', display_order: 1 }],
     });
     mockGetRules.mockResolvedValue(nestedRulesFixture());
+    mockGetLotteryPrizes.mockResolvedValue(prizeLinesWithLuckiesFixture());
     mockAccept.mockResolvedValue({});
     mockReject.mockResolvedValue({});
     mockGeneratePdfAvatar.mockResolvedValue({
@@ -307,7 +372,7 @@ describe('EditionLotteryTab rules/luckies', () => {
           }
         />
       );
-    await findByTestId('lucky-group-header-7');
+    await findByTestId('lucky-group-header-20');
     expect(queryByTestId('lottery-link-luckies')).toBeNull();
     expect(queryByTestId('lottery-link-add-lucky')).toBeNull();
     expect(queryByTestId('lottery-link-edit-lucky')).toBeNull();
@@ -324,20 +389,20 @@ describe('EditionLotteryTab rules/luckies', () => {
     expect(queryByTestId('lucky-avatar-missing-51')).toBeNull();
     const headers = getAllByTestId(/lucky-group-header-/);
     expect(headers.map(h => h.props.testID)).toEqual([
-      'lucky-group-header-7',
-      'lucky-group-header-8',
+      'lucky-group-header-20',
+      'lucky-group-header-21',
     ]);
   });
 
   it('shows quantity-only group header when prize name missing', async () => {
-    mockGetRules.mockResolvedValue({
+    mockGetLotteryPrizes.mockResolvedValue({
       data: [
         {
-          id_lottery_rule: 7,
+          id_lottery_prize: 20,
           lottery_id: 3,
-          edition_division_id: 2,
-          rule_prize_quantity: 2,
-          lottery: {},
+          prize: {},
+          sponsor: null,
+          rule_prize_quantity_total: 2,
           luckies: [
             {
               id_lucky: 5,
@@ -347,41 +412,54 @@ describe('EditionLotteryTab rules/luckies', () => {
               available_at: 1100,
               accepted_at: 1,
               rejected_at: null,
+              lottery_rule: { edition_division_id: 2 },
               drawn_participation: {
-                edition_division_id: 2,
+                edition_division_id: 9,
                 player: { name: 'Alice' },
               },
             },
           ],
         },
       ],
+      meta: { has_unresolved_pending: false },
     });
     const { findByTestId } = renderWithClient(
       <EditionLotteryTab editionId={1} mode="luckies" divisions={[] as any} />
     );
-    expect(await findByTestId('lucky-group-header-7')).toHaveTextContent('2');
+    expect(await findByTestId('lucky-group-header-20')).toHaveTextContent('2');
   });
 
-  it('shows empty-tab copy when there are no rules', async () => {
-    mockGetRules.mockResolvedValue({ data: [] });
+  it('shows empty-tab copy when there are no prize lines', async () => {
+    mockGetLotteryPrizes.mockResolvedValue({ data: [], meta: {} });
     const { findByText, queryByTestId } = renderWithClient(
       <EditionLotteryTab editionId={1} mode="luckies" divisions={[] as any} />
     );
-    expect(await findByText(/No lottery rules for this edition/)).toBeTruthy();
+    expect(await findByText(/No lottery prizes for this edition/)).toBeTruthy();
     expect(queryByTestId(/lucky-group-/)).toBeNull();
   });
 
-  it('keeps empty-rule groups when all luckies arrays are empty', async () => {
-    mockGetRules.mockResolvedValue({
+  it('does not fetch prizes without ?lottery=', async () => {
+    mockSearchParams = {};
+    const { findByTestId } = renderWithClient(
+      <EditionLotteryTab editionId={1} mode="luckies" divisions={[] as any} />
+    );
+    expect(await findByTestId('lottery-select-empty')).toBeTruthy();
+    expect(mockGetLotteryPrizes).not.toHaveBeenCalled();
+  });
+
+  it('keeps empty luckies groups when luckies arrays are empty', async () => {
+    mockGetLotteryPrizes.mockResolvedValue({
       data: [
         {
-          id_lottery_rule: 9,
+          id_lottery_prize: 9,
           lottery_id: 3,
-          rule_prize_quantity: 3,
-          lottery: { prize: { name: 'Ball' } },
+          prize: { name: 'Ball' },
+          sponsor: null,
+          rule_prize_quantity_total: 3,
           luckies: [],
         },
       ],
+      meta: { has_unresolved_pending: false },
     });
     const { findByTestId, queryByText } = renderWithClient(
       <EditionLotteryTab editionId={1} mode="luckies" divisions={[] as any} />
@@ -389,7 +467,7 @@ describe('EditionLotteryTab rules/luckies', () => {
     expect(await findByTestId('lucky-group-header-9')).toHaveTextContent(
       'Ball × 3'
     );
-    expect(queryByText(/No lottery rules/)).toBeNull();
+    expect(queryByText(/No lottery prizes/)).toBeNull();
   });
 
   it('invalidates rules-with-luckies on accept and reject', async () => {
@@ -410,10 +488,10 @@ describe('EditionLotteryTab rules/luckies', () => {
     );
     await findByTestId('lottery-lucky-card-51');
     fireEvent.press(getByTestId('lottery-accept-lucky-51'));
-    await waitFor(() => expect(mockAccept).toHaveBeenCalled());
+    await waitFor(() => expect(mockAccept).toHaveBeenCalledWith(3, 51));
     fireEvent.press(getByTestId('lottery-reject-lucky-51'));
     await waitFor(() => expect(mockReject).toHaveBeenCalled());
-    const expectedKey = queryKeys.editionLotteryRulesWithLuckies(1, 2);
+    const expectedKey = queryKeys.editionLotteryPrizesWithLuckies(1, 2, 3);
     expect(
       spy.mock.calls.some(
         (c: any[]) =>
@@ -470,7 +548,7 @@ describe('EditionLotteryTab rules/luckies', () => {
       getByTestId('lucky-avatar-reload-51').props.accessibilityState?.disabled
     ).toBe(true);
 
-    mockGetRules.mockResolvedValue(nestedRulesFixture());
+    mockGetLotteryPrizes.mockResolvedValue(prizeLinesWithLuckiesFixture());
     await act(async () => {
       await Promise.resolve();
     });
@@ -506,29 +584,27 @@ describe('EditionLotteryTab rules/luckies', () => {
       <EditionLotteryTab editionId={1} mode="luckies" divisions={[] as any} />
     );
     await findByTestId('lottery-luckies-last-refresh');
-    const callsBefore = mockGetRules.mock.calls.length;
+    const callsBefore = mockGetLotteryPrizes.mock.calls.length;
     await act(async () => {
       jest.advanceTimersByTime(30_000);
     });
     await waitFor(() =>
-      expect(mockGetRules.mock.calls.length).toBeGreaterThan(callsBefore)
+      expect(mockGetLotteryPrizes.mock.calls.length).toBeGreaterThan(callsBefore)
     );
     unmount();
     jest.useRealTimers();
   });
 
-  it('general tab does not issue a second pending-only rules fetch', async () => {
+  it('issues a single prizes fetch on the general luckies tab', async () => {
     const { findByTestId } = renderWithClient(
       <EditionLotteryTab editionId={1} mode="luckies" divisions={[] as any} />
     );
     await findByTestId('lottery-luckies-board');
-    const withLuckiesCalls = mockGetRules.mock.calls.filter(
-      (c: any[]) => c[0]?.with_luckies === true
-    );
-    expect(withLuckiesCalls.length).toBe(1);
+    expect(mockGetLotteryPrizes).toHaveBeenCalledTimes(1);
+    expect(mockGetRules).not.toHaveBeenCalled();
   });
 
-  it('ed filter fetches edition-wide pending check as well', async () => {
+  it('with editionDivisionId set issues one prizes fetch and no rules fetch', async () => {
     const { findByTestId } = renderWithClient(
       <EditionLotteryTab
         editionId={1}
@@ -541,23 +617,20 @@ describe('EditionLotteryTab rules/luckies', () => {
     );
     await findByTestId('lottery-luckies-board');
     await waitFor(() => {
-      const calls = mockGetRules.mock.calls.map((c: any[]) => c[0]?.filters);
-      const filtered = calls.some(
-        (f: any) => f?.edition_division_id === 2 && f?.lottery_id === 3
-      );
-      const editionWide = calls.some(
-        (f: any) => f?.lottery_id === 3 && f?.edition_division_id == null
-      );
-      expect(filtered).toBe(true);
-      expect(editionWide).toBe(true);
+      expect(mockGetLotteryPrizes).toHaveBeenCalledTimes(1);
     });
+    const args = mockGetLotteryPrizes.mock.calls[0][0];
+    expect(args.include).toBe('luckies');
+    expect(args.edition_division_id).toBe(2);
+    expect(args.filters).toEqual({ lottery_id: 3 });
+    expect(mockGetRules).not.toHaveBeenCalled();
   });
 
   it('pending empty phones shows No phone without icon', async () => {
-    const fixture = nestedRulesFixture();
-    (fixture.data[1].luckies as any[])[1].drawn_participation.player.phones =
+    const fixture = prizeLinesWithLuckiesFixture();
+    (fixture.data[0].luckies as any[])[1].drawn_participation.player.phones =
       [];
-    mockGetRules.mockResolvedValue(fixture);
+    mockGetLotteryPrizes.mockResolvedValue(fixture);
     const { findByTestId, queryByTestId } = renderWithClient(
       <EditionLotteryTab editionId={1} mode="luckies" divisions={[] as any} />
     );
@@ -569,8 +642,8 @@ describe('EditionLotteryTab rules/luckies', () => {
 
   it('shows Announcing in countdown for pending unannounced luckies', async () => {
     const availableAt = Math.floor(Date.now() / 1000) + 125;
-    mockGetRules.mockResolvedValue(
-      nestedRulesFixture([
+    mockGetLotteryPrizes.mockResolvedValue(
+      prizeLinesWithLuckiesFixture([
         pendingUnannouncedLucky({ available_at: availableAt }),
       ])
     );
@@ -595,8 +668,8 @@ describe('EditionLotteryTab rules/luckies', () => {
   });
 
   it('holds Announcing in 00:00 when available_at is past', async () => {
-    mockGetRules.mockResolvedValue(
-      nestedRulesFixture([
+    mockGetLotteryPrizes.mockResolvedValue(
+      prizeLinesWithLuckiesFixture([
         pendingUnannouncedLucky({
           available_at: Math.floor(Date.now() / 1000) - 30,
         }),
@@ -613,8 +686,8 @@ describe('EditionLotteryTab rules/luckies', () => {
   it('decreases announce countdown on nowTick', async () => {
     jest.useFakeTimers({ now: new Date('2026-08-16T12:00:00Z') });
     const availableAt = Math.floor(Date.now() / 1000) + 65;
-    mockGetRules.mockResolvedValue(
-      nestedRulesFixture([
+    mockGetLotteryPrizes.mockResolvedValue(
+      prizeLinesWithLuckiesFixture([
         pendingUnannouncedLucky({ available_at: availableAt }),
       ])
     );
@@ -646,8 +719,8 @@ describe('EditionLotteryTab rules/luckies', () => {
   });
 
   it('falls back to Drawn when available_at missing on pending unannounced', async () => {
-    mockGetRules.mockResolvedValue(
-      nestedRulesFixture([
+    mockGetLotteryPrizes.mockResolvedValue(
+      prizeLinesWithLuckiesFixture([
         pendingUnannouncedLucky({
           available_at: null,
           drawn_at: 42,
@@ -761,5 +834,118 @@ describe('EditionLotteryTab rules/luckies', () => {
     expect(
       getByTestId('lottery-accept-lucky-51').props.accessibilityState?.disabled
     ).toBe(true);
+  });
+
+  it('renders one group for a prize line that already merged two luckies', async () => {
+    mockGetLotteryPrizes.mockResolvedValue({
+      data: [
+        {
+          id_lottery_prize: 20,
+          prize: { name: 'Towel' },
+          sponsor: null,
+          rule_prize_quantity_total: 5,
+          luckies: [
+            { id_lucky: 50, accepted_at: 1, rejected_at: null, lottery_rule: { edition_division_id: 2 } },
+            { id_lucky: 51, accepted_at: null, rejected_at: null, lottery_rule: { edition_division_id: 2 } },
+          ],
+        },
+      ],
+      meta: { has_unresolved_pending: true },
+    });
+    const { findByTestId, getAllByTestId } = renderWithClient(
+      <EditionLotteryTab editionId={1} mode="luckies" divisions={[] as any} />
+    );
+    expect(await findByTestId('lucky-group-20')).toBeTruthy();
+    expect(await findByTestId('lucky-group-header-20')).toHaveTextContent(
+      'Towel × 5'
+    );
+    expect(getAllByTestId(/lucky-group-header-/)).toHaveLength(1);
+    expect(await findByTestId('lottery-lucky-card-50')).toBeTruthy();
+    expect(await findByTestId('lottery-lucky-card-51')).toBeTruthy();
+  });
+
+  it('uses prize · sponsor × qty in the group header', async () => {
+    mockGetLotteryPrizes.mockResolvedValue({
+      data: [
+        {
+          id_lottery_prize: 20,
+          prize: { name: 'Towel' },
+          sponsor: { name: 'Acme' },
+          rule_prize_quantity_total: 2,
+          luckies: [],
+        },
+      ],
+      meta: { has_unresolved_pending: false },
+    });
+    const { findByTestId } = renderWithClient(
+      <EditionLotteryTab editionId={1} mode="luckies" divisions={[] as any} />
+    );
+    expect(await findByTestId('lucky-group-header-20')).toHaveTextContent(
+      'Towel · Acme × 2'
+    );
+  });
+
+  it('card division comes from lottery_rule, not participation', async () => {
+    mockGetLotteryPrizes.mockResolvedValue({
+      data: [
+        {
+          id_lottery_prize: 20,
+          prize: { name: 'Towel' },
+          rule_prize_quantity_total: 1,
+          luckies: [
+            {
+              id_lucky: 50,
+              accepted_at: 1,
+              rejected_at: null,
+              lottery_rule: { edition_division_id: 2 },
+              drawn_participation: { edition_division_id: 9 },
+            },
+            {
+              id_lucky: 70,
+              accepted_at: 1,
+              rejected_at: null,
+              lottery_rule: { edition_division_id: null },
+              drawn_participation: { edition_division_id: 2 },
+            },
+          ],
+        },
+      ],
+      meta: { has_unresolved_pending: false },
+    });
+    const { findByTestId } = renderWithClient(
+      <EditionLotteryTab
+        editionId={1}
+        mode="luckies"
+        divisions={
+          [{ id_edition_division: 2, division_title: 'Learners' }] as any
+        }
+      />
+    );
+    expect(await findByTestId('lucky-header-50')).toHaveTextContent(
+      'Lucky #50 · Learners'
+    );
+    expect(await findByTestId('lucky-header-70')).toHaveTextContent(
+      'Lucky #70 · General'
+    );
+  });
+
+  it('does not poll when has_unresolved_pending is false', async () => {
+    jest.useFakeTimers();
+    mockGetLotteryPrizes.mockResolvedValue({
+      ...prizeLinesWithLuckiesFixture(),
+      meta: { current_page: 1, has_unresolved_pending: false },
+    });
+    const { findByTestId, queryByTestId, unmount } = renderWithClient(
+      <EditionLotteryTab editionId={1} mode="luckies" divisions={[] as any} />
+    );
+    await findByTestId('lottery-luckies-board');
+    expect(queryByTestId('lottery-luckies-last-refresh')).toBeNull();
+    const callsBefore = mockGetLotteryPrizes.mock.calls.length;
+    await act(async () => {
+      jest.advanceTimersByTime(30_000);
+    });
+    expect(mockGetLotteryPrizes.mock.calls.length).toBe(callsBefore);
+    unmount();
+    jest.useRealTimers();
   });
 });

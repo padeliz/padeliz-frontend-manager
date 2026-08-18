@@ -1,10 +1,16 @@
 import { buildEditionTopTabs } from '@/utils/editionWorkspace';
 
 describe('edition workspace tabs', () => {
-  it('starts with Details and includes Divisions', () => {
+  it('starts with Details then Registrations and Participations', () => {
     const tabs = buildEditionTopTabs(1, null);
     expect(tabs[0].label).toBe('Details');
-    expect(tabs.some(t => t.label === 'Divisions')).toBe(true);
+    expect(tabs[1].label).toBe('Registrations');
+    expect(tabs[1].href).toContain('/editions/1/registrations');
+    expect(tabs[1].match).toBe('/registrations');
+    expect(tabs[2].label).toBe('Participations');
+    expect(tabs[2].href).toContain('/editions/1/participations');
+    expect(tabs[2].match).toBe('/participations');
+    expect(tabs.some(t => t.label === 'Divisions')).toBe(false);
     expect(tabs.some(t => t.label === 'Overview')).toBe(false);
   });
 });

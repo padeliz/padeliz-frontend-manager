@@ -102,4 +102,30 @@ describe('EditionScheduleGeneralView matches cards', () => {
     );
     expect(await findByTestId('schedule-metrics-empty')).toBeTruthy();
   });
+
+  it('has no participations or collecting branch', async () => {
+    mockGetSchedule.mockResolvedValue({
+      data: {
+        has_regular_matches: false,
+        participations: [
+          {
+            id_participation: 1,
+            is_collecting_points: true,
+            player: { name: 'Alice' },
+          },
+        ],
+        courts: [],
+        edition_division: {},
+      },
+    });
+    const { findByTestId, queryByText } = renderView(
+      <EditionScheduleGeneralView
+        section="knobs"
+        divisions={[{ id_edition_division: 9, division_title: 'A' }] as any}
+      />
+    );
+    await findByTestId('schedule-general-ed-9');
+    expect(queryByText(/collecting/i)).toBeNull();
+    expect(queryByText(/Alice/)).toBeNull();
+  });
 });

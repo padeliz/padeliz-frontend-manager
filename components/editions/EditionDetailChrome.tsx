@@ -13,7 +13,9 @@ import { EditionsApiService } from '@/services/api/editionsApi';
 import {
   buildEditionTopTabs,
   parseEditionDivisionIdOptimistic,
+  parseLotteryId,
   withEdQuery,
+  withLotteryQuery,
 } from '@/utils/editionWorkspace';
 import {
   confirmDiscardDirty,
@@ -46,10 +48,19 @@ export function EditionChrome() {
   const pathname = usePathname();
   const queryClient = useQueryClient();
   const { actions } = usePageChrome();
-  const localParams = useLocalSearchParams<{ id: string; ed?: string }>();
-  const globalParams = useGlobalSearchParams<{ id?: string; ed?: string }>();
+  const localParams = useLocalSearchParams<{
+    id: string;
+    ed?: string;
+    lottery?: string;
+  }>();
+  const globalParams = useGlobalSearchParams<{
+    id?: string;
+    ed?: string;
+    lottery?: string;
+  }>();
   const editionId = Number(localParams.id ?? globalParams.id);
   const edParam = globalParams.ed ?? localParams.ed;
+  const lotteryParam = globalParams.lottery ?? localParams.lottery;
 
   const editionQuery = useQuery({
     queryKey: queryKeys.edition(editionId),
@@ -80,9 +91,11 @@ export function EditionChrome() {
     validIds,
     divisionsLoaded
   );
+  const selectedLotteryId = parseLotteryId(lotteryParam);
 
   const isDetails = pathname.includes('/details');
-  const showEdPicker = !isDetails;
+  const isRegistrations = pathname.includes('/registrations');
+  const showEdPicker = !isDetails && !isRegistrations;
   const isFinalized = !!(editionQuery.data as any)?.finalized_at;
   const finalizedAt = (editionQuery.data as any)?.finalized_at as
     | number
@@ -90,8 +103,8 @@ export function EditionChrome() {
     | undefined;
 
   const tabs = useMemo(
-    () => buildEditionTopTabs(editionId, selectedDivisionId),
-    [editionId, selectedDivisionId]
+    () => buildEditionTopTabs(editionId, selectedDivisionId, selectedLotteryId),
+    [editionId, selectedDivisionId, selectedLotteryId]
   );
 
   const discardIfNeeded = useCallback(async (): Promise<boolean> => {
@@ -104,13 +117,13 @@ export function EditionChrome() {
 
   const navigateEd = useCallback(
     (id: number | null) => {
-      if (id == null) {
-        router.replace(pathname as any);
-      } else {
-        router.replace(withEdQuery(pathname, id) as any);
-      }
+      const next =
+        id == null
+          ? withLotteryQuery(pathname, selectedLotteryId)
+          : withLotteryQuery(withEdQuery(pathname, id), selectedLotteryId);
+      router.replace(next as any);
     },
-    [pathname, router]
+    [pathname, router, selectedLotteryId]
   );
 
   const setEd = useCallback(

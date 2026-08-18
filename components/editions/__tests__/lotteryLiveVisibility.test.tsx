@@ -20,7 +20,7 @@ jest.mock('expo-router', () => {
   };
 });
 
-let mockParams: { id: string; ed?: string } = { id: '1' };
+let mockParams: { id: string; ed?: string; lottery?: string } = { id: '1' };
 
 jest.mock('@/services/api/editionDivisionsApi', () => ({
   EditionDivisionsApiService: jest.fn().mockImplementation(() => ({
@@ -85,5 +85,16 @@ describe('lottery LIVE link visibility', () => {
       'noopener,noreferrer'
     );
     expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('passes selected lottery on LIVE URL', async () => {
+    mockParams = { id: '1', lottery: '3' };
+    const { findByTestId } = renderLayout();
+    fireEvent.press(await findByTestId('open-live-lottery'));
+    expect(mockOpen).toHaveBeenCalledWith(
+      'http://localhost/lottery-live/1?lottery=3',
+      '_blank',
+      'noopener,noreferrer'
+    );
   });
 });

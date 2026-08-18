@@ -1,0 +1,228 @@
+/**
+ * @jest-environment jsdom
+ */
+import { PageChromeProvider, usePageChrome } from '@/components/chrome/PageChromeProvider';
+import ResourceListPage from '@/components/pages/ResourceListPage';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import React from 'react';
+import { Pressable, Text, View } from 'react-native';
+
+jest.mock('@expo/vector-icons', () => ({
+  Ionicons: 'Ionicons',
+}));
+
+const mockList = {
+  selectedItems: [] as any[],
+  refresh: jest.fn(),
+  onBulkAction: jest.fn(),
+  exportData: jest.fn(),
+};
+
+jest.mock('@/hooks/useAdvancedDataManagement', () => ({
+  useAdvancedDataManagement: () => ({
+    data: [{ id: 1, name: 'Row' }],
+    loading: false,
+    error: null,
+    pagination: {
+      currentPage: 1,
+      totalPages: 1,
+      totalItems: 1,
+      perPage: 10,
+      onPageChange: jest.fn(),
+      onPerPageChange: jest.fn(),
+    },
+    search: {
+      query: '',
+      input: '',
+      placeholder: 'Search',
+      onInputChange: jest.fn(),
+      onSearch: jest.fn(),
+      onKeyPress: jest.fn(),
+      onBlur: jest.fn(),
+      onClear: jest.fn(),
+    },
+    sorting: { config: {}, onSort: jest.fn(), onMultiSort: jest.fn() },
+    filters: { active: {}, definitions: [], onFilter: jest.fn() },
+    bulkActions: {
+      selectedItems: mockList.selectedItems,
+      onSelectAll: jest.fn(),
+      onSelectItem: jest.fn(),
+      onClearSelection: jest.fn(),
+      onBulkAction: mockList.onBulkAction,
+      isAllSelected: false,
+      isPartiallySelected: false,
+    },
+    metadata: {
+      swagger_schema: {
+        properties: {
+          id: { type: 'integer', format: 'int64', readOnly: true },
+          name: { type: 'string' },
+        },
+      },
+    },
+    metadataLoading: false,
+    refresh: mockList.refresh,
+    exportData: mockList.exportData,
+    reset: { hasActiveState: false, onReset: jest.fn() },
+  }),
+}));
+
+jest.mock('@/hooks/useResourceMetadata', () => ({
+  useResourceMetadata: () => ({
+    getMetadata: () => null,
+    getError: () => null,
+    isLoading: () => false,
+    fetchMetadata: jest.fn(),
+  }),
+}));
+
+jest.mock('@/utils/tableColumns', () => ({
+  extractLinkedResourceSchemaNames: () => [],
+  generateColumnsFromMetadata: () => [
+    { key: 'name', label: 'Name', width: 120 },
+  ],
+}));
+
+jest.mock('@/components/layout/AppLayout', () => {
+  const React = require('react');
+  const { View, Text } = require('react-native');
+  return {
+    __esModule: true,
+    default: ({ children, title }: any) => (
+      <View testID="app-layout">
+        <Text>{title}</Text>
+        {children}
+      </View>
+    ),
+  };
+});
+
+jest.mock('@/components/ui/AdvancedDataTable', () => {
+  const React = require('react');
+  const { View, Text } = require('react-native');
+  return {
+    __esModule: true,
+    default: () => (
+      <View testID="advanced-data-table">
+        <Text>table</Text>
+      </View>
+    ),
+  };
+});
+
+jest.mock('@/components/ui/AdvancedSearchFilters', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    __esModule: true,
+    default: () => <View testID="search-filters" />,
+  };
+});
+
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ back: jest.fn(), push: jest.fn() }),
+}));
+
+const baseConfig = {
+  resourceName: 'Widget',
+  resourceDisplayName: 'Widget',
+  fetchData: jest.fn(),
+  title: 'Widgets',
+  onAdd: jest.fn(),
+  bulkActions: [
+    { label: 'Delete Selected', action: 'delete', variant: 'danger' as const },
+    { label: 'Export Selected', action: 'export', variant: 'primary' as const },
+  ],
+};
+
+function ChromeProbe() {
+  const { actions } = usePageChrome();
+  return (
+    <View>
+      <Text testID="chrome-has-refresh">{actions?.refresh ? 'yes' : 'no'}</Text>
+      <Text testID="chrome-can-save">{actions?.canSave ? 'yes' : 'no'}</Text>
+      <Pressable
+        testID="chrome-refresh"
+        onPress={() => void actions?.refresh?.()}
+      />
+    </View>
+  );
+}
+
+describe('ResourceListPage', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockList.selectedItems = [];
+  });
+
+  it('wraps the global list in AppLayout with a back-arrow header', () => {
+    const { getByTestId, queryByTestId } = render(
+      <ResourceListPage config={baseConfig} />
+    );
+    expect(getByTestId('app-layout')).toBeTruthy();
+    expect(getByTestId('resource-list-back')).toBeTruthy();
+    expect(queryByTestId('resource-list-embedded')).toBeNull();
+    expect(getByTestId('resource-list-add')).toBeTruthy();
+  });
+
+  it('omits AppLayout and the back-arrow header when embedded', () => {
+    const { getByTestId, queryByTestId, getByText } = render(
+      <ResourceListPage config={{ ...baseConfig, embedded: true }} />
+    );
+    expect(queryByTestId('app-layout')).toBeNull();
+    expect(queryByTestId('resource-list-back')).toBeNull();
+    expect(getByTestId('resource-list-embedded')).toBeTruthy();
+    expect(getByText('Add Widget')).toBeTruthy();
+    expect(getByTestId('resource-list-export')).toBeTruthy();
+  });
+
+  it('keeps Add and Delete Selected visible but non-pressable when mutationsDisabled', () => {
+    mockList.selectedItems = [{ id: 1, name: 'Row' }];
+    const onAdd = jest.fn();
+    const { getByTestId } = render(
+      <ResourceListPage
+        config={{ ...baseConfig, onAdd, mutationsDisabled: true }}
+      />
+    );
+    expect(getByTestId('resource-list-add')).toBeTruthy();
+    fireEvent.press(getByTestId('resource-list-add'));
+    expect(onAdd).not.toHaveBeenCalled();
+
+    expect(getByTestId('resource-list-delete-selected')).toBeTruthy();
+    fireEvent.press(getByTestId('resource-list-delete-selected'));
+    expect(mockList.onBulkAction).not.toHaveBeenCalled();
+
+    fireEvent.press(getByTestId('resource-list-export'));
+    expect(mockList.exportData).toHaveBeenCalledWith('csv');
+
+    fireEvent.press(getByTestId('resource-list-export-selected'));
+    expect(mockList.onBulkAction).toHaveBeenCalledWith('export');
+  });
+
+  it('registers chrome refresh only when embedded and clears it on unmount', async () => {
+    function Harness({ showList }: { showList: boolean }) {
+      return (
+        <PageChromeProvider>
+          <ChromeProbe />
+          {showList ? (
+            <ResourceListPage config={{ ...baseConfig, embedded: true }} />
+          ) : null}
+        </PageChromeProvider>
+      );
+    }
+
+    const { getByTestId, rerender } = render(<Harness showList />);
+    await waitFor(() => {
+      expect(getByTestId('chrome-has-refresh')).toHaveTextContent('yes');
+    });
+    expect(getByTestId('chrome-can-save')).toHaveTextContent('no');
+
+    fireEvent.press(getByTestId('chrome-refresh'));
+    expect(mockList.refresh).toHaveBeenCalled();
+
+    rerender(<Harness showList={false} />);
+    await waitFor(() => {
+      expect(getByTestId('chrome-has-refresh')).toHaveTextContent('no');
+    });
+  });
+});

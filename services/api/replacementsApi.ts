@@ -8,6 +8,13 @@ export type CreateReplacementPayload = {
   match_id?: number | null;
 };
 
+export type PatchReplacementPayload = {
+  original_participation_id?: number;
+  substitute_participation_id?: number | null;
+  substitute_player_id?: number | null;
+  match_id?: number | null;
+};
+
 export class ReplacementsApiService extends BaseApiService {
   async list(
     editionDivisionId: number
@@ -40,6 +47,16 @@ export class ReplacementsApiService extends BaseApiService {
   ): Promise<{ data?: any; message?: string }> {
     return this.delete<{ data?: any; message?: string }>(
       `/edition-division-replacements/${replacementId}`
+    );
+  }
+
+  async patch(
+    replacementId: number,
+    payload: PatchReplacementPayload
+  ): Promise<{ data: ReplacementRow; message?: string }> {
+    return super.patch<{ data: ReplacementRow; message?: string }>(
+      `/edition-division-replacements/${replacementId}`,
+      payload
     );
   }
 }

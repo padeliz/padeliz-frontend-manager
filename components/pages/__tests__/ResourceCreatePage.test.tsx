@@ -10,12 +10,14 @@ jest.mock('@expo/vector-icons', () => ({
 }));
 
 const mockReplace = jest.fn();
+let mockSearchParams: Record<string, string> = {};
 jest.mock('expo-router', () => ({
   useRouter: () => ({
     replace: mockReplace,
     back: jest.fn(),
     push: jest.fn(),
   }),
+  useLocalSearchParams: () => mockSearchParams,
 }));
 
 jest.mock('@/hooks/useResourceMetadata', () => ({
@@ -94,6 +96,7 @@ jest.mock('@/components/ui/ManagerFileUpload', () => {
 describe('ResourceCreatePage', () => {
   beforeEach(() => {
     mockReplace.mockClear();
+    mockSearchParams = {};
   });
 
   it(

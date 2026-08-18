@@ -113,7 +113,6 @@ export interface GameMatchSidePlayer {
     id_participation?: number;
     player?: { id_player?: number; name?: string; first_name?: string; last_name?: string } | null;
   } | null;
-  got_replaced?: boolean;
 }
 
 export interface GameMatchSide {
@@ -156,7 +155,6 @@ export interface ReplacementRow {
   substitute_participation_id?: number;
   substitute_player_id?: number;
   match_id?: number | null;
-  match_scope_key?: string;
   edition_division?: {
     id_edition_division?: number;
     division_title?: string | null;
@@ -271,16 +269,20 @@ export interface ApiCourt {
 
 export interface ApiEditionLotteryRule {
   id_lottery_rule: number;
-  lottery_id: number;
+  lottery_prize_id: number;
   rule_prize_quantity: number;
   orderliness?: number | null;
   edition_division_id?: number | null;
   gender?: string | null;
   has_social_status?: boolean | null;
   legal_age?: boolean | null;
-  lottery?: {
-    id_lottery?: number;
+  lottery_prize?: {
+    id_lottery_prize?: number;
+    lottery_id?: number;
+    prize_id?: number;
+    sponsor_id?: number | null;
     prize?: { name?: string | null } | null;
+    sponsor?: { name?: string | null } | null;
     [key: string]: unknown;
   } | null;
   luckies?: Array<Record<string, unknown>>;

@@ -47,6 +47,9 @@ export interface HookResourcePageConfigOptions<
   enableBulkDelete?: boolean;
   enableBulkExport?: boolean;
   customBulkActions?: UiBulkActionConfig[];
+
+  embedded?: boolean;
+  mutationsDisabled?: boolean;
 }
 
 export interface HookResourceViewPageConfigOptions<
@@ -95,4 +98,5 @@ export interface HookResourceCreatePageConfigOptions<
   description?: string;
   onBack?: () => void;
   getViewPath?: (id: number, created: T) => string;
+  seedFromQuery?: boolean | string[];
 }

@@ -70,6 +70,7 @@ export default function EditionReplacementsTab({
   const [originalId, setOriginalId] = useState<number | null>(null);
   const [substituteKey, setSubstituteKey] = useState<string>(NONE_SUBSTITUTE);
   const [matchId, setMatchId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const isGeneral = editionDivisionId == null;
@@ -181,34 +182,80 @@ export default function EditionReplacementsTab({
     [matches]
   );
 
+  const resetForm = () => {
+    setOriginalId(null);
+    setSubstituteKey(NONE_SUBSTITUTE);
+    setMatchId(null);
+    setEditingId(null);
+    setActionError(null);
+  };
+
+  const substitutePayload = () => {
+    let substituteParticipationId: number | undefined;
+    let substitutePlayerId: number | undefined;
+    if (substituteKey.startsWith('part:')) {
+      substituteParticipationId = Number(substituteKey.slice(5));
+    } else if (substituteKey.startsWith('player:')) {
+      substitutePlayerId = Number(substituteKey.slice(7));
+    }
+    return { substituteParticipationId, substitutePlayerId };
+  };
+
   const createMutation = useMutation({
     mutationFn: async () => {
       if (editionDivisionId == null || originalId == null) {
         throw new Error('Select original participation');
       }
-      let substituteParticipationId: number | undefined;
-      let substitutePlayerId: number | undefined;
-      if (substituteKey.startsWith('part:')) {
-        substituteParticipationId = Number(substituteKey.slice(5));
-      } else if (substituteKey.startsWith('player:')) {
-        substitutePlayerId = Number(substituteKey.slice(7));
-      }
-      return replacementsApi.create(editionDivisionId, {
+      const { substituteParticipationId, substitutePlayerId } =
+        substitutePayload();
+      const payload: {
+        original_participation_id: number;
+        substitute_participation_id?: number;
+        substitute_player_id?: number;
+        match_id?: number;
+      } = {
         original_participation_id: originalId,
-        substitute_participation_id: substituteParticipationId,
-        substitute_player_id: substitutePlayerId,
-        match_id: matchId && matchId !== NONE_MATCH ? matchId : undefined,
-      });
+      };
+      if (substituteParticipationId != null) {
+        payload.substitute_participation_id = substituteParticipationId;
+      }
+      if (substitutePlayerId != null) {
+        payload.substitute_player_id = substitutePlayerId;
+      }
+      if (matchId && matchId !== NONE_MATCH) {
+        payload.match_id = matchId;
+      }
+      return replacementsApi.create(editionDivisionId, payload);
     },
     onSuccess: async () => {
-      setOriginalId(null);
-      setSubstituteKey(NONE_SUBSTITUTE);
-      setMatchId(null);
-      setActionError(null);
+      resetForm();
       await refresh();
     },
     onError: (e: Error) => {
       setActionError(e.message || 'Create failed');
+    },
+  });
+
+  const patchMutation = useMutation({
+    mutationFn: async () => {
+      if (editingId == null || originalId == null) {
+        throw new Error('Select original participation');
+      }
+      const { substituteParticipationId, substitutePlayerId } =
+        substitutePayload();
+      return replacementsApi.patch(editingId, {
+        original_participation_id: originalId,
+        substitute_participation_id: substituteParticipationId ?? null,
+        substitute_player_id: substitutePlayerId ?? null,
+        match_id: matchId && matchId !== NONE_MATCH ? matchId : null,
+      });
+    },
+    onSuccess: async () => {
+      resetForm();
+      await refresh();
+    },
+    onError: (e: Error) => {
+      setActionError(e.message || 'Update failed');
     },
   });
 
@@ -285,9 +332,11 @@ export default function EditionReplacementsTab({
       )}
       {isGeneral && <EditionGeneralEditHint />}
 
-      {!isGeneral && (
+      {!isGeneral && !finalized && (
         <View className="bg-white border border-gray-200 rounded-lg p-3 gap-3">
-          <Text className="font-semibold text-gray-900">Create replacement</Text>
+          <Text className="font-semibold text-gray-900">
+            {editingId != null ? 'Edit replacement' : 'Create replacement'}
+          </Text>
 
           <View
             testID="replacements-create-form-row"
@@ -344,18 +393,45 @@ export default function EditionReplacementsTab({
               />
             </View>
 
-            <Pressable
-              disabled={
-                finalized || originalId == null || createMutation.isPending
-              }
-              onPress={() => createMutation.mutate()}
-              className={`${actionPillClass(
-                !(finalized || originalId == null || createMutation.isPending),
-                'blue'
-              )}`}
-            >
-              <Text className="text-white text-sm">Create</Text>
-            </Pressable>
+            {editingId != null ? (
+              <>
+                <Pressable
+                  testID="replacements-save"
+                  disabled={
+                    finalized || originalId == null || patchMutation.isPending
+                  }
+                  onPress={() => patchMutation.mutate()}
+                  className={`${actionPillClass(
+                    !(finalized || originalId == null || patchMutation.isPending),
+                    'blue'
+                  )}`}
+                >
+                  <Text className="text-white text-sm">Save</Text>
+                </Pressable>
+                <Pressable
+                  testID="replacements-cancel-edit"
+                  disabled={finalized || patchMutation.isPending}
+                  onPress={resetForm}
+                  className="rounded-lg px-3 py-2 bg-gray-500"
+                >
+                  <Text className="text-white text-sm">Cancel</Text>
+                </Pressable>
+              </>
+            ) : (
+              <Pressable
+                testID="replacements-create"
+                disabled={
+                  finalized || originalId == null || createMutation.isPending
+                }
+                onPress={() => createMutation.mutate()}
+                className={`${actionPillClass(
+                  !(finalized || originalId == null || createMutation.isPending),
+                  'blue'
+                )}`}
+              >
+                <Text className="text-white text-sm">Create</Text>
+              </Pressable>
+            )}
           </View>
         </View>
       )}
@@ -383,20 +459,39 @@ export default function EditionReplacementsTab({
                 → {nameForRow(r)}
               </Text>
               <Text className="text-xs text-gray-500">
-                match {r.match_id ?? 'all'} · {r.match_scope_key ?? ''}
+                match {r.match_id ?? 'all'}
               </Text>
             </View>
-            {!isGeneral && (
-              <Pressable
-                disabled={finalized || deleteMutation.isPending}
-                onPress={() => deleteMutation.mutate(r.id_replacement)}
-                className={actionPillClass(
-                  !(finalized || deleteMutation.isPending),
-                  'red'
-                )}
-              >
-                <Text className="text-white text-sm">Delete</Text>
-              </Pressable>
+            {!isGeneral && !finalized && (
+              <View className="flex-row gap-2">
+                <Pressable
+                  testID={`replacements-edit-${r.id_replacement}`}
+                  disabled={patchMutation.isPending}
+                  onPress={() => {
+                    setEditingId(r.id_replacement);
+                    setOriginalId(r.original_participation_id);
+                    if (r.substitute_participation_id) {
+                      setSubstituteKey(`part:${r.substitute_participation_id}`);
+                    } else if (r.substitute_player_id) {
+                      setSubstituteKey(`player:${r.substitute_player_id}`);
+                    } else {
+                      setSubstituteKey(NONE_SUBSTITUTE);
+                    }
+                    setMatchId(r.match_id ?? null);
+                    setActionError(null);
+                  }}
+                  className={actionPillClass(!patchMutation.isPending, 'blue')}
+                >
+                  <Text className="text-white text-sm">Edit</Text>
+                </Pressable>
+                <Pressable
+                  disabled={deleteMutation.isPending}
+                  onPress={() => deleteMutation.mutate(r.id_replacement)}
+                  className={actionPillClass(!deleteMutation.isPending, 'red')}
+                >
+                  <Text className="text-white text-sm">Delete</Text>
+                </Pressable>
+              </View>
             )}
           </View>
         ))

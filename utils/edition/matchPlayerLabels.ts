@@ -50,8 +50,8 @@ export function buildParticipationsById(
  * 2. schedule.participations[participation_id].player
  * 3. #player_id | #participation_id | #?
  *
- * For got_replaced slots, the original roster player via the participation map
- * is intentional (do not invent substitute labels).
+ * Replacement substitutes are not written onto match_players, so this always
+ * shows the original scheduled roster player.
  */
 export function resolveMatchPlayerLabel(
   matchPlayer: GameMatchSidePlayer | null | undefined,

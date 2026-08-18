@@ -81,8 +81,11 @@ export function usePageChrome() {
   return ctx;
 }
 
+const noopRegister = (_next: PageChromeActions | null) => {};
+
 export function useRegisterPageActions(actions: PageChromeActions | null) {
-  const { register } = usePageChrome();
+  const ctx = useContext(PageChromeContext);
+  const register = ctx?.register ?? noopRegister;
   const actionsRef = useRef(actions);
   actionsRef.current = actions;
 

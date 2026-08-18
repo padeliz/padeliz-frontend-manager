@@ -41,14 +41,6 @@ jest.mock('@/services/api/editionsApi', () => ({
   })),
 }));
 
-jest.mock('@/services/api/editionLotteriesApi', () => ({
-  EditionLotteriesApiService: jest.fn().mockImplementation(() => ({
-    getLotteries: jest.fn(async () => ({
-      data: [{ id_lottery: 3 }],
-    })),
-  })),
-}));
-
 jest.mock('@/services/api/lotteryLiveApi', () => ({
   lotteryLiveApi: {
     live: (...args: unknown[]) => mockLive(...args),
@@ -58,13 +50,13 @@ jest.mock('@/services/api/lotteryLiveApi', () => ({
   },
 }));
 
-function renderKiosk() {
+function renderKiosk(lotteryId: number | null = 3) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
-      <LotteryLiveKiosk editionId={1} />
+      <LotteryLiveKiosk editionId={1} lotteryId={lotteryId} />
     </QueryClientProvider>
   );
 }
@@ -109,6 +101,12 @@ describe('LotteryLiveKiosk', () => {
   afterEach(() => {
     cleanup();
     jest.useRealTimers();
+  });
+
+  it('shows empty state when lottery query is missing', async () => {
+    const { findByTestId } = renderKiosk(null);
+    expect(await findByTestId('lottery-live-empty')).toBeTruthy();
+    expect(mockLive).not.toHaveBeenCalled();
   });
 
   it('countdown phase shows prize beside timer without decide buttons', async () => {

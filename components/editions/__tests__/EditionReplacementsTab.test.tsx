@@ -9,6 +9,9 @@ import EditionReplacementsTab, {
 const mockGetSchedule = jest.fn();
 const mockList = jest.fn();
 const mockListForEdition = jest.fn();
+const mockCreate = jest.fn();
+const mockPatch = jest.fn();
+const mockDestroy = jest.fn();
 const mockGetPlayers = jest.fn(async () => ({
   data: [{ id_player: 5, name: 'Guest Eve' }],
 }));
@@ -23,8 +26,9 @@ jest.mock('@/services/api/replacementsApi', () => ({
   replacementsApi: {
     list: (...args: unknown[]) => mockList(...args),
     listForEdition: (...args: unknown[]) => mockListForEdition(...args),
-    create: jest.fn(),
-    destroy: jest.fn(),
+    create: (...args: unknown[]) => mockCreate(...args),
+    patch: (...args: unknown[]) => mockPatch(...args),
+    destroy: (...args: unknown[]) => mockDestroy(...args),
   },
 }));
 
@@ -176,6 +180,137 @@ describe('EditionReplacementsTab', () => {
     expect(await findByText(/Pick an edition division above to edit/)).toBeTruthy();
     expect(mockGetSchedule).not.toHaveBeenCalled();
     expect(mockListForEdition).toHaveBeenCalledWith(36);
+  });
+
+  it('create with None substitute omits substitute ids', async () => {
+    mockGetSchedule.mockResolvedValue({
+      data: {
+        is_finalized: false,
+        edition_division: { allow_replacements: true },
+        participations: [
+          { id_participation: 1, player: { name: 'Original Alice' } },
+        ],
+        matches: [],
+      },
+    });
+    mockList.mockResolvedValue({ data: [] });
+    mockCreate.mockResolvedValue({ data: { id_replacement: 9 } });
+    const { findByText, getByText } = renderWithProviders(
+      <EditionReplacementsTab editionId={36} editionDivisionId={9} />
+    );
+    fireEvent.press(await findByText('Select original participation'));
+    fireEvent.press(getByText('Original Alice'));
+    fireEvent.press(getByText('Create'));
+    await waitFor(() => expect(mockCreate).toHaveBeenCalled());
+    const payload = mockCreate.mock.calls[0][1] as Record<string, unknown>;
+    expect(payload.original_participation_id).toBe(1);
+    expect(payload).not.toHaveProperty('substitute_participation_id');
+    expect(payload).not.toHaveProperty('substitute_player_id');
+  });
+
+  it('edit existing row calls patch including cleared substitute and match', async () => {
+    mockGetSchedule.mockResolvedValue({
+      data: {
+        is_finalized: false,
+        edition_division: { allow_replacements: true },
+        participations: [
+          { id_participation: 1, player: { name: 'Original Alice' } },
+          { id_participation: 2, player: { name: 'Sub Bob' } },
+        ],
+        matches: [{ id_match: 44, scheduled_start: '20:00:00', match_kind: 'REGULAR' }],
+      },
+    });
+    mockList.mockResolvedValue({
+      data: [
+        {
+          id_replacement: 8,
+          original_participation_id: 1,
+          substitute_participation_id: 2,
+          substitute_player_id: null,
+          match_id: 44,
+        },
+      ],
+    });
+    mockPatch.mockResolvedValue({ data: { id_replacement: 8 } });
+    const { findByTestId, getByText } = renderWithProviders(
+      <EditionReplacementsTab editionId={36} editionDivisionId={9} />
+    );
+    fireEvent.press(await findByTestId('replacements-edit-8'));
+    expect(await findByTestId('replacements-save')).toBeTruthy();
+    const picker = await findByTestId('replacements-substitute-picker');
+    fireEvent.press(within(picker).getByText('Participation · Sub Bob'));
+    fireEvent.press(getByText('None'));
+    fireEvent.press(getByText('Save'));
+    await waitFor(() => expect(mockPatch).toHaveBeenCalled());
+    expect(mockPatch).toHaveBeenCalledWith(
+      8,
+      expect.objectContaining({
+        original_participation_id: 1,
+        substitute_participation_id: null,
+        substitute_player_id: null,
+      })
+    );
+  });
+
+  it('hides create edit and delete when finalized', async () => {
+    mockGetSchedule.mockResolvedValue({
+      data: {
+        is_finalized: true,
+        edition_division: { allow_replacements: true },
+        participations: [
+          { id_participation: 1, player: { name: 'Original Alice' } },
+        ],
+        matches: [],
+      },
+    });
+    mockList.mockResolvedValue({
+      data: [
+        {
+          id_replacement: 8,
+          original_participation_id: 1,
+          substitute_participation_id: 2,
+          match_id: null,
+        },
+      ],
+    });
+    const { findByText, queryByText, queryByTestId } = renderWithProviders(
+      <EditionReplacementsTab editionId={36} editionDivisionId={9} />
+    );
+    expect(await findByText(/#8:/)).toBeTruthy();
+    expect(queryByText('Create replacement')).toBeNull();
+    expect(queryByText('Create')).toBeNull();
+    expect(queryByText('Edit')).toBeNull();
+    expect(queryByText('Delete')).toBeNull();
+    expect(queryByTestId('replacements-edit-8')).toBeNull();
+  });
+
+  it('hides edit and delete in General', async () => {
+    mockListForEdition.mockResolvedValue({
+      data: [
+        {
+          id_replacement: 1,
+          edition_division_id: 170,
+          original_participation_id: 10,
+          substitute_participation_id: 11,
+          edition_division: { division_title: 'Beginners' },
+          original_participation: {
+            id_participation: 10,
+            player: { name: 'Alice Original' },
+          },
+          substitute_participation: {
+            id_participation: 11,
+            player: { name: 'Bob Sub' },
+          },
+        },
+      ],
+    });
+    const { findByText, queryByText } = renderWithProviders(
+      <EditionReplacementsTab editionId={36} editionDivisionId={null} />
+    );
+    expect(await findByText(/Alice Original/)).toBeTruthy();
+    expect(queryByText('Edit')).toBeNull();
+    expect(queryByText('Delete')).toBeNull();
+    expect(queryByText('Create replacement')).toBeNull();
   });
 
   it('substitute picker uses the shared searchable player picker', async () => {

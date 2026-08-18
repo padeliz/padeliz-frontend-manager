@@ -16,6 +16,7 @@ jest.mock('expo-router', () => ({
     back: jest.fn(),
     push: jest.fn(),
   }),
+  useLocalSearchParams: () => ({}),
 }));
 
 const divisionMetadata = {

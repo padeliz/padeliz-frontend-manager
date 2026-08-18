@@ -3,6 +3,7 @@
  * Generic component for displaying and managing any resource type with advanced features
  */
 
+import { useRegisterPageActions } from '@/components/chrome/PageChromeProvider';
 import AppLayout from '@/components/layout/AppLayout';
 import AdvancedDataTable from '@/components/ui/AdvancedDataTable';
 import AdvancedSearchFilters from '@/components/ui/AdvancedSearchFilters';
@@ -44,6 +45,8 @@ export default function ResourceListPage<
     debounceMs = 300,
     showDebugInfo = false,
     showInstructions = false,
+    embedded = false,
+    mutationsDisabled = false,
   } = config;
 
   // Stable fetch functions using useCallback
@@ -140,6 +143,21 @@ export default function ResourceListPage<
     return PrimaryKeyService.detectPrimaryKey(metadata);
   }, [metadata]);
 
+  useRegisterPageActions(
+    embedded
+      ? {
+          refresh,
+          canSave: false,
+          isDirty: false,
+        }
+      : null
+  );
+
+  const handleBulkAction = (action: string) => {
+    if (mutationsDisabled && action === 'delete') return;
+    bulkActionsState.onBulkAction(action);
+  };
+
   if (!primaryKeyField) {
     console.error('No primary key field found for metadata', metadata);
     return null;
@@ -154,10 +172,20 @@ export default function ResourceListPage<
   };
 
   const handleAdd = () => {
+    if (mutationsDisabled) return;
     if (onAdd) {
       onAdd();
     }
   };
+
+  const wrap = (children: React.ReactNode) =>
+    embedded ? (
+      <View className="flex-1" testID="resource-list-embedded">
+        {children}
+      </View>
+    ) : (
+      <AppLayout title={title}>{children}</AppLayout>
+    );
 
   const handleExportAll = () => {
     if (onExport) {
@@ -167,11 +195,15 @@ export default function ResourceListPage<
     }
   };
 
-  return (
-    <AppLayout title={title}>
-      <View className="flex-1">
+  return wrap(
+    <View className="flex-1">
+      {!embedded && (
         <View className="flex-row items-center p-4 border-b border-gray-200">
-          <Pressable onPress={handleBack} className="mr-3 p-2">
+          <Pressable
+            testID="resource-list-back"
+            onPress={handleBack}
+            className="mr-3 p-2"
+          >
             <Ionicons name="arrow-back" size={24} className="text-gray-600" />
           </Pressable>
           <View className="flex-1">
@@ -181,6 +213,7 @@ export default function ResourceListPage<
             )}
           </View>
         </View>
+      )}
 
         <ScrollView className="flex-1 p-4">
           {/* Header Actions */}
@@ -209,20 +242,31 @@ export default function ResourceListPage<
                       : `${bulkActionsState.selectedItems.length} items selected`}
                   </Text>
 
-                  {bulkActions.map(action => (
+                  {bulkActions.map(action => {
+                    const deleteLocked =
+                      mutationsDisabled && action.action === 'delete';
+                    return (
                     <Pressable
                       key={action.action}
-                      onPress={() =>
-                        bulkActionsState.onBulkAction(action.action)
+                      testID={
+                        action.action === 'delete'
+                          ? 'resource-list-delete-selected'
+                          : action.action === 'export'
+                            ? 'resource-list-export-selected'
+                            : undefined
                       }
+                      disabled={deleteLocked}
+                      onPress={() => handleBulkAction(action.action)}
                       className={`
                         px-3 py-2 rounded-lg border flex-row items-center
                         ${
-                          action.variant === 'danger'
-                            ? 'bg-red-600 border-red-600'
-                            : action.variant === 'primary'
-                              ? 'bg-blue-600 border-blue-600'
-                              : 'bg-gray-600 border-gray-600'
+                          deleteLocked
+                            ? 'bg-gray-300 border-gray-300'
+                            : action.variant === 'danger'
+                              ? 'bg-red-600 border-red-600'
+                              : action.variant === 'primary'
+                                ? 'bg-blue-600 border-blue-600'
+                                : 'bg-gray-600 border-gray-600'
                         }
                       `}
                     >
@@ -235,7 +279,8 @@ export default function ResourceListPage<
                         {action.label}
                       </Text>
                     </Pressable>
-                  ))}
+                    );
+                  })}
                 </>
               )}
 
@@ -266,6 +311,7 @@ export default function ResourceListPage<
               </Pressable>
 
               <Pressable
+                testID="resource-list-export"
                 onPress={handleExportAll}
                 className="bg-green-100 border border-green-300 rounded-lg px-3 py-2 flex-row items-center"
               >
@@ -279,8 +325,12 @@ export default function ResourceListPage<
 
               {onAdd && (
                 <Pressable
+                  testID="resource-list-add"
+                  disabled={mutationsDisabled}
                   onPress={handleAdd}
-                  className="bg-blue-500 rounded-lg px-3 py-2 flex-row items-center"
+                  className={`${
+                    mutationsDisabled ? 'bg-gray-300' : 'bg-blue-500'
+                  } rounded-lg px-3 py-2 flex-row items-center`}
                 >
                   <Ionicons name="add" size={16} className="text-white mr-1" />
                   <Text className="text-white text-sm font-medium">
@@ -326,7 +376,7 @@ export default function ResourceListPage<
                 selectedItems: bulkActionsState.selectedItems,
                 onSelectAll: bulkActionsState.onSelectAll,
                 onSelectItem: bulkActionsState.onSelectItem,
-                onBulkAction: bulkActionsState.onBulkAction,
+                onBulkAction: handleBulkAction,
                 isAllSelected: bulkActionsState.isAllSelected,
                 isPartiallySelected: bulkActionsState.isPartiallySelected,
                 availableActions: bulkActions,
@@ -406,6 +456,5 @@ export default function ResourceListPage<
           )}
         </ScrollView>
       </View>
-    </AppLayout>
   );
 }

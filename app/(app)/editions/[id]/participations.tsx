@@ -1,4 +1,4 @@
-import EditionDivisionsTab from '@/components/editions/EditionDivisionsTab';
+import EditionParticipationsTab from '@/components/editions/EditionParticipationsTab';
 import { queryKeys } from '@/lib/queryClient';
 import { EditionDivisionsApiService } from '@/services/api/editionDivisionsApi';
 import { EditionParticipationsApiService } from '@/services/api/editionParticipationsApi';
@@ -14,7 +14,7 @@ const editionsApi = new EditionsApiService();
 const editionDivisionsApi = new EditionDivisionsApiService();
 const participationsApi = new EditionParticipationsApiService();
 
-export default function EditionDivisionsRoute() {
+export default function EditionParticipationsRoute() {
   const params = useLocalSearchParams<{ id: string; ed?: string }>();
   const editionId = Number(params.id);
 
@@ -62,7 +62,7 @@ export default function EditionDivisionsRoute() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <View className="p-4">
-        <EditionDivisionsTab
+        <EditionParticipationsTab
           editionId={editionId}
           editionFinalized={editionFinalized}
           divisions={divisions}

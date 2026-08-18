@@ -45,6 +45,14 @@ export interface ResourceListPageConfig<
   // Debug configuration
   showDebugInfo?: boolean;
   showInstructions?: boolean;
+
+  /** Omit AppLayout and the back-arrow header (keep the inner action row). */
+  embedded?: boolean;
+  /**
+   * Add stays visible but non-pressable. After rows are selected, Delete Selected
+   * stays visible but non-pressable. Export / View / search / Refresh stay enabled.
+   */
+  mutationsDisabled?: boolean;
 }
 
 export interface ResourceListPageProps<T extends { [key: string]: any } = any> {
@@ -124,6 +132,11 @@ export interface ResourceCreatePageConfig<
   onBack?: () => void;
   /** Path after successful create (default: list-style /{resource}/{id}) */
   getViewPath?: (id: number, created: T) => string;
+  /**
+   * Seed writable schema fields from the URL query after metadata loads.
+   * `true` = any writable field; `string[]` = those keys only.
+   */
+  seedFromQuery?: boolean | string[];
 }
 
 export interface ResourceCreatePageProps<

@@ -71,6 +71,12 @@ export const managerNavigationItems: NavigationItem[] = [
     description: 'Player participations',
   },
   {
+    label: 'Registrations',
+    href: '/edition-registrations',
+    icon: 'ticket',
+    description: 'Player registrations',
+  },
+  {
     label: 'Eligibilities',
     href: '/eligibilities',
     icon: 'checkmark-done',
@@ -83,16 +89,28 @@ export const managerNavigationItems: NavigationItem[] = [
     description: 'Tournament prizes',
   },
   {
-    label: 'Prizes from Clubs',
-    href: '/prize-from-clubs',
+    label: 'Sponsors',
+    href: '/sponsors',
+    icon: 'ribbon',
+    description: 'Lottery sponsors',
+  },
+  {
+    label: 'Sponsor Prizes',
+    href: '/sponsor-prizes',
     icon: 'gift',
-    description: 'Club prize variants',
+    description: 'Sponsor prize overlays',
   },
   {
     label: 'Lotteries',
     href: '/edition-lotteries',
     icon: 'shuffle',
     description: 'Tournament lotteries',
+  },
+  {
+    label: 'Lottery Prizes',
+    href: '/edition-lottery-prizes',
+    icon: 'cube',
+    description: 'Lottery prize lines',
   },
   {
     label: 'Lottery Rules',

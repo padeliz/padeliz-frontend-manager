@@ -41,51 +41,83 @@ export function withEdQuery(
   return `${href}${sep}ed=${editionDivisionId}`;
 }
 
+export function parseLotteryId(
+  lotteryParam: string | string[] | undefined,
+  validIds?: Array<number | string>
+): number | null {
+  if (lotteryParam == null) return null;
+  const raw = Array.isArray(lotteryParam) ? lotteryParam[0] : lotteryParam;
+  const id = Number(raw);
+  if (!Number.isFinite(id)) return null;
+  if (validIds != null) {
+    const normalized = validIds.map(Number).filter(Number.isFinite);
+    if (!normalized.includes(id)) return null;
+  }
+  return id;
+}
+
+export function withLotteryQuery(
+  href: string,
+  lotteryId: number | null
+): string {
+  if (lotteryId == null) return href;
+  const sep = href.includes('?') ? '&' : '?';
+  return `${href}${sep}lottery=${lotteryId}`;
+}
+
 export function buildEditionTopTabs(
   editionId: number,
-  editionDivisionId: number | null
+  editionDivisionId: number | null,
+  lotteryId: number | null = null
 ) {
   const base = `/editions/${editionId}`;
   const ed = editionDivisionId;
+  const href = (path: string) =>
+    withLotteryQuery(withEdQuery(`${base}${path}`, ed), lotteryId);
   return [
     {
       label: 'Details',
-      href: withEdQuery(`${base}/details`, ed),
+      href: href('/details'),
       match: '/details',
     },
     {
-      label: 'Divisions',
-      href: withEdQuery(`${base}/divisions`, ed),
-      match: '/divisions',
+      label: 'Registrations',
+      href: href('/registrations'),
+      match: '/registrations',
+    },
+    {
+      label: 'Participations',
+      href: href('/participations'),
+      match: '/participations',
     },
     {
       label: 'Schedule',
-      href: withEdQuery(`${base}/schedule/knobs`, ed),
+      href: href('/schedule/knobs'),
       match: '/schedule',
     },
     {
       label: 'Replacements',
-      href: withEdQuery(`${base}/replacements`, ed),
+      href: href('/replacements'),
       match: '/replacements',
     },
     {
       label: 'Lottery',
-      href: withEdQuery(`${base}/lottery/prizes`, ed),
+      href: href('/lottery/prizes'),
       match: '/lottery',
     },
     {
       label: 'PDFs',
-      href: withEdQuery(`${base}/pdfs`, ed),
+      href: href('/pdfs'),
       match: '/pdfs',
     },
     {
       label: 'Scores',
-      href: withEdQuery(`${base}/scores`, ed),
+      href: href('/scores'),
       match: '/scores',
     },
     {
       label: 'Standings',
-      href: withEdQuery(`${base}/standings`, ed),
+      href: href('/standings'),
       match: '/standings',
     },
   ];

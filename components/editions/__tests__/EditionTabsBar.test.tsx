@@ -39,16 +39,16 @@ describe('EditionTabsBar', () => {
         tabs={[
           { label: 'Details', href: '/editions/1/details', match: '/details' },
           {
-            label: 'Divisions',
-            href: '/editions/1/divisions',
-            match: '/divisions',
+            label: 'Participations',
+            href: '/editions/1/participations',
+            match: '/participations',
           },
         ]}
         onBeforeNavigate={onBeforeNavigate}
       />
     );
 
-    fireEvent.press(getByTestId('edition-tab-Divisions'));
+    fireEvent.press(getByTestId('edition-tab-Participations'));
     await waitFor(() => {
       expect(onBeforeNavigate).toHaveBeenCalled();
     });
@@ -62,18 +62,18 @@ describe('EditionTabsBar', () => {
         tabs={[
           { label: 'Details', href: '/editions/1/details', match: '/details' },
           {
-            label: 'Divisions',
-            href: '/editions/1/divisions',
-            match: '/divisions',
+            label: 'Participations',
+            href: '/editions/1/participations',
+            match: '/participations',
           },
         ]}
         onBeforeNavigate={onBeforeNavigate}
       />
     );
 
-    fireEvent.press(getByTestId('edition-tab-Divisions'));
+    fireEvent.press(getByTestId('edition-tab-Participations'));
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith('/editions/1/divisions');
+      expect(mockPush).toHaveBeenCalledWith('/editions/1/participations');
     });
   });
 

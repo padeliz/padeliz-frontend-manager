@@ -31,7 +31,7 @@ import EditionScheduleGeneralView from './EditionScheduleGeneralView';
 import EditionScheduleMatchesBoard from './EditionScheduleMatchesBoard';
 import type { ApiEditionDivision } from '@/types/api/entities';
 
-export type ScheduleSection = 'knobs' | 'participations' | 'matches';
+export type ScheduleSection = 'knobs' | 'matches';
 
 /** Keep prior order for still-selected courts; append newly selected ids. */
 export function mergeCourtSelection(
@@ -52,14 +52,27 @@ type Props = {
   divisions?: ApiEditionDivision[];
 };
 
-function playerLabel(p: any): string {
-  const player = p?.player;
-  if (!player) return `Participation #${p?.id_participation ?? '?'}`;
-  return (
-    player.name ||
-    [player.first_name, player.last_name].filter(Boolean).join(' ') ||
-    `Player #${player.id_player}`
-  );
+function knobsFormPayload(form: ScheduleFormPayload): ScheduleFormPayload {
+  const { is_collecting_points: _collecting, participation_ids: _ids, ...rest } =
+    form;
+  return rest;
+}
+
+function formFromSchedule(data: ScheduleState): ScheduleFormPayload {
+  const ed = data.edition_division || {};
+  return {
+    playing_start_time: ed.playing_start_time || '',
+    playing_end_time: ed.playing_end_time || '',
+    player_opponents_nr: ed.player_opponents_nr,
+    player_matches_repeat: ed.player_matches_repeat,
+    include_final: !!ed.include_final,
+    has_demonstrative_match: !!ed.has_demonstrative_match,
+    include_scores: !!ed.include_scores,
+    allow_replacements: !!ed.allow_replacements,
+    points_per_match: ed.points_per_match,
+    final_points_target: ed.final_points_target,
+    court_ids: (data.courts || []).map((c: any) => c.id_court),
+  };
 }
 
 function confirmAction(
@@ -77,39 +90,6 @@ function confirmAction(
   }
 }
 
-function formFromSchedule(data: ScheduleState): {
-  form: ScheduleFormPayload;
-  participations: any[];
-} {
-  const parts = Array.isArray(data.participations)
-    ? [...data.participations]
-    : [];
-  const collecting: Record<string, boolean> = {};
-  parts.forEach((p: any) => {
-    if (p?.id_participation != null) {
-      collecting[String(p.id_participation)] = !!p.is_collecting_points;
-    }
-  });
-  const ed = data.edition_division || {};
-  return {
-    participations: parts,
-    form: {
-      playing_start_time: ed.playing_start_time || '',
-      playing_end_time: ed.playing_end_time || '',
-      player_opponents_nr: ed.player_opponents_nr,
-      player_matches_repeat: ed.player_matches_repeat,
-      include_final: !!ed.include_final,
-      has_demonstrative_match: !!ed.has_demonstrative_match,
-      include_scores: !!ed.include_scores,
-      allow_replacements: !!ed.allow_replacements,
-      points_per_match: ed.points_per_match,
-      final_points_target: ed.final_points_target,
-      court_ids: (data.courts || []).map((c: any) => c.id_court),
-      is_collecting_points: collecting,
-    },
-  };
-}
-
 export default function EditionScheduleTab({
   editionDivisionId,
   locationId,
@@ -119,7 +99,6 @@ export default function EditionScheduleTab({
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [participations, setParticipations] = useState<any[]>([]);
   const [form, setForm] = useState<ScheduleFormPayload>({});
   const [baseline, setBaseline] = useState<string>('');
   const [preview, setPreview] = useState<SchedulePreview | null>(null);
@@ -161,26 +140,15 @@ export default function EditionScheduleTab({
   useEffect(() => {
     if (!state) return;
     const next = formFromSchedule(state);
-    setParticipations(next.participations);
-    setForm(next.form);
-    setBaseline(
-      JSON.stringify({
-        form: next.form,
-        participation_ids: next.participations.map(p => p.id_participation),
-      })
-    );
+    setForm(next);
+    setBaseline(JSON.stringify(next));
     setPreview(null);
   }, [state]);
 
   const dirty = useMemo(() => {
     if (!baseline) return false;
-    return (
-      JSON.stringify({
-        form,
-        participation_ids: participations.map(p => p.id_participation),
-      }) !== baseline
-    );
-  }, [baseline, form, participations]);
+    return JSON.stringify(form) !== baseline;
+  }, [baseline, form]);
 
   const previewMatches = useMemo(
     () => flattenMatchesByCourt(preview?.matches_by_court),
@@ -193,29 +161,6 @@ export default function EditionScheduleTab({
     await scheduleQuery.refetch();
     if (locationId != null) await courtsQuery.refetch();
   }, [courtsQuery, locationId, scheduleQuery]);
-
-  const moveParticipation = (index: number, direction: -1 | 1) => {
-    if (finalized) return;
-    const next = index + direction;
-    if (next < 0 || next >= participations.length) return;
-    const copy = [...participations];
-    const tmp = copy[index];
-    copy[index] = copy[next];
-    copy[next] = tmp;
-    setParticipations(copy);
-  };
-
-  const toggleCollecting = (participationId: number) => {
-    if (finalized) return;
-    const key = String(participationId);
-    setForm(prev => ({
-      ...prev,
-      is_collecting_points: {
-        ...(prev.is_collecting_points || {}),
-        [key]: !(prev.is_collecting_points || {})[key],
-      },
-    }));
-  };
 
   const toggleCourtSelection = (values: (string | number | boolean)[]) => {
     if (finalized) return;
@@ -249,10 +194,10 @@ export default function EditionScheduleTab({
     setSaving(true);
     setError(null);
     try {
-      await scheduleApi.updateForm(editionDivisionId, {
-        ...form,
-        participation_ids: participations.map(p => p.id_participation),
-      });
+      await scheduleApi.updateForm(
+        editionDivisionId,
+        knobsFormPayload(form)
+      );
       await queryClient.invalidateQueries({
         queryKey: queryKeys.schedule(editionDivisionId),
       });
@@ -265,12 +210,11 @@ export default function EditionScheduleTab({
     editionDivisionId,
     finalized,
     form,
-    participations,
     queryClient,
   ]);
 
   useRegisterPageActions(
-    editionDivisionId && (section === 'knobs' || section === 'participations')
+    editionDivisionId && section === 'knobs'
       ? {
           save: saveForm,
           refresh: reload,
@@ -278,13 +222,7 @@ export default function EditionScheduleTab({
           isDirty: dirty,
           isSaving: saving,
         }
-      : editionDivisionId && section !== 'matches'
-        ? {
-            refresh: reload,
-            canSave: false,
-            isDirty: false,
-          }
-        : null
+      : null
   );
 
   const runPreview = async () => {
@@ -294,19 +232,14 @@ export default function EditionScheduleTab({
     try {
       // Persist knobs only when not finalized; preview itself stays allowed after finalize
       if (!finalized) {
-        await scheduleApi.updateForm(editionDivisionId, {
-          ...form,
-          participation_ids: participations.map(p => p.id_participation),
-        });
+        await scheduleApi.updateForm(
+          editionDivisionId,
+          knobsFormPayload(form)
+        );
       }
       const res = await scheduleApi.preview(editionDivisionId, {
         adjust: adjust || undefined,
-        ...(finalized
-          ? {
-              ...form,
-              participation_ids: participations.map(p => p.id_participation),
-            }
-          : {}),
+        ...(finalized ? knobsFormPayload(form) : {}),
       });
       setPreview(res.data);
       if (!finalized) {
@@ -328,8 +261,7 @@ export default function EditionScheduleTab({
       setError(null);
       try {
         await scheduleApi.generate(editionDivisionId, {
-          ...form,
-          participation_ids: participations.map(p => p.id_participation),
+          ...knobsFormPayload(form),
           adjust: adjust || undefined,
           confirm_replace: canReplace || undefined,
         });
@@ -619,64 +551,6 @@ export default function EditionScheduleTab({
             )}
           </View>
         </>
-      )}
-
-      {section === 'participations' && (
-        <View className="bg-white border border-gray-200 rounded-lg p-4">
-          <Text className="font-semibold text-gray-900 mb-2">
-            Participations order
-          </Text>
-          <Text className="text-xs text-gray-500 mb-2">
-            Same-ED order only. Move players across divisions on the Divisions
-            tab. Use top Save to persist.
-          </Text>
-          {participations.map((p, index) => {
-            const collecting =
-              !!(form.is_collecting_points || {})[String(p.id_participation)];
-            return (
-              <View
-                key={p.id_participation}
-                className="flex-row items-center justify-between py-2 border-b border-gray-100"
-              >
-                <View className="flex-1 pr-2">
-                  <Text className="text-sm text-gray-800">
-                    {index + 1}. {playerLabel(p)}
-                  </Text>
-                  <Pressable
-                    disabled={finalized}
-                    onPress={() => toggleCollecting(p.id_participation)}
-                    className="flex-row items-center mt-1"
-                  >
-                    <Ionicons
-                      name={collecting ? 'checkbox' : 'square-outline'}
-                      size={18}
-                      color={finalized ? '#9ca3af' : '#2563eb'}
-                    />
-                    <Text className="ml-1 text-xs text-gray-600">
-                      Collecting points
-                    </Text>
-                  </Pressable>
-                </View>
-                <View className="flex-row">
-                  <Pressable
-                    disabled={finalized}
-                    onPress={() => moveParticipation(index, -1)}
-                    className="p-2"
-                  >
-                    <Ionicons name="arrow-up" size={18} color="#374151" />
-                  </Pressable>
-                  <Pressable
-                    disabled={finalized}
-                    onPress={() => moveParticipation(index, 1)}
-                    className="p-2"
-                  >
-                    <Ionicons name="arrow-down" size={18} color="#374151" />
-                  </Pressable>
-                </View>
-              </View>
-            );
-          })}
-        </View>
       )}
 
       {section === 'matches' && state && (

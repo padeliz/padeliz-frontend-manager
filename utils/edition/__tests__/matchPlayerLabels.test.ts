@@ -42,13 +42,12 @@ describe('matchPlayerLabels', () => {
     ).toBe('Alice From Participation');
   });
 
-  it('shows original roster player for got_replaced via participation map', () => {
+  it('shows original roster player via participation map', () => {
     expect(
       resolveMatchPlayerLabel(
         {
           participation_id: 11,
           player: null,
-          got_replaced: true,
         },
         participationsById
       )
