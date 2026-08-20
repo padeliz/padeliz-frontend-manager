@@ -1,4 +1,4 @@
-import { playerMetadata, emptyMetadata } from '@/__tests__/fixtures/playerMetadata';
+import { emptyMetadata, nullSwaggerMetadata, playerMetadata } from '@/__tests__/fixtures/playerMetadata';
 import { PrimaryKeyService } from '@/utils/primaryKeyService';
 
 describe('PrimaryKeyService', () => {
@@ -12,18 +12,22 @@ describe('PrimaryKeyService', () => {
     it('returns null for an empty schema', () => {
       expect(PrimaryKeyService.detectPrimaryKey(emptyMetadata)).toBeNull();
     });
+
+    it('returns null when swagger_schema is null', () => {
+      expect(PrimaryKeyService.detectPrimaryKey(nullSwaggerMetadata)).toBeNull();
+    });
   });
 
   describe('extractId', () => {
     it('extracts the numeric primary key value', () => {
       expect(
-        PrimaryKeyService.extractId({ id_player: 61, name: 'Ada' }, playerMetadata)
+        PrimaryKeyService.extractId({ id_player: 61, name: 'Mara' }, playerMetadata)
       ).toBe(61);
     });
 
     it('returns null when the primary key is missing on the item', () => {
       expect(
-        PrimaryKeyService.extractId({ name: 'Ada' }, playerMetadata)
+        PrimaryKeyService.extractId({ name: 'Mara' }, playerMetadata)
       ).toBeNull();
     });
   });

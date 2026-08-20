@@ -330,7 +330,7 @@ describe('EditionReplacementsTab', () => {
     );
     const picker = await findByTestId('replacements-substitute-picker');
     fireEvent.press(within(picker).getByText('None'));
-    expect(await findByTestId('dropdown-search')).toBeTruthy();
+    expect(await findByTestId('dropdown-search-wrapper')).toBeTruthy();
     await waitFor(() => expect(mockGetPlayers).toHaveBeenCalled());
     for (const call of mockGetPlayers.mock.calls) {
       expect(call[0].per_page).toBeLessThanOrEqual(100);

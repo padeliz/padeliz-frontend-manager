@@ -1,7 +1,11 @@
 import React from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { queryKeys } from '@/lib/queryClient';
+import {
+  createTestQueryClient,
+  disposeTestQueryClient,
+} from '@/testing/createTestQueryClient';
 
 const mockGetPlayers = jest.fn();
 const mockGetPlayer = jest.fn();
@@ -13,14 +17,19 @@ jest.mock('@/services/api/playersApi', () => ({
   })),
 }));
 
-import { usePlayerPicker } from '@/hooks/usePlayerPicker';
+import {
+  PLAYER_PICKER_DEBOUNCE_MS,
+  usePlayerPicker,
+} from '@/hooks/usePlayerPicker';
 
-function createWrapper(client?: QueryClient) {
-  const queryClient =
-    client ??
-    new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
+function createWrapper() {
+  const queryClient = createTestQueryClient({
+    defaultOptions: {
+      // Keep inactive picker queries long enough to match product staleTime
+      // so clearing search reuses preload cache instead of refetching.
+      queries: { retry: false, gcTime: 5 * 60_000 },
+    },
+  });
   return {
     queryClient,
     wrapper: ({ children }: { children: React.ReactNode }) => (
@@ -29,7 +38,16 @@ function createWrapper(client?: QueryClient) {
   };
 }
 
+async function advanceDebounce() {
+  await act(async () => {
+    jest.advanceTimersByTime(PLAYER_PICKER_DEBOUNCE_MS);
+  });
+}
+
 describe('usePlayerPicker', () => {
+  let activeClient: ReturnType<typeof createTestQueryClient> | null = null;
+  let activeUnmount: (() => void) | null = null;
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockGetPlayers.mockResolvedValue({
@@ -40,12 +58,31 @@ describe('usePlayerPicker', () => {
     });
   });
 
+  afterEach(async () => {
+    activeUnmount?.();
+    activeUnmount = null;
+    if (activeClient) {
+      await disposeTestQueryClient(activeClient);
+      activeClient = null;
+    }
+    jest.useRealTimers();
+  });
+
+  function mountHook(
+    options: Parameters<typeof usePlayerPicker>[0] = {
+      preloadCount: 100,
+      selectedValue: null,
+    }
+  ) {
+    const { wrapper, queryClient } = createWrapper();
+    const hook = renderHook(() => usePlayerPicker(options), { wrapper });
+    activeClient = queryClient;
+    activeUnmount = hook.unmount;
+    return { ...hook, queryClient };
+  }
+
   it('preloads getPlayers with per_page capped at 100 and no q', async () => {
-    const { wrapper } = createWrapper();
-    renderHook(
-      () => usePlayerPicker({ preloadCount: 200, selectedValue: null }),
-      { wrapper }
-    );
+    mountHook({ preloadCount: 200, selectedValue: null });
     await waitFor(() => {
       expect(mockGetPlayers).toHaveBeenCalledWith(
         expect.objectContaining({ per_page: 100, page: 1 })
@@ -55,17 +92,15 @@ describe('usePlayerPicker', () => {
   });
 
   it('sends q only after 2+ characters; short query does not', async () => {
-    const { wrapper } = createWrapper();
-    const { result } = renderHook(
-      () => usePlayerPicker({ preloadCount: 100, selectedValue: null }),
-      { wrapper }
-    );
+    const { result } = mountHook({ preloadCount: 100, selectedValue: null });
     await waitFor(() => expect(mockGetPlayers).toHaveBeenCalledTimes(1));
+
+    jest.useFakeTimers({ advanceTimers: true });
 
     await act(async () => {
       result.current.onSearch('a');
-      await new Promise(r => setTimeout(r, 400));
     });
+    await advanceDebounce();
     expect(mockGetPlayers).toHaveBeenCalledTimes(1);
     expect(mockGetPlayers.mock.calls[0][0].q).toBeUndefined();
 
@@ -75,6 +110,7 @@ describe('usePlayerPicker', () => {
     await act(async () => {
       result.current.onSearch('alice');
     });
+    await advanceDebounce();
     await waitFor(() => {
       expect(mockGetPlayers).toHaveBeenCalledWith(
         expect.objectContaining({ q: 'alice', per_page: 100 })
@@ -83,11 +119,7 @@ describe('usePlayerPicker', () => {
   });
 
   it('keeps the selected player in options when missing from the page', async () => {
-    const { wrapper } = createWrapper();
-    const { result } = renderHook(
-      () => usePlayerPicker({ preloadCount: 100, selectedValue: 99 }),
-      { wrapper }
-    );
+    const { result } = mountHook({ preloadCount: 100, selectedValue: 99 });
     await waitFor(() => {
       expect(result.current.options.some(o => o.value === 99)).toBe(true);
     });
@@ -96,19 +128,21 @@ describe('usePlayerPicker', () => {
   });
 
   it('uses distinct query keys for preload vs search so caches stay separate', async () => {
-    const { wrapper, queryClient } = createWrapper();
-    const { result } = renderHook(
-      () => usePlayerPicker({ preloadCount: 100, selectedValue: null }),
-      { wrapper }
-    );
+    const { result, queryClient } = mountHook({
+      preloadCount: 100,
+      selectedValue: null,
+    });
     await waitFor(() => expect(mockGetPlayers).toHaveBeenCalledTimes(1));
 
     mockGetPlayers.mockResolvedValue({
       data: [{ id_player: 3, name: 'Bob' }],
     });
+
+    jest.useFakeTimers({ advanceTimers: true });
     await act(async () => {
       result.current.onSearch('bob');
     });
+    await advanceDebounce();
     await waitFor(() => {
       expect(mockGetPlayers).toHaveBeenCalledWith(
         expect.objectContaining({ q: 'bob' })
@@ -134,8 +168,8 @@ describe('usePlayerPicker', () => {
     const preloadCalls = mockGetPlayers.mock.calls.length;
     await act(async () => {
       result.current.onSearch('');
-      await new Promise(r => setTimeout(r, 400));
     });
+    await advanceDebounce();
     expect(mockGetPlayers.mock.calls.length).toBe(preloadCalls);
   });
 });

@@ -278,6 +278,19 @@ export default function ResourceViewPage<
     );
   }
 
+  if (!metadata.swagger_schema?.properties) {
+    return wrap(
+      <View className="flex-1 justify-center items-center p-6">
+        <Text
+          testID="resource-view-schema-error"
+          className="text-red-800 text-center"
+        >
+          Resource metadata is unavailable. Try refreshing the page.
+        </Text>
+      </View>
+    );
+  }
+
   const fieldKeys = Object.keys(metadata.swagger_schema.properties).filter(
     key => {
       if (excludeFields.includes(key)) return false;

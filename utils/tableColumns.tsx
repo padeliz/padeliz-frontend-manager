@@ -427,7 +427,11 @@ export function generateColumnsFromMetadata(
 ): UiDataTableColumn<any>[] {
   const { excludeFields = [], onView, linkedResourcesMetadata = {} } = options;
   const { swagger_schema, searchable_fields, sortable_fields } = metadata;
-  const { properties, required = [] } = swagger_schema;
+  const properties = swagger_schema?.properties;
+  if (!properties) {
+    return [];
+  }
+  const required = swagger_schema.required ?? [];
 
   const columns: UiDataTableColumn<any>[] = [];
 

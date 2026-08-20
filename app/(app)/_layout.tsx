@@ -11,8 +11,6 @@ export default function AppLayout() {
     <AuthGuard>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
-        <Stack.Screen name="clubs" />
-        <Stack.Screen name="players" />
       </Stack>
     </AuthGuard>
   );

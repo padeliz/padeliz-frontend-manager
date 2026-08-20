@@ -20,7 +20,7 @@ jest.mock('@/services/api/playerImportApi', () => ({
 
 jest.mock('@/hooks/usePlayerPicker', () => ({
   usePlayerPicker: () => ({
-    options: [{ label: 'Ada Popescu', value: 12, imageUrl: null }],
+    options: [{ label: 'Mara Popescu', value: 12, imageUrl: null }],
     onSearch: jest.fn(),
     loading: false,
   }),
@@ -114,20 +114,20 @@ const previewRows = [
       matched_by: null,
       player: null,
       candidates: [],
-      name_matches: [{ id_player: 12, name: 'Ada Popescu', pdf_avatar_url: null }],
+      name_matches: [{ id_player: 12, name: 'Mara Popescu', pdf_avatar_url: null }],
     },
   },
   {
     index: 1,
-    first_name: 'Ada',
+    first_name: 'Mara',
     middle_name: null,
     last_name: 'Popescu',
-    email: 'ada@example.test',
+    email: 'mara@example.test',
     phone: '+40701',
     mapping: {
       status: 'mapped',
       matched_by: 'email',
-      player: { id_player: 12, name: 'Ada Popescu', pdf_avatar_url: 'https://img/a.png' },
+      player: { id_player: 12, name: 'Mara Popescu', pdf_avatar_url: 'https://img/a.png' },
       candidates: [],
       name_matches: [],
     },
@@ -220,7 +220,7 @@ describe('PlayerImportPanel', () => {
       data: {
         rows: [
           { row_index: 0, player_id: 50, first_name: 'New', last_name: 'Player', action: 'created' },
-          { row_index: 1, player_id: 12, first_name: 'Ada', last_name: 'Popescu', action: 'attached' },
+          { row_index: 1, player_id: 12, first_name: 'Mara', last_name: 'Popescu', action: 'attached' },
           { row_index: 2, player_id: 1, first_name: 'Conflict', last_name: 'Row', action: 'attached' },
         ],
       },
@@ -278,7 +278,7 @@ describe('PlayerImportPanel', () => {
 
   it('seeds options from player, candidates, and name_matches', async () => {
     const screen = await loadPreview();
-    expect(screen.getAllByText('Ada Popescu').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Mara Popescu').length).toBeGreaterThan(0);
     expect(screen.getByText('Email Owner')).toBeTruthy();
     expect(screen.getByText('Phone Owner')).toBeTruthy();
   });
@@ -289,7 +289,7 @@ describe('PlayerImportPanel', () => {
       data: {
         rows: [
           { row_index: 0, player_id: 50, first_name: 'New', last_name: 'Player', action: 'created' },
-          { row_index: 1, player_id: 12, first_name: 'Ada', last_name: 'Popescu', action: 'attached' },
+          { row_index: 1, player_id: 12, first_name: 'Mara', last_name: 'Popescu', action: 'attached' },
           { row_index: 2, player_id: 1, first_name: 'Conflict', last_name: 'Row', action: 'attached' },
           { row_index: 3, player_id: 77, first_name: '*fictiv*', last_name: 'Guest', action: 'created' },
         ],

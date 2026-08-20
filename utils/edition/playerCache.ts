@@ -1,13 +1,9 @@
 /**
  * Normalize + diacritic-fold for local player filter.
  */
-export function normalizeSearchText(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim();
-}
+import { normalizeSearchText } from '@/utils/textNormalize';
+
+export { normalizeSearchText } from '@/utils/textNormalize';
 
 export function filterPlayersLocally<
   T extends {

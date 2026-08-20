@@ -23,11 +23,10 @@ export default function CsvFilePicker({
   };
 
   return (
-    <View className="flex-row items-center gap-2">
+    <View testID="csv-file-picker" className="flex-row items-center gap-2">
       {Platform.OS === 'web' ? (
         <input
           ref={inputRef as any}
-          testID="csv-file-picker"
           type="file"
           accept=".csv,text/csv"
           disabled={disabled}

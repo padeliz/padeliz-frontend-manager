@@ -19,8 +19,7 @@ export class PrimaryKeyService {
    * @returns The field name of the primary key, or null if not found
    */
   static detectPrimaryKey(metadata: ApiResourceMetadata): string | null {
-    const { swagger_schema } = metadata;
-    const { properties } = swagger_schema;
+    const properties = metadata.swagger_schema?.properties;
 
     if (!properties || Object.keys(properties).length === 0) {
       return null;
@@ -95,8 +94,7 @@ export class PrimaryKeyService {
    * @returns Array of field names that could be primary keys
    */
   static getPrimaryKeyCandidates(metadata: ApiResourceMetadata): string[] {
-    const { swagger_schema } = metadata;
-    const { properties } = swagger_schema;
+    const properties = metadata.swagger_schema?.properties;
     const candidates: string[] = [];
 
     if (!properties) return candidates;

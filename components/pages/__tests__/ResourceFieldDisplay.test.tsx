@@ -8,13 +8,13 @@ describe('ResourceFieldDisplay', () => {
     render(
       <ResourceFieldDisplay
         fieldKey="name"
-        fieldValue="Ada Lovelace"
+        fieldValue="Mara Lovelace"
         metadata={playerMetadata}
       />
     );
 
     expect(screen.getByText('Name')).toBeTruthy();
-    expect(screen.getByText('Ada Lovelace')).toBeTruthy();
+    expect(screen.getByText('Mara Lovelace')).toBeTruthy();
   });
 
   it('renders read-only primary key and timestamp fields', () => {
@@ -56,13 +56,13 @@ describe('ResourceFieldDisplay', () => {
     render(
       <ResourceFieldDisplay
         fieldKey="name"
-        fieldValue="Ada Lovelace"
+        fieldValue="Mara Lovelace"
         metadata={playerMetadata}
         excludeFields={['name']}
       />
     );
 
     expect(screen.queryByText('Name')).toBeNull();
-    expect(screen.queryByText('Ada Lovelace')).toBeNull();
+    expect(screen.queryByText('Mara Lovelace')).toBeNull();
   });
 });

@@ -48,13 +48,13 @@ describe('formatField', () => {
     const result = formatField({
       metadata: playerMetadata,
       fieldKey: 'name',
-      fieldValue: 'Ada Lovelace',
+      fieldValue: 'Mara Lovelace',
       mode: 'form',
     });
 
     expect(result.isEditable).toBe(true);
-    expect(result.inputValue).toBe('Ada Lovelace');
-    expect(result.apiValue).toBe('Ada Lovelace');
+    expect(result.inputValue).toBe('Mara Lovelace');
+    expect(result.apiValue).toBe('Mara Lovelace');
     expect(result.inputType).toBe('text');
   });
 

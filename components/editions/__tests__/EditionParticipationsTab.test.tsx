@@ -250,7 +250,7 @@ describe('EditionParticipationsTab General DnD UI', () => {
     });
     expect(getByTestId('participations-player-picker')).toBeTruthy();
     fireEvent.press(getByText('Select player'));
-    expect(getByTestId('dropdown-search')).toBeTruthy();
+    expect(getByTestId('dropdown-search-wrapper')).toBeTruthy();
     await waitFor(() => expect(mockGetPlayers).toHaveBeenCalled());
     for (const call of mockGetPlayers.mock.calls) {
       expect(call[0].per_page).toBeLessThanOrEqual(100);

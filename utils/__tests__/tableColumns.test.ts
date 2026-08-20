@@ -46,4 +46,20 @@ describe('tableColumns', () => {
     expect(pkCol).toBeTruthy();
     expect(typeof pkCol.render).toBe('function');
   });
+
+  it('returns empty columns when swagger_schema is null', () => {
+    const metadata = {
+      ...baseMetadata,
+      swagger_schema: null,
+    };
+    expect(generateColumnsFromMetadata(metadata as any)).toEqual([]);
+  });
+
+  it('returns empty columns when swagger_schema has no properties', () => {
+    const metadata = {
+      ...baseMetadata,
+      swagger_schema: {},
+    };
+    expect(generateColumnsFromMetadata(metadata as any)).toEqual([]);
+  });
 });

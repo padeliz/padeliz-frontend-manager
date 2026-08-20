@@ -1,9 +1,9 @@
+import { useRouter } from 'expo-router';
+import React, { useCallback } from 'react';
 import ResourceListPage from '@/components/pages/ResourceListPage';
 import { useResourcePageConfig } from '@/hooks/useResourcePageConfig';
 import { PlayerImportApiService } from '@/services/api/playerImportApi';
 import { ApiPlayerImport } from '@/types/api/entities';
-import { useRouter } from 'expo-router';
-import React, { useCallback } from 'react';
 
 const importsApi = new PlayerImportApiService();
 
@@ -21,7 +21,7 @@ export default function PlayerImportsListPage() {
 
   const handleView = useCallback(
     (id: number) => {
-      router.push(`/players/imports/${id}` as any);
+      router.push(`/players/import-players/imports/${id}` as any);
     },
     [router]
   );

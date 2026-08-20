@@ -78,3 +78,13 @@ export const emptyMetadata: ApiResourceMetadata = {
     properties: {},
   },
 };
+
+export const nullSwaggerMetadata: ApiResourceMetadata = {
+  version: '1.0.0',
+  schema_name: 'Broken',
+  searchable_fields: [],
+  filterable_fields: {},
+  sortable_fields: [],
+  request_body: {},
+  swagger_schema: null as unknown as ApiResourceMetadata['swagger_schema'],
+};

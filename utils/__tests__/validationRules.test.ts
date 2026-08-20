@@ -1,9 +1,9 @@
-import {
-  schemaToValidationRules,
-  validateField,
-  validateForm,
-} from '@/utils/validationRules';
 import { FormFieldSchema } from '@/types/validation/schemas';
+import {
+    schemaToValidationRules,
+    validateField,
+    validateForm,
+} from '@/utils/validationRules';
 
 describe('validationRules', () => {
   const nameField: FormFieldSchema = {
@@ -29,7 +29,7 @@ describe('validationRules', () => {
   describe('validateField', () => {
     it('returns no errors for a valid value', () => {
       const rules = schemaToValidationRules(nameField);
-      expect(validateField(nameField, 'Ada', rules)).toEqual([]);
+      expect(validateField(nameField, 'Mara', rules)).toEqual([]);
     });
 
     it('returns required and minLength errors for invalid values', () => {
@@ -62,8 +62,8 @@ describe('validationRules', () => {
 
     it('returns isValid true when all values pass', () => {
       const result = validateForm(schema, {
-        name: 'Ada Lovelace',
-        first_name: 'Ada',
+        name: 'Mara Lovelace',
+        first_name: 'Mara',
       });
 
       expect(result.isValid).toBe(true);
@@ -73,7 +73,7 @@ describe('validationRules', () => {
     it('returns field errors when values fail', () => {
       const result = validateForm(schema, {
         name: '',
-        first_name: 'Ada',
+        first_name: 'Mara',
       });
 
       expect(result.isValid).toBe(false);

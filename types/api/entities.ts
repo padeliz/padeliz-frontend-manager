@@ -100,7 +100,14 @@ export interface ApiPlayer {
   phones?: { id_player_phone: number; phone: string; purposes?: string[]; is_primary?: boolean }[];
   inserted_at: number;
   updated_at?: number;
-  uploaded_profile_images?: { id: number; url: string }[];
+  uploaded_profile_images?: {
+    id: number;
+    url: string;
+    is_pdf_primary?: boolean;
+    uploaded_via?: string | null;
+    uploaded_via_import_id?: number | null;
+    original_filename?: string | null;
+  }[];
   uploaded_profile_urls?: string[];
   participations?: ApiEditionParticipation[];
 }
@@ -319,4 +326,43 @@ export interface ApiPlayerImportPreviewRow {
   email: string;
   phone: string;
   mapping: ApiPlayerImportPreviewMapping;
+}
+
+export interface ApiPlayerProfileImageImportRow {
+  id_player_profile_image_import_row: number;
+  player_profile_image_import_id: number;
+  row_index: number;
+  original_filename: string;
+  player_id: number;
+  player_profile_image_id: number;
+  is_pdf_primary: boolean;
+  action: 'uploaded';
+  inserted_at: number;
+  updated_at?: number;
+}
+
+export interface ApiPlayerProfileImageImport {
+  id_player_profile_image_import: number;
+  imported_by_player_id?: number | null;
+  original_filename: string;
+  included_count: number;
+  uploaded_count: number;
+  inserted_at: number;
+  updated_at?: number;
+  importedByPlayer?: ApiPlayer | null;
+  rows?: ApiPlayerProfileImageImportRow[];
+}
+
+export interface ApiPlayerProfileImageImportPreviewMapping {
+  status: 'mapped' | 'unmapped';
+  matched_by: 'email' | 'phone' | 'id' | null;
+  player: ApiPlayer | null;
+  candidates: ApiPlayer[];
+  name_matches: ApiPlayer[];
+}
+
+export interface ApiPlayerProfileImageImportPreviewRow {
+  index: number;
+  filename: string;
+  mapping: ApiPlayerProfileImageImportPreviewMapping;
 }

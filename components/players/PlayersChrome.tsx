@@ -1,5 +1,5 @@
 /**
- * Players hub chrome: List | Import | Imports with Save/Refresh.
+ * Players hub chrome: List | Import Players | Import Profile Images with Save/Refresh.
  */
 
 import { usePageChrome } from '@/components/chrome/PageChromeProvider';
@@ -13,6 +13,18 @@ import { Slot, usePathname, useRouter } from 'expo-router';
 import React, { useCallback, useMemo } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
+function isImportDraftRoute(pathname: string): boolean {
+  const parts = pathname.split('/').filter(Boolean);
+  const playersIdx = parts.indexOf('players');
+  if (playersIdx === -1) return false;
+  const section = parts[playersIdx + 1];
+  const next = parts[playersIdx + 2];
+  if (section === 'import-players' || section === 'import-profile-images') {
+    return next !== 'imports';
+  }
+  return false;
+}
+
 export function PlayersChrome() {
   const router = useRouter();
   const pathname = usePathname();
@@ -21,8 +33,16 @@ export function PlayersChrome() {
   const tabs: EditionTabLink[] = useMemo(
     () => [
       { label: 'List', href: '/players/list', match: '/list' },
-      { label: 'Import', href: '/players/import', match: '/import' },
-      { label: 'Imports', href: '/players/imports', match: '/imports' },
+      {
+        label: 'Import Players',
+        href: '/players/import-players',
+        match: 'import-players',
+      },
+      {
+        label: 'Import Profile Images',
+        href: '/players/import-profile-images',
+        match: 'import-profile-images',
+      },
     ],
     []
   );
@@ -36,9 +56,7 @@ export function PlayersChrome() {
   }, [actions]);
 
   const canSave = !!actions?.canSave;
-  const showSave =
-    pathname.split('/').includes('import') &&
-    !pathname.split('/').includes('imports');
+  const showSave = isImportDraftRoute(pathname);
 
   return (
     <AppLayout title="Players">

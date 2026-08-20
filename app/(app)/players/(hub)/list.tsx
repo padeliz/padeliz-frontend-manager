@@ -33,7 +33,7 @@ export default function PlayersListPage() {
 
   const handleViewPlayer = useCallback(
     (playerId: number) => {
-      router.push(`/players/${playerId}` as any);
+      router.push(`/players/${playerId}/details` as any);
     },
     [router]
   );

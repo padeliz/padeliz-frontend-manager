@@ -1,8 +1,8 @@
 import { PageChromeProvider } from '@/components/chrome/PageChromeProvider';
 import EditionStandingsTab from '@/components/editions/EditionStandingsTab';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import React from 'react';
 
 jest.mock('@/services/api/standingsApi', () => ({
   standingsApi: {
@@ -17,7 +17,7 @@ jest.mock('@/services/api/standingsApi', () => ({
           rank: 1,
           participation: {
             id_participation: 100,
-            player: { name: 'Ada Lovelace' },
+            player: { name: 'Mara Lovelace' },
           },
         },
       ],
@@ -35,7 +35,7 @@ jest.mock('@/services/api/scheduleApi', () => ({
         participations: [
           {
             id_participation: 100,
-            player: { name: 'Ada Lovelace' },
+            player: { name: 'Mara Lovelace' },
           },
         ],
         edition_division: {},
@@ -65,7 +65,7 @@ describe('EditionStandingsTab', () => {
     const { getByText, findByText } = renderTab(
       <EditionStandingsTab editionDivisionId={9} />
     );
-    expect(await findByText(/Ada Lovelace/)).toBeTruthy();
+    expect(await findByText(/Mara Lovelace/)).toBeTruthy();
     expect(getByText(/Recalculate/i)).toBeTruthy();
   });
 
@@ -74,7 +74,7 @@ describe('EditionStandingsTab', () => {
     const { getByText, findByText } = renderTab(
       <EditionStandingsTab editionDivisionId={9} />
     );
-    await findByText(/Ada Lovelace/);
+    await findByText(/Mara Lovelace/);
     fireEvent.press(getByText(/Recalculate/i));
     await waitFor(() => {
       expect(standingsApi.recalculate).toHaveBeenCalledWith(9);

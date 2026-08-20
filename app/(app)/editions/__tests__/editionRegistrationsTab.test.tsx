@@ -1,6 +1,10 @@
 import EditionRegistrationsTab from '@/app/(app)/editions/[id]/registrations';
 import { PageChromeProvider } from '@/components/chrome/PageChromeProvider';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import {
+  createTestQueryClient,
+  disposeTestQueryClient,
+} from '@/testing/createTestQueryClient';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
@@ -49,19 +53,21 @@ jest.mock('@/components/pages/ResourceListPage', () => ({
 }));
 
 function renderTab() {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return render(
-    <QueryClientProvider client={client}>
+  const queryClient = createTestQueryClient();
+  const utils = render(
+    <QueryClientProvider client={queryClient}>
       <PageChromeProvider>
         <EditionRegistrationsTab />
       </PageChromeProvider>
     </QueryClientProvider>
   );
+  return { ...utils, queryClient };
 }
 
 describe('Edition registrations tab', () => {
+  let activeClient: ReturnType<typeof createTestQueryClient> | null = null;
+  let activeUnmount: (() => void) | null = null;
+
   beforeEach(() => {
     jest.clearAllMocks();
     capturedConfig = null;
@@ -70,8 +76,24 @@ describe('Edition registrations tab', () => {
     });
   });
 
+  afterEach(async () => {
+    activeUnmount?.();
+    activeUnmount = null;
+    if (activeClient) {
+      await disposeTestQueryClient(activeClient);
+      activeClient = null;
+    }
+  });
+
+  function mountTab() {
+    const mounted = renderTab();
+    activeClient = mounted.queryClient;
+    activeUnmount = mounted.unmount;
+    return mounted;
+  }
+
   it('embeds the list, hides the edition column, and locks filters.edition_id last', async () => {
-    const { getByTestId } = renderTab();
+    const { getByTestId } = mountTab();
     await waitFor(() => {
       expect(capturedConfig).toBeTruthy();
     });
@@ -92,7 +114,7 @@ describe('Edition registrations tab', () => {
   });
 
   it('Add uses withSearchParams for edition_id', async () => {
-    const { getByTestId } = renderTab();
+    const { getByTestId } = mountTab();
     await waitFor(() => expect(capturedConfig).toBeTruthy());
     fireEvent.press(getByTestId('tab-add'));
     expect(mockPush).toHaveBeenCalledWith(
@@ -104,7 +126,7 @@ describe('Edition registrations tab', () => {
     mockGetEdition.mockResolvedValue({
       data: { id_edition: 7, name: 'Cup', finalized_at: 123 },
     });
-    const { findByTestId } = renderTab();
+    const { findByTestId } = mountTab();
     await findByTestId('registrations-finalized-hint');
     await waitFor(() => {
       expect(capturedConfig?.mutationsDisabled).toBe(true);

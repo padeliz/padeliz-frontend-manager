@@ -11,7 +11,7 @@ describe('ResourceFieldEdit', () => {
     render(
       <ResourceFieldEdit
         fieldKey="name"
-        fieldValue="Ada"
+        fieldValue="Mara"
         metadata={playerMetadata}
         onChange={onChange}
         onBlur={onBlur}
@@ -20,9 +20,9 @@ describe('ResourceFieldEdit', () => {
 
     expect(screen.getByText('Name')).toBeTruthy();
 
-    const input = screen.getByDisplayValue('Ada');
-    fireEvent.changeText(input, 'Ada Lovelace');
-    expect(onChange).toHaveBeenCalledWith('name', 'Ada Lovelace');
+    const input = screen.getByDisplayValue('Mara');
+    fireEvent.changeText(input, 'Mara Lovelace');
+    expect(onChange).toHaveBeenCalledWith('name', 'Mara Lovelace');
 
     fireEvent(input, 'blur');
     expect(onBlur).toHaveBeenCalledWith('name');
@@ -65,7 +65,7 @@ describe('ResourceFieldEdit', () => {
     render(
       <ResourceFieldEdit
         fieldKey="name"
-        fieldValue="Ada"
+        fieldValue="Mara"
         metadata={playerMetadata}
         onChange={jest.fn()}
         onBlur={jest.fn()}

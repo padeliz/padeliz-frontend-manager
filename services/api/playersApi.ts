@@ -127,6 +127,32 @@ export class PlayersApiService extends BaseApiService {
     });
   }
 
+  async uploadProfileImage(
+    playerId: number,
+    file: File
+  ): Promise<{ data: { uploaded_profile_images: ApiPlayer['uploaded_profile_images'] } }> {
+    const form = new FormData();
+    form.append('image', file);
+    return this.uploadFormData(`/players/${playerId}/profile-images`, form);
+  }
+
+  async deleteProfileImage(
+    playerId: number,
+    imageId: number
+  ): Promise<{ data: { uploaded_profile_images: ApiPlayer['uploaded_profile_images'] } }> {
+    return this.deleteUpload(`/players/${playerId}/profile-images/${imageId}`);
+  }
+
+  async setProfileImagePdfPrimary(
+    playerId: number,
+    imageId: number
+  ): Promise<{ data: { uploaded_profile_images: ApiPlayer['uploaded_profile_images'] } }> {
+    return this.post(
+      `/players/${playerId}/profile-images/${imageId}/pdf-primary`,
+      {}
+    );
+  }
+
   /**
    * Get players metadata
    */

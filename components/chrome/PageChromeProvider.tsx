@@ -7,6 +7,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -108,7 +109,7 @@ export function useRegisterPageActions(actions: PageChromeActions | null) {
   const isDirty = actions?.isDirty;
   const hasActions = !!actions;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!hasActions) {
       register(null);
       return;

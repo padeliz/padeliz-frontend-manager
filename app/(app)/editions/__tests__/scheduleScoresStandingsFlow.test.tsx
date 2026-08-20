@@ -1,14 +1,14 @@
 /**
  * Happy-path smoke: schedule → scores → standings (mocked APIs).
  */
-import React from 'react';
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PageChromeProvider } from '@/components/chrome/PageChromeProvider';
 import EditionScheduleTab from '@/components/editions/EditionScheduleTab';
 import EditionScoresTab from '@/components/editions/EditionScoresTab';
 import EditionStandingsTab from '@/components/editions/EditionStandingsTab';
 import { matchesApi } from '@/services/api/matchesApi';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import React from 'react';
 
 const scheduleState = {
   has_regular_matches: true,
@@ -20,7 +20,7 @@ const scheduleState = {
     {
       id_participation: 1,
       is_collecting_points: true,
-      player: { name: 'Ada Lovelace' },
+      player: { name: 'Mara Lovelace' },
     },
   ],
   edition_division: { allow_replacements: true },
@@ -33,7 +33,7 @@ const scheduleState = {
         {
           side: 'LEFT',
           score: null,
-          players: [{ player_id: 1, player: { name: 'Ada Lovelace' } }],
+          players: [{ player_id: 1, player: { name: 'Mara Lovelace' } }],
         },
         {
           side: 'RIGHT',
@@ -66,7 +66,7 @@ const mockRecalculate = jest.fn(async () => {
         rank: 1,
         participation: {
           id_participation: 1,
-          player: { name: 'Ada Lovelace' },
+          player: { name: 'Mara Lovelace' },
         },
       },
     ],
@@ -82,7 +82,7 @@ const mockGetStandings = jest.fn(async () => ({
       rank: 1,
       participation: {
         id_participation: 1,
-        player: { name: 'Ada Lovelace' },
+        player: { name: 'Mara Lovelace' },
       },
     },
   ],
@@ -155,7 +155,7 @@ describe('schedule → scores → standings flow', () => {
     const scores = renderWithProviders(
       <EditionScoresTab editionDivisionId={9} />
     );
-    expect(await scores.findByText('Ada Lovelace')).toBeTruthy();
+    expect(await scores.findByText('Mara Lovelace')).toBeTruthy();
     expect(scores.getByText('Bob')).toBeTruthy();
     expect(scores.getByTestId('score-match-row-50')).toBeTruthy();
     expect(scores.queryByText('LEFT')).toBeNull();
@@ -170,7 +170,7 @@ describe('schedule → scores → standings flow', () => {
     const standings = renderWithProviders(
       <EditionStandingsTab editionDivisionId={9} />
     );
-    expect(await standings.findByText(/Ada Lovelace/)).toBeTruthy();
+    expect(await standings.findByText(/Mara Lovelace/)).toBeTruthy();
     fireEvent.press(standings.getByText(/Recalculate/i));
     await waitFor(() => expect(mockRecalculate).toHaveBeenCalledWith(9));
   });

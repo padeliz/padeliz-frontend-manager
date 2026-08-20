@@ -4,6 +4,7 @@
  */
 
 import { SingleSelectDropdownProps } from '@/types/ui/dropdowns';
+import { normalizeSearchText } from '@/utils/textNormalize';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
 import {
@@ -53,10 +54,13 @@ export default function SingleSelectDropdown({
 
   const visibleOptions = useMemo(() => {
     if (!searchable) return options;
-    const needle = query.trim().toLowerCase();
+    if (onSearch) return options;
+    const needle = normalizeSearchText(query);
     if (!needle) return options;
-    return options.filter(opt => opt.label.toLowerCase().includes(needle));
-  }, [options, query, searchable]);
+    return options.filter(opt =>
+      normalizeSearchText(opt.label).includes(needle)
+    );
+  }, [onSearch, options, query, searchable]);
 
   const currentValue =
     selectedValue !== null && selectedValue !== undefined
@@ -151,9 +155,11 @@ export default function SingleSelectDropdown({
   const content = (
     <View className="flex-1">
       {searchable && (
-        <View className="px-3 py-2 border-b border-gray-200">
+        <View
+          testID="dropdown-search-wrapper"
+          className="px-3 py-2 border-b border-gray-200"
+        >
           <TextInput
-            testID="dropdown-search"
             value={query}
             onChangeText={handleQueryChange}
             placeholder="Search..."

@@ -1,8 +1,8 @@
 /**
  * @jest-environment jsdom
  */
-import PlayerImportViewPage from '@/app/(app)/players/(hub)/imports/[id]';
-import PlayerImportsListPage from '@/app/(app)/players/(hub)/imports/index';
+import PlayerImportViewPage from '@/app/(app)/players/(hub)/import-players/imports/[id]';
+import PlayerImportsListPage from '@/app/(app)/players/(hub)/import-players/imports/index';
 import { render } from '@testing-library/react-native';
 import React from 'react';
 

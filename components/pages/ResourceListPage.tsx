@@ -158,9 +158,53 @@ export default function ResourceListPage<
     bulkActionsState.onBulkAction(action);
   };
 
+  const wrap = (children: React.ReactNode) =>
+    embedded ? (
+      <View className="flex-1" testID="resource-list-embedded">
+        {children}
+      </View>
+    ) : (
+      <AppLayout title={title}>{children}</AppLayout>
+    );
+
+  if (
+    metadata &&
+    !metadataLoading &&
+    !metadata.swagger_schema?.properties
+  ) {
+    return wrap(
+      <View className="flex-1 justify-center items-center p-6">
+        <Text
+          testID="resource-list-schema-error"
+          className="text-red-800 text-center"
+        >
+          Resource metadata is unavailable for {resourceDisplayName}. Try
+          refreshing the page.
+        </Text>
+      </View>
+    );
+  }
+
   if (!primaryKeyField) {
+    if (metadataLoading || !metadata) {
+      return wrap(
+        <View className="flex-1 justify-center items-center p-6">
+          <Text className="text-gray-600 text-center">Loading...</Text>
+        </View>
+      );
+    }
     console.error('No primary key field found for metadata', metadata);
-    return null;
+    return wrap(
+      <View className="flex-1 justify-center items-center p-6">
+        <Text
+          testID="resource-list-schema-error"
+          className="text-red-800 text-center"
+        >
+          Resource metadata is unavailable for {resourceDisplayName}. Try
+          refreshing the page.
+        </Text>
+      </View>
+    );
   }
 
   const handleBack = () => {
@@ -177,15 +221,6 @@ export default function ResourceListPage<
       onAdd();
     }
   };
-
-  const wrap = (children: React.ReactNode) =>
-    embedded ? (
-      <View className="flex-1" testID="resource-list-embedded">
-        {children}
-      </View>
-    ) : (
-      <AppLayout title={title}>{children}</AppLayout>
-    );
 
   const handleExportAll = () => {
     if (onExport) {

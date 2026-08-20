@@ -49,16 +49,46 @@ describe('Players hub', () => {
     expect(getByTestId('players-redirect')).toHaveTextContent('/players/list');
   });
 
-  it('renders List, Import, and Imports tabs', () => {
+  it('renders List, Import Players, and Import Profile Images tabs', () => {
     const { getByTestId, queryByTestId } = render(
       <PageChromeProvider>
         <PlayersChrome />
       </PageChromeProvider>
     );
     expect(getByTestId('edition-tab-List')).toBeTruthy();
-    expect(getByTestId('edition-tab-Import')).toBeTruthy();
-    expect(getByTestId('edition-tab-Imports')).toBeTruthy();
-    expect(queryByTestId('edition-tab-Add')).toBeNull();
+    expect(getByTestId('edition-tab-Import Players')).toBeTruthy();
+    expect(getByTestId('edition-tab-Import Profile Images')).toBeTruthy();
+    expect(queryByTestId('edition-tab-Import')).toBeNull();
+    expect(queryByTestId('edition-tab-Imports')).toBeNull();
+  });
+
+  it('shows Save on import-players draft route only', () => {
+    pathnameState.value = '/players/import-players';
+    const { getByTestId, rerender, queryByTestId } = render(
+      <PageChromeProvider>
+        <DirtySeed />
+        <PlayersChrome />
+      </PageChromeProvider>
+    );
+    expect(getByTestId('players-chrome-save')).toBeTruthy();
+
+    pathnameState.value = '/players/import-players/imports';
+    rerender(
+      <PageChromeProvider>
+        <DirtySeed />
+        <PlayersChrome />
+      </PageChromeProvider>
+    );
+    expect(queryByTestId('players-chrome-save')).toBeNull();
+
+    pathnameState.value = '/players/import-profile-images';
+    rerender(
+      <PageChromeProvider>
+        <DirtySeed />
+        <PlayersChrome />
+      </PageChromeProvider>
+    );
+    expect(getByTestId('players-chrome-save')).toBeTruthy();
   });
 
   it('confirms dirty before switching tabs', async () => {
@@ -69,7 +99,7 @@ describe('Players hub', () => {
         <PlayersChrome />
       </PageChromeProvider>
     );
-    fireEvent.press(getByTestId('edition-tab-Import'));
+    fireEvent.press(getByTestId('edition-tab-Import Players'));
     await waitFor(() => expect(mockConfirm).toHaveBeenCalled());
     expect(mockPush).not.toHaveBeenCalled();
   });
