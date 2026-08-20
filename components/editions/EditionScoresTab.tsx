@@ -1,10 +1,12 @@
 import { useRegisterPageActions } from '@/components/chrome/PageChromeProvider';
+import CachedPdfImageReload from '@/components/editions/CachedPdfImageReload';
 import { EditionGeneralEditHint } from '@/components/editions/editionGeneralHint';
 import { queryKeys } from '@/lib/queryClient';
+import { cachedPdfImagesApi } from '@/services/api/cachedPdfImagesApi';
 import { matchesApi } from '@/services/api/matchesApi';
 import { scheduleApi } from '@/services/api/scheduleApi';
 import { ApiEditionDivision } from '@/types/api/entities';
-import { GameMatch, ScheduleState } from '@/types/api/edition';
+import { GameMatch, GameMatchSidePlayer, ScheduleState } from '@/types/api/edition';
 import {
   buildParticipationsById,
   matchSidePlayerNames,
@@ -12,31 +14,31 @@ import {
 import { clockHi } from '@/utils/edition/clockHi';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Image,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Text, TextInput, View } from 'react-native';
 
 type Props = {
   editionDivisionId: number | null;
   divisions?: ApiEditionDivision[];
 };
 
+function findSide(match: GameMatch, side: 'LEFT' | 'RIGHT') {
+  return (match.sides || []).find(s => String(s.side).toUpperCase() === side);
+}
+
 function sideScore(match: GameMatch, side: 'LEFT' | 'RIGHT'): string {
-  const found = (match.sides || []).find(
-    s => String(s.side).toUpperCase() === side
-  );
+  const found = findSide(match, side);
   return found?.score == null ? '' : String(found.score);
 }
 
 function sideCoupleUrl(match: GameMatch, side: 'LEFT' | 'RIGHT'): string | null {
-  const found = (match.sides || []).find(
-    s => String(s.side).toUpperCase() === side
-  );
-  return found?.couple_image_url ?? null;
+  return findSide(match, side)?.couple_image_url ?? null;
+}
+
+function sidePlayers(
+  match: GameMatch,
+  side: 'LEFT' | 'RIGHT'
+): GameMatchSidePlayer[] {
+  return findSide(match, side)?.players || [];
 }
 
 function draftsFromMatches(list: GameMatch[]) {
@@ -171,6 +173,13 @@ export default function EditionScoresTab({
     Record<number, { left: string; right: string }>
   >({});
   const [baseline, setBaseline] = useState('');
+  const [coupleOverrides, setCoupleOverrides] = useState<
+    Record<string, string>
+  >({});
+  const [coupleSpinning, setCoupleSpinning] = useState<
+    Record<string, boolean>
+  >({});
+  const [coupleErrors, setCoupleErrors] = useState<Record<string, string>>({});
 
   const scheduleQuery = useQuery({
     queryKey: [...queryKeys.schedule(editionDivisionId ?? 0), 'scores'] as const,
@@ -236,6 +245,102 @@ export default function EditionScoresTab({
     }
   }, [baseline, drafts, editionDivisionId, finalized, queryClient]);
 
+  const coupleReloadTargets = useCallback(
+    (players: GameMatchSidePlayer[]) => {
+      if (players.length !== 2) return null;
+      const resolved = players.map(mp => {
+        const participation: any =
+          participationsById.get(Number(mp?.participation_id)) ??
+          (mp as any)?.participation ??
+          null;
+        return {
+          playerId: Number(
+            mp?.player_id ??
+              mp?.player?.id_player ??
+              participation?.player_id ??
+              participation?.player?.id_player
+          ),
+          collecting: Boolean(participation?.is_collecting_points ?? false),
+        };
+      });
+      if (resolved.some(r => !Number.isFinite(r.playerId))) return null;
+      return resolved;
+    },
+    [participationsById]
+  );
+
+  const reloadCouple = async (match: GameMatch, side: 'LEFT' | 'RIGHT') => {
+    const key = `${match.id_match}-${side}`;
+    if (coupleSpinning[key]) return;
+
+    const targets = coupleReloadTargets(sidePlayers(match, side));
+    if (!targets) {
+      setCoupleErrors(prev => ({
+        ...prev,
+        [key]: 'Need two known players for a couple image.',
+      }));
+      return;
+    }
+
+    setCoupleSpinning(prev => ({ ...prev, [key]: true }));
+    setCoupleErrors(prev => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+
+    try {
+      const res = await cachedPdfImagesApi.generatePairImage({
+        player1Id: targets[0].playerId,
+        player2Id: targets[1].playerId,
+        player1IsCollectingPoints: targets[0].collecting,
+        player2IsCollectingPoints: targets[1].collecting,
+      });
+      const url = res?.data?.couple_image_url ?? null;
+      if (url) {
+        setCoupleOverrides(prev => ({ ...prev, [key]: url }));
+      } else {
+        setCoupleErrors(prev => ({
+          ...prev,
+          [key]: 'Couple image URL missing in response.',
+        }));
+      }
+    } catch (e: any) {
+      setCoupleErrors(prev => ({
+        ...prev,
+        [key]: e?.message || 'Failed to generate couple image.',
+      }));
+    } finally {
+      setCoupleSpinning(prev => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    }
+  };
+
+  const renderCouple = (match: GameMatch, side: 'LEFT' | 'RIGHT') => {
+    const key = `${match.id_match}-${side}`;
+    const sideKey = side.toLowerCase();
+    const url = coupleOverrides[key] ?? sideCoupleUrl(match, side);
+    const canReload = sidePlayers(match, side).length === 2;
+    if (!url && !canReload) {
+      return (
+        <Text testID={`couple-missing-${sideKey}-${match.id_match}`}>⚠️</Text>
+      );
+    }
+    return (
+      <CachedPdfImageReload
+        testIdPrefix={`couple-${sideKey}-${match.id_match}`}
+        imageUrl={url}
+        borderRadius={4}
+        spinning={Boolean(coupleSpinning[key])}
+        errorReason={coupleErrors[key] || null}
+        onReload={() => void reloadCouple(match, side)}
+      />
+    );
+  };
+
   useRegisterPageActions(
     editionDivisionId
       ? {
@@ -274,8 +379,6 @@ export default function EditionScoresTab({
       ) : (
         matches.map(m => {
           const finalRow = isFinal(m);
-          const leftUrl = sideCoupleUrl(m, 'LEFT');
-          const rightUrl = sideCoupleUrl(m, 'RIGHT');
           return (
             <View
               key={m.id_match}
@@ -306,15 +409,7 @@ export default function EditionScoresTab({
                 >
                   {matchSidePlayerNames(m, 'LEFT', participationsById)}
                 </Text>
-                {leftUrl ? (
-                  <Image
-                    testID={`couple-left-${m.id_match}`}
-                    source={{ uri: leftUrl }}
-                    style={{ width: 36, height: 36 }}
-                  />
-                ) : (
-                  <Text testID={`couple-missing-left-${m.id_match}`}>⚠️</Text>
-                )}
+                {renderCouple(m, 'LEFT')}
                 <TextInput
                   testID={`score-left-${m.id_match}`}
                   editable={!finalized}
@@ -349,15 +444,7 @@ export default function EditionScoresTab({
                     }))
                   }
                 />
-                {rightUrl ? (
-                  <Image
-                    testID={`couple-right-${m.id_match}`}
-                    source={{ uri: rightUrl }}
-                    style={{ width: 36, height: 36 }}
-                  />
-                ) : (
-                  <Text testID={`couple-missing-right-${m.id_match}`}>⚠️</Text>
-                )}
+                {renderCouple(m, 'RIGHT')}
                 <Text
                   testID={`score-names-right-${m.id_match}`}
                   className="text-sm text-gray-800 flex-1"

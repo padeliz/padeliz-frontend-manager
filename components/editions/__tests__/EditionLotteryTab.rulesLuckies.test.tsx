@@ -384,9 +384,9 @@ describe('EditionLotteryTab rules/luckies', () => {
     expect(queryByTestId('lucky-phones-50')).toBeNull();
     expect(getByTestId('lucky-phone-51-0')).toHaveTextContent('+40999');
     expect(getByTestId('lucky-phone-icon-51-0')).toBeTruthy();
-    expect(getByTestId('lucky-avatar-present-50')).toBeTruthy();
-    expect(getByTestId('lucky-avatar-reload-51')).toBeTruthy();
-    expect(queryByTestId('lucky-avatar-missing-51')).toBeNull();
+    expect(getByTestId('lucky-avatar-50-present')).toBeTruthy();
+    expect(getByTestId('lucky-avatar-51-reload')).toBeTruthy();
+    expect(queryByTestId('lucky-avatar-51-present')).toBeNull();
     const headers = getAllByTestId(/lucky-group-header-/);
     expect(headers.map(h => h.props.testID)).toEqual([
       'lucky-group-header-20',
@@ -511,21 +511,21 @@ describe('EditionLotteryTab rules/luckies', () => {
     const { findByTestId, getByTestId, queryByTestId } = renderWithClient(
       <EditionLotteryTab editionId={1} mode="luckies" divisions={[] as any} />
     );
-    await findByTestId('lucky-avatar-reload-51');
-    fireEvent.press(getByTestId('lucky-avatar-reload-51'));
+    await findByTestId('lucky-avatar-51-reload');
+    fireEvent.press(getByTestId('lucky-avatar-51-reload'));
     await waitFor(() => expect(mockGeneratePdfAvatar).toHaveBeenCalled());
     expect(
-      getByTestId('lucky-avatar-reload-51').props.accessibilityState?.disabled
+      getByTestId('lucky-avatar-51-reload').props.accessibilityState?.disabled
     ).toBe(true);
 
     await act(async () => {
       resolveAvatar({ data: { pdf_avatar_url: 'https://cdn.example/pdf.png' } });
     });
-    expect(await findByTestId('lucky-avatar-present-51')).toBeTruthy();
-    expect(queryByTestId('lucky-avatar-reload-51')).toBeNull();
+    expect(await findByTestId('lucky-avatar-51-present')).toBeTruthy();
+    expect(queryByTestId('lucky-avatar-51-reload')).toBeNull();
   });
 
-  it('disables reload on missing profile and keeps it after refetch', async () => {
+  it('keeps reload enabled after a missing-profile failure', async () => {
     mockGeneratePdfAvatar.mockRejectedValue(
       new ApiError(
         422,
@@ -537,24 +537,23 @@ describe('EditionLotteryTab rules/luckies', () => {
     const { findByTestId, getByTestId } = renderWithClient(
       <EditionLotteryTab editionId={1} mode="luckies" divisions={[] as any} />
     );
-    await findByTestId('lucky-avatar-reload-51');
-    fireEvent.press(getByTestId('lucky-avatar-reload-51'));
+    await findByTestId('lucky-avatar-51-reload');
+    fireEvent.press(getByTestId('lucky-avatar-51-reload'));
     await waitFor(() =>
-      expect(getByTestId('lucky-avatar-error-51')).toHaveTextContent(
+      expect(getByTestId('lucky-avatar-51-error')).toHaveTextContent(
         /missing a profile image/i
       )
     );
     expect(
-      getByTestId('lucky-avatar-reload-51').props.accessibilityState?.disabled
-    ).toBe(true);
+      getByTestId('lucky-avatar-51-reload').props.accessibilityState?.disabled
+    ).toBe(false);
 
-    mockGetLotteryPrizes.mockResolvedValue(prizeLinesWithLuckiesFixture());
-    await act(async () => {
-      await Promise.resolve();
+    mockGeneratePdfAvatar.mockResolvedValue({
+      data: { pdf_avatar_url: 'https://cdn.example/retry.png' },
     });
-    expect(
-      getByTestId('lucky-avatar-reload-51').props.accessibilityState?.disabled
-    ).toBe(true);
+    fireEvent.press(getByTestId('lucky-avatar-51-reload'));
+    expect(await findByTestId('lucky-avatar-51-present')).toBeTruthy();
+    expect(mockGeneratePdfAvatar).toHaveBeenCalledTimes(2);
   });
 
   it('shows last refresh while unresolved; hides when finalized', async () => {

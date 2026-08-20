@@ -13,6 +13,7 @@ import EditionScoresTab, {
 
 const mockGetSchedule = jest.fn();
 const mockUpdateScores = jest.fn(async () => ({ data: {} }));
+const mockGeneratePairImage = jest.fn();
 
 jest.mock('@/services/api/scheduleApi', () => ({
   scheduleApi: {
@@ -23,6 +24,12 @@ jest.mock('@/services/api/scheduleApi', () => ({
 jest.mock('@/services/api/matchesApi', () => ({
   matchesApi: {
     updateScores: (...args: unknown[]) => mockUpdateScores(...args),
+  },
+}));
+
+jest.mock('@/services/api/cachedPdfImagesApi', () => ({
+  cachedPdfImagesApi: {
+    generatePairImage: (...args: unknown[]) => mockGeneratePairImage(...args),
   },
 }));
 
@@ -82,6 +89,10 @@ describe('scores helpers', () => {
 describe('EditionScoresTab', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockGeneratePairImage.mockResolvedValue({
+      success: true,
+      data: { couple_image_url: 'https://cdn.example/couple.png' },
+    });
     mockGetSchedule.mockResolvedValue({
       data: {
         is_finalized: false,
@@ -144,8 +155,8 @@ describe('EditionScoresTab', () => {
     expect(queryByTestId('score-match-99')).toBeNull();
     expect(getByTestId('score-meta-50').props.children.join('')).toMatch(/14:00/);
     expect(getByTestId('score-meta-50').props.children.join('')).not.toMatch(/seq /);
-    expect(getByTestId('couple-left-50')).toBeTruthy();
-    expect(getByTestId('couple-left-50').props.style).toEqual(
+    expect(getByTestId('couple-left-50-present')).toBeTruthy();
+    expect(getByTestId('couple-left-50-present').props.style).toEqual(
       expect.objectContaining({ width: 36, height: 36 })
     );
     expect(getByTestId('score-match-row-50').props.className).toContain(
@@ -174,11 +185,100 @@ describe('EditionScoresTab', () => {
         ],
       },
     });
-    const { findByTestId } = renderTab(
+    const { findByTestId, queryByTestId } = renderTab(
       <EditionScoresTab editionDivisionId={9} />
     );
     expect(await findByTestId('couple-missing-left-70')).toBeTruthy();
     expect(await findByTestId('couple-missing-right-70')).toBeTruthy();
+    expect(queryByTestId('couple-left-70-reload')).toBeNull();
+    expect(queryByTestId('couple-right-70-reload')).toBeNull();
+  });
+
+  it('reloads a missing couple image from both side players', async () => {
+    mockGetSchedule.mockResolvedValue({
+      data: {
+        is_finalized: false,
+        participations: [
+          { id_participation: 10, player_id: 1, is_collecting_points: true },
+          { id_participation: 11, player_id: 2, is_collecting_points: false },
+        ],
+        matches: [
+          {
+            id_match: 60,
+            match_kind: 'REGULAR',
+            sequence_no: 1,
+            sides: [
+              {
+                side: 'LEFT',
+                score: 0,
+                players: [
+                  { participation_id: 10, player_id: 1 },
+                  { participation_id: 11, player_id: 2 },
+                ],
+              },
+              { side: 'RIGHT', score: 0, players: [] },
+            ],
+          },
+        ],
+      },
+    });
+    const { findByTestId, queryByTestId } = renderTab(
+      <EditionScoresTab editionDivisionId={9} />
+    );
+    fireEvent.press(await findByTestId('couple-left-60-reload'));
+    await waitFor(() => {
+      expect(mockGeneratePairImage).toHaveBeenCalledWith({
+        player1Id: 1,
+        player2Id: 2,
+        player1IsCollectingPoints: true,
+        player2IsCollectingPoints: false,
+      });
+    });
+    expect(await findByTestId('couple-left-60-present')).toBeTruthy();
+    expect(queryByTestId('couple-left-60-reload')).toBeNull();
+    expect(await findByTestId('couple-missing-right-60')).toBeTruthy();
+  });
+
+  it('surfaces couple reload failures without a reload for short sides', async () => {
+    mockGeneratePairImage.mockRejectedValue(new Error('pair boom'));
+    mockGetSchedule.mockResolvedValue({
+      data: {
+        is_finalized: false,
+        participations: [],
+        matches: [
+          {
+            id_match: 61,
+            match_kind: 'REGULAR',
+            sequence_no: 1,
+            sides: [
+              {
+                side: 'LEFT',
+                score: 0,
+                players: [{ player_id: 5 }, { player_id: 6 }],
+              },
+              { side: 'RIGHT', score: 0, players: [{ player_id: 7 }] },
+            ],
+          },
+        ],
+      },
+    });
+    const { findByTestId, queryByTestId } = renderTab(
+      <EditionScoresTab editionDivisionId={9} />
+    );
+    fireEvent.press(await findByTestId('couple-left-61-reload'));
+    await waitFor(() => {
+      expect(mockGeneratePairImage).toHaveBeenCalledWith({
+        player1Id: 5,
+        player2Id: 6,
+        player1IsCollectingPoints: false,
+        player2IsCollectingPoints: false,
+      });
+    });
+    expect(await findByTestId('couple-left-61-error')).toHaveTextContent(
+      'pair boom'
+    );
+    expect(queryByTestId('couple-right-61-reload')).toBeNull();
+    expect(await findByTestId('couple-missing-right-61')).toBeTruthy();
   });
 
   it('shows player names and soft standings hint after save', async () => {

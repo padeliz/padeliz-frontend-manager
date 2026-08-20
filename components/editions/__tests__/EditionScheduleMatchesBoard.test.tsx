@@ -11,12 +11,19 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 const mockGetSchedule = jest.fn();
 const mockReorderMatches = jest.fn();
 const mockConfirmDiscardDirty = jest.fn();
+const mockGeneratePdfAvatar = jest.fn();
 
 jest.mock('@/services/api/scheduleApi', () => ({
   scheduleApi: {
     getSchedule: (...args: unknown[]) => mockGetSchedule(...args),
     reorderMatches: (...args: unknown[]) => mockReorderMatches(...args),
   },
+}));
+
+jest.mock('@/services/api/playersApi', () => ({
+  PlayersApiService: jest.fn().mockImplementation(() => ({
+    generatePdfAvatar: (...args: unknown[]) => mockGeneratePdfAvatar(...args),
+  })),
 }));
 
 jest.mock('@/utils/softDirtyNav', () => ({
@@ -235,6 +242,9 @@ describe('EditionScheduleMatchesBoard', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockConfirmDiscardDirty.mockResolvedValue(true);
+    mockGeneratePdfAvatar.mockResolvedValue({
+      data: { pdf_avatar_url: 'https://cdn.example/b.png' },
+    });
     mockReorderMatches.mockResolvedValue({
       data: {
         matches: boardState().matches,
@@ -364,15 +374,15 @@ describe('EditionScheduleMatchesBoard', () => {
     });
   });
 
-  it('renders avatar present and missing warning', () => {
+  it('renders avatar present and a reload control when missing', () => {
     const { getAllByTestId } = renderBoard(
       <EditionScheduleMatchesBoard editionDivisionId={9} state={boardState() as any} />
     );
-    expect(getAllByTestId('avatar-present-1').length).toBeGreaterThan(0);
-    expect(getAllByTestId('avatar-missing-2').length).toBeGreaterThan(0);
+    expect(getAllByTestId('avatar-1-present').length).toBeGreaterThan(0);
+    expect(getAllByTestId('avatar-2-reload').length).toBeGreaterThan(0);
   });
 
-  it('shows warning when participation is absent from players_board', () => {
+  it('shows a reload control when participation is absent from players_board', () => {
     const state = boardState({
       players_board: [
         {
@@ -387,7 +397,40 @@ describe('EditionScheduleMatchesBoard', () => {
     const { getAllByTestId } = renderBoard(
       <EditionScheduleMatchesBoard editionDivisionId={9} state={state as any} />
     );
-    expect(getAllByTestId('avatar-missing-2').length).toBeGreaterThan(0);
+    expect(getAllByTestId('avatar-2-reload').length).toBeGreaterThan(0);
+  });
+
+  it('reloads a missing avatar with the board player id and collecting flag', async () => {
+    mockGeneratePdfAvatar.mockResolvedValue({
+      data: { pdf_avatar_url: 'https://cdn.example/b.png' },
+    });
+    const { getAllByTestId, queryAllByTestId } = renderBoard(
+      <EditionScheduleMatchesBoard editionDivisionId={9} state={boardState() as any} />
+    );
+    fireEvent.press(getAllByTestId('avatar-2-reload')[0]);
+    await waitFor(() => {
+      expect(mockGeneratePdfAvatar).toHaveBeenCalledWith(102, true);
+    });
+    await waitFor(() => {
+      expect(getAllByTestId('avatar-2-present').length).toBeGreaterThan(0);
+    });
+    expect(queryAllByTestId('avatar-2-reload')).toHaveLength(0);
+  });
+
+  it('surfaces avatar reload failures next to the control', async () => {
+    mockGeneratePdfAvatar.mockRejectedValue(new Error('avatar boom'));
+    const { getAllByTestId } = renderBoard(
+      <EditionScheduleMatchesBoard editionDivisionId={9} state={boardState() as any} />
+    );
+    fireEvent.press(getAllByTestId('avatar-2-reload')[0]);
+    await waitFor(() => {
+      expect(getAllByTestId('avatar-2-error')[0]).toHaveTextContent(
+        'avatar boom'
+      );
+    });
+    expect(
+      getAllByTestId('avatar-2-reload')[0].props.accessibilityState?.disabled
+    ).toBe(false);
   });
 
   it('does not call API until Save; posts last-touch court', async () => {

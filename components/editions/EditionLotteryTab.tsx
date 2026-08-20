@@ -1,3 +1,4 @@
+import CachedPdfImageReload from '@/components/editions/CachedPdfImageReload';
 import SingleSelectDropdown from '@/components/ui/SingleSelectDropdown';
 import { queryKeys } from '@/lib/queryClient';
 import { EditionLotteriesApiService } from '@/services/api/editionLotteriesApi';
@@ -5,7 +6,6 @@ import { EditionLotteryPrizesApiService } from '@/services/api/editionLotteryPri
 import { EditionLotteryRulesApiService } from '@/services/api/editionLotteryRulesApi';
 import { lotteryLiveApi } from '@/services/api/lotteryLiveApi';
 import { PlayersApiService } from '@/services/api/playersApi';
-import { ApiError } from '@/services/api/baseApi';
 import { ApiEditionDivision, ApiEditionLottery, ApiEditionLotteryPrize } from '@/types/api/entities';
 import { ApiEditionLotteryRule } from '@/types/api/edition';
 import {
@@ -21,12 +21,9 @@ import {
   usePathname,
   useRouter,
 } from 'expo-router';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Animated,
-  Easing,
-  Image,
   Platform,
   Pressable,
   Text,
@@ -616,83 +613,6 @@ function EditionLotteryRulesMode({
   );
 }
 
-function LuckyPdfAvatar({
-  luckyId,
-  avatarUrl,
-  disabled,
-  spinning,
-  errorReason,
-  onReload,
-}: {
-  luckyId: number;
-  avatarUrl: string | null;
-  disabled: boolean;
-  spinning: boolean;
-  errorReason: string | null;
-  onReload: () => void;
-}) {
-  const spin = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (!spinning) {
-      spin.stopAnimation();
-      spin.setValue(0);
-      return;
-    }
-    const loop = Animated.loop(
-      Animated.timing(spin, {
-        toValue: 1,
-        duration: 800,
-        easing: Easing.linear,
-        useNativeDriver: Platform.OS !== 'web',
-      })
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [spinning, spin]);
-
-  if (avatarUrl) {
-    return (
-      <Image
-        testID={`lucky-avatar-present-${luckyId}`}
-        source={{ uri: avatarUrl }}
-        style={{ width: 36, height: 36, borderRadius: 18 }}
-      />
-    );
-  }
-
-  const rotate = spin.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
-
-  return (
-    <View className="items-center" style={{ width: 36 }}>
-      <Pressable
-        testID={`lucky-avatar-reload-${luckyId}`}
-        disabled={disabled || spinning}
-        onPress={onReload}
-        accessibilityState={{ disabled: disabled || spinning }}
-        className="items-center justify-center"
-        style={{ width: 36, height: 36, opacity: disabled ? 0.4 : 1 }}
-      >
-        <Animated.View style={{ transform: [{ rotate }] }}>
-          <Ionicons name="refresh" size={22} color="#4b5563" />
-        </Animated.View>
-      </Pressable>
-      {errorReason ? (
-        <Text
-          testID={`lucky-avatar-error-${luckyId}`}
-          className="text-[10px] text-red-600 text-center mt-0.5"
-          numberOfLines={3}
-        >
-          {errorReason}
-        </Text>
-      ) : null}
-    </View>
-  );
-}
-
 function EditionLotteryLuckiesMode({
   editionId,
   editionDivisionId,
@@ -714,9 +634,6 @@ function EditionLotteryLuckiesMode({
   );
   const [infoOpenId, setInfoOpenId] = useState<number | null>(null);
   const [avatarOverrides, setAvatarOverrides] = useState<Record<number, string>>(
-    {}
-  );
-  const [avatarDisabled, setAvatarDisabled] = useState<Record<number, string>>(
     {}
   );
   const [avatarSpinning, setAvatarSpinning] = useState<Record<number, boolean>>(
@@ -827,7 +744,7 @@ function EditionLotteryLuckiesMode({
 
   const onReloadAvatar = async (lucky: any) => {
     const idLucky = Number(lucky.id_lucky);
-    if (avatarDisabled[idLucky] || avatarSpinning[idLucky]) return;
+    if (avatarSpinning[idLucky]) return;
 
     const participation =
       lucky.drawn_participation || lucky.drawnParticipation;
@@ -864,22 +781,10 @@ function EditionLotteryLuckiesMode({
         }));
       }
     } catch (e: any) {
-      const message = e?.message || 'Failed to generate avatar.';
-      const isMissingProfile =
-        e instanceof ApiError &&
-        e.status === 422 &&
-        (e.code === 'missing_profile_image' ||
-          /missing a profile image/i.test(message) ||
-          /profile image file is missing/i.test(message));
-      if (isMissingProfile) {
-        setAvatarDisabled(prev => ({
-          ...prev,
-          [idLucky]: message,
-        }));
-        setAvatarErrors(prev => ({ ...prev, [idLucky]: message }));
-      } else {
-        setAvatarErrors(prev => ({ ...prev, [idLucky]: message }));
-      }
+      setAvatarErrors(prev => ({
+        ...prev,
+        [idLucky]: e?.message || 'Failed to generate avatar.',
+      }));
     } finally {
       setAvatarSpinning(prev => {
         const next = { ...prev };
@@ -968,16 +873,11 @@ function EditionLotteryLuckiesMode({
                     }}
                   >
                     <View className="flex-row items-center gap-2">
-                      <LuckyPdfAvatar
-                        luckyId={idLucky}
-                        avatarUrl={avatarUrl}
-                        disabled={Boolean(avatarDisabled[idLucky])}
+                      <CachedPdfImageReload
+                        testIdPrefix={`lucky-avatar-${idLucky}`}
+                        imageUrl={avatarUrl}
                         spinning={Boolean(avatarSpinning[idLucky])}
-                        errorReason={
-                          avatarDisabled[idLucky] ||
-                          avatarErrors[idLucky] ||
-                          null
-                        }
+                        errorReason={avatarErrors[idLucky] || null}
                         onReload={() => onReloadAvatar(lucky)}
                       />
                       <View className="flex-1 min-w-0">
