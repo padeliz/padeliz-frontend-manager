@@ -7,10 +7,17 @@ import { UiDataTableColumn } from '@/types/ui/tables';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Pressable, Text } from 'react-native';
+import { Image, Pressable, Text, View } from 'react-native';
 import { formatField } from './fieldFormatter';
 import { ForeignKeyService } from './foreignKeyService';
+import {
+  getImageConfig,
+  getNestedValue,
+  isListImageUrl,
+} from './imageMetadata';
 import { PrimaryKeyService } from './primaryKeyService';
+
+const LIST_IMAGE_SIZE = 40;
 
 // Constants for better maintainability
 const CHAR_WIDTH = 8; // Approximate pixels per character
@@ -416,6 +423,9 @@ function createViewLinkRenderer(
  * value from the linked resource's own metadata (display_field / primary key)
  * instead of the parent table's. Keys must be the original-case schema names
  * (e.g. `Player`, `Division`, `Edition`) matching the `$ref` of each FK.
+ *
+ * When `metadata.list_fields` is non-empty: PK first, then those fields in
+ * order, then remaining columns (required then alpha). Otherwise legacy sort.
  */
 export function generateColumnsFromMetadata(
   metadata: ApiResourceMetadata,
@@ -432,8 +442,13 @@ export function generateColumnsFromMetadata(
     return [];
   }
   const required = swagger_schema.required ?? [];
+  const listFields = Array.isArray(metadata.list_fields)
+    ? metadata.list_fields
+    : [];
+  const listFieldSet = new Set(listFields);
 
   const columns: UiDataTableColumn<any>[] = [];
+  const columnByKey = new Map<string, UiDataTableColumn<any>>();
 
   const primaryKeyField = PrimaryKeyService.detectPrimaryKey(metadata);
 
@@ -445,6 +460,73 @@ export function generateColumnsFromMetadata(
     )
   );
 
+  const pushColumn = (column: UiDataTableColumn<any>) => {
+    if (columnByKey.has(column.key)) return;
+    columnByKey.set(column.key, column);
+    columns.push(column);
+  };
+
+  const resolveFieldDefinition = (
+    path: string
+  ): { def: any; labelKey: string; linkedMeta: ApiResourceMetadata | null } => {
+    if (!path.includes('.')) {
+      return {
+        def: properties[path],
+        labelKey: path,
+        linkedMeta: null,
+      };
+    }
+    const [relation, ...rest] = path.split('.');
+    const leaf = rest.join('.');
+    const fkKey = `${relation}_id`;
+    const fkMapping = foreignKeyMappings.get(fkKey);
+    const linkedMeta =
+      fkMapping?.linkedSchemaName != null
+        ? linkedResourcesMetadata[fkMapping.linkedSchemaName] ?? null
+        : null;
+    const def =
+      linkedMeta?.swagger_schema?.properties?.[leaf] ??
+      properties[path] ??
+      null;
+    return { def, labelKey: leaf, linkedMeta };
+  };
+
+  const createImageColumn = (
+    columnKey: string,
+    valuePath: string,
+    fieldDef: any,
+    labelFallback: string
+  ): UiDataTableColumn<any> => {
+    const title =
+      (typeof fieldDef?.title === 'string' && fieldDef.title) ||
+      labelFallback;
+    return {
+      key: columnKey,
+      label: title,
+      type: 'image',
+      sortable: false,
+      filterable: false,
+      searchable: false,
+      width: LIST_IMAGE_SIZE + PADDING,
+      render: (item: any) => {
+        const url = getNestedValue(item, valuePath);
+        if (!isListImageUrl(url)) {
+          return <Text className="text-sm text-gray-500">-</Text>;
+        }
+        return (
+          <View className="items-center justify-center">
+            <Image
+              source={{ uri: url }}
+              style={{ width: LIST_IMAGE_SIZE, height: LIST_IMAGE_SIZE }}
+              className="rounded-md bg-gray-100"
+              accessibilityLabel={title}
+            />
+          </View>
+        );
+      },
+    };
+  };
+
   Object.entries(properties).forEach(([key, field]: [string, any]) => {
     if (excludeFields.includes(key)) {
       return;
@@ -454,12 +536,16 @@ export function generateColumnsFromMetadata(
       return;
     }
 
+    const inListFields = listFieldSet.has(key);
+    const isImageField = getImageConfig(field) != null;
+
     // Keep display_field even when readOnly (e.g. Player computed `name`)
-    // so view-link columns still appear.
+    // so view-link columns still appear. Also keep list_fields / image list fields.
     if (
       field.readOnly &&
       key !== primaryKeyField &&
-      metadata.display_field !== key
+      metadata.display_field !== key &&
+      !inListFields
     ) {
       return;
     }
@@ -484,6 +570,8 @@ export function generateColumnsFromMetadata(
         metadata,
         linkedMeta
       );
+    } else if (isImageField && inListFields) {
+      column = createImageColumn(key, key, field, key);
     } else {
       const fieldInfo = formatField({
         metadata,
@@ -502,7 +590,7 @@ export function generateColumnsFromMetadata(
       };
     }
 
-    if (!isForeignKey) {
+    if (!isForeignKey && column.type !== 'image') {
       if (metadata.display_field === key) {
         column.render = createViewLinkRenderer(key, metadata, onView);
       } else if (
@@ -524,11 +612,20 @@ export function generateColumnsFromMetadata(
       }
     }
 
-    columns.push(column);
+    pushColumn(column);
   });
 
-  // Sort columns: primary key first, then display_field, then required, then others
-  columns.sort((a, b) => {
+  // Dotted list_fields that need linked metadata (retry with linked swagger)
+  for (const listKey of listFields) {
+    if (excludeFields.includes(listKey)) continue;
+    if (!listKey.includes('.')) continue;
+    if (columnByKey.has(listKey)) continue;
+    const { def, labelKey } = resolveFieldDefinition(listKey);
+    if (!getImageConfig(def)) continue;
+    pushColumn(createImageColumn(listKey, listKey, def, labelKey));
+  }
+
+  const legacySort = (a: UiDataTableColumn<any>, b: UiDataTableColumn<any>) => {
     const aKey = a.key;
     const bKey = b.key;
 
@@ -547,7 +644,36 @@ export function generateColumnsFromMetadata(
     if (!aRequired && bRequired) return 1;
 
     return aKey.localeCompare(bKey);
-  });
+  };
 
-  return columns;
+  if (listFields.length === 0) {
+    columns.sort(legacySort);
+    return columns;
+  }
+
+  const ordered: UiDataTableColumn<any>[] = [];
+  const used = new Set<string>();
+
+  if (primaryKeyField && columnByKey.has(primaryKeyField)) {
+    ordered.push(columnByKey.get(primaryKeyField)!);
+    used.add(primaryKeyField);
+  }
+
+  for (const listKey of listFields) {
+    if (excludeFields.includes(listKey)) continue;
+    const fkMapping = foreignKeyMappings.get(listKey);
+    const resolvedKey = fkMapping
+      ? fkMapping.linkedResourceField
+      : listKey;
+    if (used.has(resolvedKey)) continue;
+    const col = columnByKey.get(resolvedKey);
+    if (!col) continue;
+    ordered.push(col);
+    used.add(resolvedKey);
+  }
+
+  const leftovers = columns
+    .filter(c => !used.has(c.key))
+    .sort(legacySort);
+  return [...ordered, ...leftovers];
 }

@@ -1,4 +1,4 @@
-import EditionRegistrationsTab from '@/app/(app)/editions/[id]/registrations';
+import EditionRegistrationsTab from '@/app/(app)/editions/[id]/registrations/index';
 import { PageChromeProvider } from '@/components/chrome/PageChromeProvider';
 import {
   createTestQueryClient,

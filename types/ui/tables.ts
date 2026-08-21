@@ -16,7 +16,7 @@ export interface UiBulkActionConfig {
 export interface UiDataTableColumn<T> {
   key: string;
   label: string;
-  type?: 'text' | 'number' | 'date' | 'boolean' | 'custom';
+  type?: 'text' | 'number' | 'date' | 'boolean' | 'custom' | 'image';
   sortable?: boolean;
   filterable?: boolean;
   searchable?: boolean;

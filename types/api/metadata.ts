@@ -17,6 +17,8 @@ export interface ApiResourceMetadata {
   searchable_fields: string[];
   filterable_fields: Record<string, ApiFilterFieldDefinition>;
   sortable_fields: string[];
+  /** Preferred list column order after PK (not an allowlist). Empty = legacy heuristic. */
+  list_fields?: string[];
 }
 
 export interface ApiFilterFieldDefinition {

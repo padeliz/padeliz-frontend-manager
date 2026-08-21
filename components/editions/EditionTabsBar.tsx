@@ -11,6 +11,11 @@ export type EditionTabLink = {
   href: string;
   /** Path suffix to match active state, e.g. "/details" or "/schedule" */
   match: string;
+  /**
+   * When true, active only if the last path segment equals `match`
+   * (e.g. List under /registrations vs /registrations/register-players).
+   */
+  matchExact?: boolean;
   /** When set, press runs this instead of router.push (never pathname-active) */
   onPress?: () => void;
   /** Visual treatment; live = emerald CTA chip */
@@ -23,10 +28,18 @@ type Props = {
   onBeforeNavigate?: () => boolean | Promise<boolean>;
 };
 
-function isSegmentActive(pathname: string, match: string): boolean {
+function isSegmentActive(
+  pathname: string,
+  match: string,
+  matchExact = false
+): boolean {
   const segment = match.replace(/^\/+|\/+$/g, '');
   if (!segment) return false;
-  return pathname.split('/').includes(segment);
+  const parts = pathname.split('/').filter(Boolean);
+  if (matchExact) {
+    return parts[parts.length - 1] === segment;
+  }
+  return parts.includes(segment);
 }
 
 export default function EditionTabsBar({ tabs, onBeforeNavigate }: Props) {
@@ -43,7 +56,9 @@ export default function EditionTabsBar({ tabs, onBeforeNavigate }: Props) {
       {tabs.map(tab => {
         const isAction = typeof tab.onPress === 'function';
         const isLive = tab.variant === 'live';
-        const isActive = !isAction && isSegmentActive(pathname, tab.match);
+        const isActive =
+          !isAction &&
+          isSegmentActive(pathname, tab.match, tab.matchExact);
         return (
           <Pressable
             key={isAction ? `action-${tab.label}` : tab.href}

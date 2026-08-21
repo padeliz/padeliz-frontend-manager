@@ -96,6 +96,7 @@ export interface ApiPlayer {
   created_via_format?: string | null;
   created_via_import_id?: number | null;
   pdf_avatar_url?: string | null;
+  profile_image_url?: string | null;
   emails?: { id_player_email: number; email: string; purposes?: string[]; is_primary?: boolean }[];
   phones?: { id_player_phone: number; phone: string; purposes?: string[]; is_primary?: boolean }[];
   inserted_at: number;
@@ -326,6 +327,26 @@ export interface ApiPlayerImportPreviewRow {
   email: string;
   phone: string;
   mapping: ApiPlayerImportPreviewMapping;
+}
+
+export interface ApiEditionRegistrationImportPreviewRow
+  extends ApiPlayerImportPreviewRow {
+  already_registered: boolean;
+}
+
+export interface ApiEditionRegistrationImportResultRow {
+  index: number;
+  player_id: number | null;
+  action: string;
+  registration_id: number | null;
+}
+
+export interface ApiEditionRegistrationImportResult {
+  registered: number;
+  skipped_already_registered: number;
+  skipped_unmapped: number;
+  skipped_conflict: number;
+  rows: ApiEditionRegistrationImportResultRow[];
 }
 
 export interface ApiPlayerProfileImageImportRow {
