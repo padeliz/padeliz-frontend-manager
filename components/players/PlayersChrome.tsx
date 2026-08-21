@@ -19,7 +19,7 @@ function isImportDraftRoute(pathname: string): boolean {
   if (playersIdx === -1) return false;
   const section = parts[playersIdx + 1];
   const next = parts[playersIdx + 2];
-  if (section === 'import-players' || section === 'import-profile-images') {
+  if (section === 'import-players' || section === 'import-profile-images' || section === 'import-custom-field-values') {
     return next !== 'imports';
   }
   return false;
@@ -42,6 +42,11 @@ export function PlayersChrome() {
         label: 'Import Profile Images',
         href: '/players/import-profile-images',
         match: 'import-profile-images',
+      },
+      {
+        label: 'Import Custom Field Values',
+        href: '/players/import-custom-field-values',
+        match: 'import-custom-field-values',
       },
     ],
     []

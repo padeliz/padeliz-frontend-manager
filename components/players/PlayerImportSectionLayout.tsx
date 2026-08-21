@@ -9,7 +9,10 @@ import React, { useCallback } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 type Props = {
-  sectionSegment: 'import-players' | 'import-profile-images';
+  sectionSegment:
+    | 'import-players'
+    | 'import-profile-images'
+    | 'import-custom-field-values';
   importHref: string;
   importsHref: string;
 };

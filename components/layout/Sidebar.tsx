@@ -53,6 +53,12 @@ export const managerNavigationItems: NavigationItem[] = [
     description: 'Player management',
   },
   {
+    label: 'Custom fields',
+    href: '/player-custom-fields',
+    icon: 'options',
+    description: 'Player custom field definitions',
+  },
+  {
     label: 'Locations',
     href: '/locations',
     icon: 'location',

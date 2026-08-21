@@ -366,3 +366,118 @@ export interface ApiPlayerProfileImageImportPreviewRow {
   filename: string;
   mapping: ApiPlayerProfileImageImportPreviewMapping;
 }
+
+export type ApiPlayerCustomFieldType =
+  | 'text'
+  | 'integer'
+  | 'boolean'
+  | 'date'
+  | 'single_select'
+  | 'multi_select';
+
+export interface ApiPlayerCustomFieldOption {
+  id_player_custom_field_option: number;
+  player_custom_field_id: number;
+  code: string;
+  label: string;
+  sort_order: number;
+  is_active: boolean;
+  inserted_at: number;
+  updated_at?: number;
+}
+
+export interface ApiPlayerCustomField {
+  id_player_custom_field: number;
+  code: string;
+  label: string;
+  help_text?: string | null;
+  sort_order: number;
+  type: ApiPlayerCustomFieldType;
+  rules_json?: Record<string, unknown> | null;
+  is_required: boolean;
+  archived_at?: number | null;
+  inserted_at: number;
+  updated_at?: number;
+  options?: ApiPlayerCustomFieldOption[];
+}
+
+export interface ApiPlayerCustomFieldValueOption {
+  id_player_custom_field_value_option: number;
+  player_custom_field_value_id: number;
+  option_id: number;
+  option_label_snapshot: string;
+  inserted_at: number;
+  updated_at?: number;
+}
+
+export interface ApiPlayerCustomFieldValue {
+  id_player_custom_field_value: number;
+  player_id: number;
+  player_custom_field_id: number;
+  edition_id?: number | null;
+  value_text?: string | null;
+  value_integer?: number | null;
+  value_boolean?: boolean | null;
+  value_date?: string | null;
+  value?: unknown;
+  submitted_by_player_id?: number | null;
+  submitted_via: 'manager' | 'csv';
+  created_via_import_id?: number | null;
+  invalidated_at?: number | null;
+  invalidated_by_player_id?: number | null;
+  invalidation_reason?: string | null;
+  inserted_at: number;
+  updated_at?: number;
+  field?: ApiPlayerCustomField;
+  edition?: ApiEdition;
+  selected_options?: ApiPlayerCustomFieldValueOption[];
+}
+
+export interface ApiPlayerCustomFieldValueImportRow {
+  id_player_custom_field_value_import_row: number;
+  player_custom_field_value_import_id: number;
+  row_index: number;
+  full_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  player_id: number;
+  action: 'imported';
+  answers_json: Record<string, string>;
+  inserted_at: number;
+  updated_at?: number;
+  player?: ApiPlayer;
+}
+
+export interface ApiPlayerCustomFieldValueImport {
+  id_player_custom_field_value_import: number;
+  imported_by_player_id?: number | null;
+  format: string;
+  original_filename: string;
+  edition_id?: number | null;
+  included_count: number;
+  values_new_count: number;
+  values_replaced_count: number;
+  inserted_at: number;
+  updated_at?: number;
+  importedByPlayer?: ApiPlayer | null;
+  edition?: ApiEdition | null;
+  rows?: ApiPlayerCustomFieldValueImportRow[];
+}
+
+export interface ApiPlayerCustomFieldValueImportPreviewMapping {
+  status: 'mapped' | 'unmapped' | 'conflict';
+  matched_by: 'email' | 'phone' | null;
+  player: ApiPlayer | null;
+  candidates: ApiPlayer[];
+  name_matches: ApiPlayer[];
+}
+
+export interface ApiPlayerCustomFieldValueImportPreviewRow {
+  index: number;
+  full_name: string;
+  email: string;
+  phone: string;
+  answers: Record<string, string>;
+  included: boolean;
+  mapping: ApiPlayerCustomFieldValueImportPreviewMapping;
+}

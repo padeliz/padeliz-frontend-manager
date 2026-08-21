@@ -34,6 +34,11 @@ export function PlayerDetailChrome() {
         href: `/players/${playerId}/profile-images`,
         match: '/profile-images',
       },
+      {
+        label: 'Custom fields',
+        href: `/players/${playerId}/custom-fields`,
+        match: '/custom-fields',
+      },
     ],
     [playerId]
   );

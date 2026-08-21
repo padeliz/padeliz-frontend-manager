@@ -49,7 +49,7 @@ describe('Players hub', () => {
     expect(getByTestId('players-redirect')).toHaveTextContent('/players/list');
   });
 
-  it('renders List, Import Players, and Import Profile Images tabs', () => {
+  it('renders List, Import Players, Import Profile Images, and Import Custom Field Values tabs', () => {
     const { getByTestId, queryByTestId } = render(
       <PageChromeProvider>
         <PlayersChrome />
@@ -58,6 +58,7 @@ describe('Players hub', () => {
     expect(getByTestId('edition-tab-List')).toBeTruthy();
     expect(getByTestId('edition-tab-Import Players')).toBeTruthy();
     expect(getByTestId('edition-tab-Import Profile Images')).toBeTruthy();
+    expect(getByTestId('edition-tab-Import Custom Field Values')).toBeTruthy();
     expect(queryByTestId('edition-tab-Import')).toBeNull();
     expect(queryByTestId('edition-tab-Imports')).toBeNull();
   });
@@ -89,6 +90,24 @@ describe('Players hub', () => {
       </PageChromeProvider>
     );
     expect(getByTestId('players-chrome-save')).toBeTruthy();
+
+    pathnameState.value = '/players/import-custom-field-values';
+    rerender(
+      <PageChromeProvider>
+        <DirtySeed />
+        <PlayersChrome />
+      </PageChromeProvider>
+    );
+    expect(getByTestId('players-chrome-save')).toBeTruthy();
+
+    pathnameState.value = '/players/import-custom-field-values/imports';
+    rerender(
+      <PageChromeProvider>
+        <DirtySeed />
+        <PlayersChrome />
+      </PageChromeProvider>
+    );
+    expect(queryByTestId('players-chrome-save')).toBeNull();
   });
 
   it('confirms dirty before switching tabs', async () => {
