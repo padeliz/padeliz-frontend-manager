@@ -81,6 +81,13 @@ describe('EditionChrome ED picker visibility', () => {
     expect(queryByTestId('edition-division-picker')).toBeNull();
   });
 
+  it('hides the ED picker on Divisions', async () => {
+    mockPathname = '/editions/1/divisions';
+    const { queryByTestId, findByText } = renderChrome();
+    await findByText('Edition: Test Edition');
+    expect(queryByTestId('edition-division-picker')).toBeNull();
+  });
+
   it('shows the ED picker on Participations', async () => {
     mockPathname = '/editions/1/participations';
     const { findByTestId } = renderChrome();

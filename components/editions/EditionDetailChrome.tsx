@@ -95,7 +95,8 @@ export function EditionChrome() {
 
   const isDetails = pathname.includes('/details');
   const isRegistrations = pathname.includes('/registrations');
-  const showEdPicker = !isDetails && !isRegistrations;
+  const isDivisions = pathname.includes('/divisions');
+  const showEdPicker = !isDetails && !isRegistrations && !isDivisions;
   const isFinalized = !!(editionQuery.data as any)?.finalized_at;
   const finalizedAt = (editionQuery.data as any)?.finalized_at as
     | number

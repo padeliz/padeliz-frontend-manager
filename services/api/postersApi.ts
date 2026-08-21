@@ -1,12 +1,6 @@
 import { PosterRow } from '@/types/api/edition';
 import { BaseApiService } from './baseApi';
 
-export type PosterBrandingParams = {
-  court?: number;
-  organizer?: number;
-  partner?: number;
-};
-
 export class PostersApiService extends BaseApiService {
   async list(
     editionDivisionId: number
@@ -16,25 +10,25 @@ export class PostersApiService extends BaseApiService {
     );
   }
 
+  /**
+   * Branding comes from the edition's organizer and club host, not the request.
+   */
   async generateMatches(
     editionDivisionId: number,
-    params: PosterBrandingParams
+    params: { court: number }
   ): Promise<{ data: PosterRow; message?: string }> {
     return this.post(`/edition-divisions/${editionDivisionId}/posters/matches`, {
       court: params.court,
-      organizer: params.organizer,
-      partner: params.partner,
     });
   }
 
   async generateRanking(
-    editionDivisionId: number,
-    params: Omit<PosterBrandingParams, 'court'> = {}
+    editionDivisionId: number
   ): Promise<{ data: PosterRow; message?: string }> {
-    return this.post(`/edition-divisions/${editionDivisionId}/posters/ranking`, {
-      organizer: params.organizer,
-      partner: params.partner,
-    });
+    return this.post(
+      `/edition-divisions/${editionDivisionId}/posters/ranking`,
+      {}
+    );
   }
 
   async downloadMatchesPdf(

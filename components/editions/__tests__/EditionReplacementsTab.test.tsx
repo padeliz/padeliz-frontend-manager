@@ -75,7 +75,7 @@ describe('EditionReplacementsTab', () => {
     mockGetSchedule.mockResolvedValue({
       data: {
         is_finalized: false,
-        edition_division: { allow_replacements: false },
+        schedule: { allow_replacements: false },
         participations: [],
         matches: [],
       },
@@ -93,7 +93,7 @@ describe('EditionReplacementsTab', () => {
     mockGetSchedule.mockResolvedValue({
       data: {
         is_finalized: false,
-        edition_division: { allow_replacements: true },
+        schedule: { allow_replacements: true },
         participations: [
           {
             id_participation: 1,
@@ -186,7 +186,7 @@ describe('EditionReplacementsTab', () => {
     mockGetSchedule.mockResolvedValue({
       data: {
         is_finalized: false,
-        edition_division: { allow_replacements: true },
+        schedule: { allow_replacements: true },
         participations: [
           { id_participation: 1, player: { name: 'Original Alice' } },
         ],
@@ -212,7 +212,7 @@ describe('EditionReplacementsTab', () => {
     mockGetSchedule.mockResolvedValue({
       data: {
         is_finalized: false,
-        edition_division: { allow_replacements: true },
+        schedule: { allow_replacements: true },
         participations: [
           { id_participation: 1, player: { name: 'Original Alice' } },
           { id_participation: 2, player: { name: 'Sub Bob' } },
@@ -256,7 +256,7 @@ describe('EditionReplacementsTab', () => {
     mockGetSchedule.mockResolvedValue({
       data: {
         is_finalized: true,
-        edition_division: { allow_replacements: true },
+        schedule: { allow_replacements: true },
         participations: [
           { id_participation: 1, player: { name: 'Original Alice' } },
         ],
@@ -317,7 +317,7 @@ describe('EditionReplacementsTab', () => {
     mockGetSchedule.mockResolvedValue({
       data: {
         is_finalized: false,
-        edition_division: { allow_replacements: true },
+        schedule: { allow_replacements: true },
         participations: [
           { id_participation: 1, player: { name: 'Original Alice' } },
         ],

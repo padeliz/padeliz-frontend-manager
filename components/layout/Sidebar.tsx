@@ -29,6 +29,12 @@ export const managerNavigationItems: NavigationItem[] = [
     description: 'Manage padel clubs',
   },
   {
+    label: 'Organizers',
+    href: '/organizers',
+    icon: 'ribbon',
+    description: 'Poster branding organizers',
+  },
+  {
     label: 'Divisions',
     href: '/divisions',
     icon: 'layers',

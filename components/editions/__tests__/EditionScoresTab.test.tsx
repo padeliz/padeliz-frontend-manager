@@ -360,7 +360,8 @@ describe('EditionScoresTab', () => {
   it('General shows stats only without match rows or inputs', async () => {
     mockGetSchedule.mockImplementation(async (id: number) => ({
       data: {
-        edition_division: { include_final: id === 9 },
+        edition_division: { id_edition_division: id },
+        schedule: { include_final: id === 9 },
         matches: [
           {
             id_match: 1,

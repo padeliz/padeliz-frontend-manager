@@ -37,6 +37,7 @@ describe('editionWorkspace', () => {
     const tabs = buildEditionTopTabs(42, 7);
     expect(tabs.map(t => t.label)).toEqual([
       'Details',
+      'Divisions',
       'Registrations',
       'Participations',
       'Schedule',
@@ -60,6 +61,10 @@ describe('editionWorkspace', () => {
     expect(tabs.find(t => t.label === 'Participations')?.match).toBe(
       '/participations'
     );
+    expect(tabs.find(t => t.label === 'Divisions')?.href).toContain(
+      '/editions/42/divisions'
+    );
+    expect(tabs.find(t => t.label === 'Divisions')?.match).toBe('/divisions');
   });
 
   it('documents ED navigate replace URLs (select vs General clear)', () => {

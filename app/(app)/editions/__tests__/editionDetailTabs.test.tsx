@@ -5,6 +5,7 @@ describe('Edition detail routing helpers', () => {
     const labels = buildEditionTopTabs(10, null).map(t => t.label);
     expect(labels).toEqual([
       'Details',
+      'Divisions',
       'Registrations',
       'Participations',
       'Schedule',

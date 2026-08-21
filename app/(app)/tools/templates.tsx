@@ -6,8 +6,9 @@ import AppLayout from '@/components/layout/AppLayout';
 import AdvancedDataTable from '@/components/ui/AdvancedDataTable';
 import SingleSelectDropdown from '@/components/ui/SingleSelectDropdown';
 import { queryKeys } from '@/lib/queryClient';
-import { brandingApi } from '@/services/api/brandingApi';
+import { ClubsApiService } from '@/services/api/clubsApi';
 import { DivisionsApiService } from '@/services/api/divisionsApi';
+import { organizersApi } from '@/services/api/organizersApi';
 import { PlayersApiService } from '@/services/api/playersApi';
 import { scratchScheduleApi } from '@/services/api/scratchScheduleApi';
 import { templatesToolsApi } from '@/services/api/templatesToolsApi';
@@ -34,31 +35,43 @@ import {
 
 const playersApi = new PlayersApiService();
 const divisionsApi = new DivisionsApiService();
+const clubsApi = new ClubsApiService();
+
+const NO_CLUB = 0;
 
 export default function ToolsTemplatesPage() {
   const router = useRouter();
-  const brandingQuery = useQuery({
-    queryKey: queryKeys.branding(),
+  const organizersQuery = useQuery({
+    queryKey: queryKeys.organizers(),
     queryFn: async () => {
-      const res = await brandingApi.getBranding();
-      return res.data;
+      const res = await organizersApi.getOrganizers({ per_page: 100 });
+      return res.data || [];
+    },
+  });
+  const clubsQuery = useQuery({
+    queryKey: queryKeys.clubsPicker(),
+    queryFn: async () => {
+      const res = await clubsApi.getClubs({ page: 1, per_page: 100 });
+      return res.data || [];
     },
   });
   const organizerOptions = useMemo(
     () =>
-      (brandingQuery.data?.organizers || []).map(o => ({
-        label: `${o.id}. ${o.name}`,
-        value: o.id,
+      (organizersQuery.data || []).map(o => ({
+        label: `${o.id_organizer}. ${o.name}`,
+        value: o.id_organizer,
       })),
-    [brandingQuery.data?.organizers]
+    [organizersQuery.data]
   );
-  const partnerOptions = useMemo(
-    () =>
-      (brandingQuery.data?.partners || []).map(p => ({
-        label: `${p.id}. ${p.name}`,
-        value: p.id,
+  const clubOptions = useMemo(
+    () => [
+      { label: 'No club host', value: NO_CLUB },
+      ...(clubsQuery.data || []).map(c => ({
+        label: `${c.id_club}. ${c.name}`,
+        value: c.id_club,
       })),
-    [brandingQuery.data?.partners]
+    ],
+    [clubsQuery.data]
   );
   const [catalog, setCatalog] = useState<any>(null);
   const [metrics, setMetrics] = useState<any>(null);
@@ -80,7 +93,7 @@ export default function ToolsTemplatesPage() {
   const [pdfTitle, setPdfTitle] = useState('Scratch MiniTour');
   const [courtIndex, setCourtIndex] = useState('0');
   const [organizerId, setOrganizerId] = useState(1);
-  const [partnerId, setPartnerId] = useState(1);
+  const [clubId, setClubId] = useState<number>(NO_CLUB);
   const [divisions, setDivisions] = useState<ApiDivision[]>([]);
   const [color, setColor] = useState('#2563eb');
   const [includeFinal, setIncludeFinal] = useState(false);
@@ -208,7 +221,7 @@ export default function ToolsTemplatesPage() {
     adjust: adjust || undefined,
     color,
     organizer_id: organizerId,
-    partner_id: partnerId,
+    club_id: clubId === NO_CLUB ? null : clubId,
     collecting_player_ids: collectingPlayerIds,
   });
 
@@ -530,24 +543,28 @@ export default function ToolsTemplatesPage() {
             />
 
             <Text className="text-xs text-gray-500 mt-1">Organizer branding</Text>
-            <SingleSelectDropdown
-              options={organizerOptions}
-              selectedValue={organizerId}
-              onSelectionChange={v => setOrganizerId(Number(v))}
-              placeholder="Organizer"
-              title="Organizer branding"
-              minWidth={220}
-            />
+            <View testID="tools-organizer-picker">
+              <SingleSelectDropdown
+                options={organizerOptions}
+                selectedValue={organizerId}
+                onSelectionChange={v => setOrganizerId(Number(v))}
+                placeholder="Organizer"
+                title="Organizer branding"
+                minWidth={220}
+              />
+            </View>
 
-            <Text className="text-xs text-gray-500 mt-1">Partner branding</Text>
-            <SingleSelectDropdown
-              options={partnerOptions}
-              selectedValue={partnerId}
-              onSelectionChange={v => setPartnerId(Number(v))}
-              placeholder="Partner"
-              title="Partner branding"
-              minWidth={220}
-            />
+            <Text className="text-xs text-gray-500 mt-1">Club host branding</Text>
+            <View testID="tools-club-picker">
+              <SingleSelectDropdown
+                options={clubOptions}
+                selectedValue={clubId}
+                onSelectionChange={v => setClubId(Number(v))}
+                placeholder="Club host"
+                title="Club host branding"
+                minWidth={220}
+              />
+            </View>
 
             <TextInput
               className="border border-gray-300 rounded px-3 py-2"

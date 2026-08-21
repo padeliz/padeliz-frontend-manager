@@ -13,23 +13,23 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, {
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
 import {
   applyDrop,
   EdListFrame,
   resolveDropTarget,
 } from './editionDivisionsDnD';
 import { confirmAction } from './editionLotteryUtils';
+import SortableRow, {
+  moveInList,
+  reorderList,
+  SortableArrows,
+  SortableDragHandle,
+  SORTABLE_ROW_HEIGHT,
+} from './SortableRow';
 
 const participationsApi = new EditionParticipationsApiService();
 
-const ROW_HEIGHT = 48;
+const ROW_HEIGHT = SORTABLE_ROW_HEIGHT;
 
 type Props = {
   editionId: number;
@@ -130,7 +130,12 @@ function PlayerHistoryText({ p }: { p: ApiEditionParticipation }) {
   );
 }
 
-function SortableRow({
+/**
+ * Same-ED reordering is the shared primitive; when the "General" ED view is
+ * active a drop can also land in another ED's list, which needs the measured
+ * list frames instead of a plain row offset.
+ */
+function ParticipationSortableRow({
   index,
   count,
   locked,
@@ -158,66 +163,26 @@ function SortableRow({
   ) => void;
   children: React.ReactNode;
 }) {
-  const translateY = useSharedValue(0);
-  const zIndex = useSharedValue(0);
-  const dragging = useSharedValue(0);
-
-  const finishDrop = (translationY: number) => {
-    if (crossEdEnabled) {
-      const absoluteY =
-        listY + index * ROW_HEIGHT + translationY + ROW_HEIGHT / 2;
-      const target = resolveDropTarget(frames, absoluteY, ROW_HEIGHT);
-      if (
-        target &&
-        (target.targetEdId !== edId || target.index !== index)
-      ) {
-        onCrossDrop(edId, index, target.targetEdId, target.index);
-      }
-      return;
-    }
-    const delta = Math.round(translationY / ROW_HEIGHT);
-    const next = Math.max(0, Math.min(count - 1, index + delta));
-    if (next !== index) {
-      onSameEdReorder(index, next);
+  const crossDrop = (translationY: number) => {
+    const absoluteY =
+      listY + index * ROW_HEIGHT + translationY + ROW_HEIGHT / 2;
+    const target = resolveDropTarget(frames, absoluteY, ROW_HEIGHT);
+    if (target && (target.targetEdId !== edId || target.index !== index)) {
+      onCrossDrop(edId, index, target.targetEdId, target.index);
     }
   };
 
-  const gesture = Gesture.Pan()
-    .enabled(!locked)
-    .activeOffsetY([-8, 8])
-    .onStart(() => {
-      zIndex.value = 20;
-      dragging.value = 1;
-    })
-    .onUpdate(e => {
-      translateY.value = e.translationY;
-    })
-    .onEnd(e => {
-      const ty = e.translationY;
-      translateY.value = withSpring(0);
-      zIndex.value = 0;
-      dragging.value = 0;
-      runOnJS(finishDrop)(ty);
-    })
-    .onFinalize(() => {
-      translateY.value = withSpring(0);
-      zIndex.value = 0;
-      dragging.value = 0;
-    });
-
-  const style = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
-    zIndex: zIndex.value,
-    elevation: zIndex.value,
-    opacity: dragging.value ? 0.92 : 1,
-  }));
-
   return (
-    <GestureDetector gesture={gesture}>
-      <Animated.View style={[{ minHeight: ROW_HEIGHT }, style]}>
-        {children}
-      </Animated.View>
-    </GestureDetector>
+    <SortableRow
+      index={index}
+      count={count}
+      locked={locked}
+      rowHeight={ROW_HEIGHT}
+      onReorder={onSameEdReorder}
+      onDragEnd={crossEdEnabled ? crossDrop : undefined}
+    >
+      {children}
+    </SortableRow>
   );
 }
 
@@ -333,22 +298,14 @@ export default function EditionParticipationsTab({
 
   const moveWithin = (edId: number, index: number, dir: -1 | 1) => {
     if (editionFinalized) return;
-    const list = [...(byEd.get(edId) || [])];
-    const j = index + dir;
-    if (j < 0 || j >= list.length) return;
-    const tmp = list[index];
-    list[index] = list[j];
-    list[j] = tmp;
-    applyList(edId, list);
+    const next = moveInList(byEd.get(edId) || [], index, dir);
+    if (next) applyList(edId, next);
   };
 
   const reorderAt = (edId: number, from: number, to: number) => {
-    if (editionFinalized || from === to) return;
-    const list = [...(byEd.get(edId) || [])];
-    if (from < 0 || from >= list.length || to < 0 || to >= list.length) return;
-    const [item] = list.splice(from, 1);
-    list.splice(to, 0, item);
-    applyList(edId, list);
+    if (editionFinalized) return;
+    const next = reorderList(byEd.get(edId) || [], from, to);
+    if (next) applyList(edId, next);
   };
 
   const onDrop = (
@@ -638,7 +595,7 @@ export default function EditionParticipationsTab({
               style={{ minHeight: list.length === 0 ? ROW_HEIGHT : undefined }}
             >
               {list.map((p, index) => (
-                <SortableRow
+                <ParticipationSortableRow
                   key={p.id_participation}
                   index={index}
                   count={list.length}
@@ -657,12 +614,9 @@ export default function EditionParticipationsTab({
                     className="flex-row flex-wrap items-center py-2 border-b border-gray-100"
                   >
                     {!locked && (
-                      <View
-                        className="mr-2 p-1"
+                      <SortableDragHandle
                         testID={`drag-handle-${p.id_participation}`}
-                      >
-                        <Ionicons name="menu" size={18} color="#9ca3af" />
-                      </View>
+                      />
                     )}
                     <Text className="text-gray-800 flex-1 mr-2 shrink">
                       {playerLabel(p)}
@@ -689,32 +643,16 @@ export default function EditionParticipationsTab({
                       <PlayerHistoryText p={p} />
                       {!locked && (
                         <>
-                          <Pressable
-                            onPress={() =>
+                          <SortableArrows
+                            onUp={() =>
                               moveWithin(ed.id_edition_division, index, -1)
                             }
-                            className="p-2"
-                            testID={`move-up-${p.id_participation}`}
-                          >
-                            <Ionicons
-                              name="arrow-up"
-                              size={18}
-                              color="#4b5563"
-                            />
-                          </Pressable>
-                          <Pressable
-                            onPress={() =>
+                            onDown={() =>
                               moveWithin(ed.id_edition_division, index, 1)
                             }
-                            className="p-2"
-                            testID={`move-down-${p.id_participation}`}
-                          >
-                            <Ionicons
-                              name="arrow-down"
-                              size={18}
-                              color="#4b5563"
-                            />
-                          </Pressable>
+                            upTestID={`move-up-${p.id_participation}`}
+                            downTestID={`move-down-${p.id_participation}`}
+                          />
                           <Pressable
                             testID={`delete-participation-${p.id_participation}`}
                             onPress={() => onDelete(p)}
@@ -730,7 +668,7 @@ export default function EditionParticipationsTab({
                       )}
                     </View>
                   </View>
-                </SortableRow>
+                </ParticipationSortableRow>
               ))}
               {list.length === 0 && (
                 <Text className="text-sm text-gray-500">No players</Text>

@@ -1,5 +1,6 @@
 import { ApiEditionDivision } from '@/types/api/entities';
 import SingleSelectDropdown from '@/components/ui/SingleSelectDropdown';
+import { sortBySkillOrder } from '@/utils/edition/editionDivisionOrder';
 import React, { useMemo } from 'react';
 import { Text, View } from 'react-native';
 
@@ -17,7 +18,7 @@ export default function EditionDivisionPicker({
   includeGeneral = false,
 }: Props) {
   const options = useMemo(() => {
-    const eds = divisions.map(ed => ({
+    const eds = sortBySkillOrder(divisions).map(ed => ({
       label:
         ed.division_title ||
         ed.division?.name ||

@@ -82,6 +82,7 @@ export interface HookResourceViewPageConfigOptions<
   embedded?: boolean;
   resourceIdOverride?: number | null;
   showLinkedEntities?: boolean;
+  excludeLinkedEntities?: string[];
   externalChrome?: boolean;
   showSave?: boolean;
   onChromeStateChange?: (state: any) => void;

@@ -121,7 +121,7 @@ function ScoresGeneralView({ divisions }: { divisions: ApiEditionDivision[] }) {
       {divisions.map((d, i) => {
         const data = queries[i]?.data;
         const matches = (data?.matches || []) as GameMatch[];
-        const includeFinal = !!(data?.edition_division as any)?.include_final;
+        const includeFinal = !!(data?.schedule as any)?.include_final;
         const stats = scoresFillStats(matches, includeFinal);
         return (
           <View

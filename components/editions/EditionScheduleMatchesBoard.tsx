@@ -29,13 +29,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, {
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
+import SortableRow from './SortableRow';
 
 export { completeRoundCount, isSparseMatch };
 
@@ -112,55 +106,16 @@ function SortableMatchRow({
   onReorder: (from: number, to: number) => void;
   children: React.ReactNode;
 }) {
-  const translateY = useSharedValue(0);
-  const zIndex = useSharedValue(0);
-  const dragging = useSharedValue(0);
-
-  const finishDrop = (translationY: number) => {
-    const delta = Math.round(translationY / ROW_HEIGHT);
-    const next = Math.max(0, Math.min(count - 1, index + delta));
-    if (next !== index) onReorder(index, next);
-  };
-
-  const gesture = Gesture.Pan()
-    .enabled(!locked)
-    .activeOffsetY([-8, 8])
-    .onStart(() => {
-      zIndex.value = 20;
-      dragging.value = 1;
-    })
-    .onUpdate(e => {
-      translateY.value = e.translationY;
-    })
-    .onEnd(e => {
-      const ty = e.translationY;
-      translateY.value = withSpring(0);
-      zIndex.value = 0;
-      dragging.value = 0;
-      runOnJS(finishDrop)(ty);
-    })
-    .onFinalize(() => {
-      translateY.value = withSpring(0);
-      zIndex.value = 0;
-      dragging.value = 0;
-    });
-
-  const style = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
-    zIndex: zIndex.value,
-    elevation: zIndex.value,
-    opacity: dragging.value ? 0.92 : 1,
-  }));
-
   return (
-    <GestureDetector gesture={gesture}>
-      <Animated.View
-        style={[{ minHeight: ROW_HEIGHT }, style]}
-        testID={dragging ? undefined : undefined}
-      >
-        {children}
-      </Animated.View>
-    </GestureDetector>
+    <SortableRow
+      index={index}
+      count={count}
+      locked={locked}
+      rowHeight={ROW_HEIGHT}
+      onReorder={onReorder}
+    >
+      {children}
+    </SortableRow>
   );
 }
 

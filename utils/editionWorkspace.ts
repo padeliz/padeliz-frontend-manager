@@ -81,6 +81,11 @@ export function buildEditionTopTabs(
       match: '/details',
     },
     {
+      label: 'Divisions',
+      href: href('/divisions'),
+      match: '/divisions',
+    },
+    {
       label: 'Registrations',
       href: href('/registrations'),
       match: '/registrations',

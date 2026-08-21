@@ -36,6 +36,8 @@ export default function EditionDetailsRoute() {
     updateResource,
     embedded: true,
     showLinkedEntities: true,
+    // Edition divisions have their own tab with ordering + schedule links.
+    excludeLinkedEntities: ['divisions', 'edition_divisions'],
     externalChrome: true,
     showSave: false,
     onChromeStateChange: setChrome,

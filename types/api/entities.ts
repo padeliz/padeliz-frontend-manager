@@ -7,9 +7,21 @@ export interface ApiClub {
   id_club: number;
   name: string;
   city: string;
+  logo_path?: string | null;
+  url?: string | null;
   inserted_at: number;
   updated_at?: number;
   locations?: ApiLocation[];
+}
+
+export interface ApiOrganizer {
+  id_organizer: number;
+  name: string;
+  logo_path?: string | null;
+  url?: string | null;
+  show_edition_label?: boolean;
+  inserted_at: number;
+  updated_at?: number;
 }
 
 export interface ApiDivision {
@@ -25,6 +37,8 @@ export interface ApiDivision {
 export interface ApiEdition {
   id_edition: number;
   location_id: number;
+  organizer_id?: number | null;
+  include_club_host_on_pdf?: boolean;
   name: string;
   date: string;
   entry_fee?: number;
@@ -35,30 +49,47 @@ export interface ApiEdition {
   inserted_at: number;
   updated_at?: number;
   location?: ApiLocation;
+  organizer?: ApiOrganizer | null;
   divisions?: ApiEditionDivision[];
+  edition_divisions?: ApiEditionDivision[];
   participations?: ApiEditionParticipation[];
 }
 
+/**
+ * Identity only. Schedule knobs live on ApiEditionDivisionSchedule.
+ */
 export interface ApiEditionDivision {
   id_edition_division: number;
   edition_id: number;
   division_id: number;
   division_title?: string;
   players_limit: number;
+  skill_order?: number;
   playing_start_time: string;
   playing_end_time: string;
-  player_opponents_nr?: number;
-  player_matches_repeat: number;
-  include_scores: boolean;
-  has_demonstrative_match: boolean;
-  allow_replacements?: boolean;
-  points_per_match?: number | null;
-  final_points_target?: number;
-  include_final?: boolean;
   inserted_at: number;
   updated_at?: number;
+  edition?: ApiEdition;
   division?: ApiDivision;
   courts?: { id_court: number; name: string; location_id?: number }[];
+  schedule?: ApiEditionDivisionSchedule | null;
+}
+
+export interface ApiEditionDivisionSchedule {
+  id_edition_division_schedule: number;
+  edition_division_id: number;
+  player_opponents_nr?: number | null;
+  player_matches_repeat?: number | null;
+  include_scores: boolean;
+  has_demonstrative_match: boolean;
+  allow_replacements: boolean;
+  points_per_match?: number | null;
+  final_points_target?: number;
+  include_final: boolean;
+  template_version?: number | null;
+  adjust?: number;
+  inserted_at: number;
+  updated_at?: number;
 }
 
 export interface ApiLocation {

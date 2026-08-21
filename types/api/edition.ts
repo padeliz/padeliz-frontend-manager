@@ -2,9 +2,12 @@
  * Edition / schedule / lottery API types (loose shapes matching backend resources).
  */
 
+import { ApiEditionDivisionSchedule } from './entities';
+
+/**
+ * Playing times are owned by the edition division and rejected here by the API.
+ */
 export interface ScheduleFormPayload {
-  playing_start_time?: string;
-  playing_end_time?: string;
   player_opponents_nr?: number;
   player_matches_repeat?: number;
   include_final?: boolean;
@@ -94,6 +97,8 @@ export interface SchedulePlayerBoardRow {
 
 export interface ScheduleState {
   edition_division: any;
+  /** Null until the first schedule form upsert. */
+  schedule?: ApiEditionDivisionSchedule | null;
   courts: any[];
   participations: any[];
   matches: GameMatch[];
@@ -248,8 +253,9 @@ export interface ScratchSchedulePayload {
   title?: string;
   color?: string;
   edition_label?: string;
-  organizer_id?: number;
-  partner_id?: number;
+  organizer_id?: number | null;
+  /** Club host branding replaced the old partner slot. */
+  club_id?: number | null;
   points_per_match?: number;
   final_points_target?: number;
   include_scores?: boolean;

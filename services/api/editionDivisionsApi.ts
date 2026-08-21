@@ -14,10 +14,14 @@ export class EditionDivisionsApiService extends BaseApiService {
       filters?: {
         edition_id?: number;
         division_id?: number;
+        players_limit?: number;
+        skill_order?: number;
       };
       sort_by?: {
         edition_id?: 'asc' | 'desc';
         division_id?: 'asc' | 'desc';
+        skill_order?: 'asc' | 'desc';
+        division_title?: 'asc' | 'desc';
         inserted_at?: 'asc' | 'desc';
         updated_at?: 'asc' | 'desc';
       };
@@ -36,13 +40,13 @@ export class EditionDivisionsApiService extends BaseApiService {
         }
       });
     }
-    if (params.sort_by) {
-      Object.entries(params.sort_by).forEach(([key, value]) => {
-        if (value) {
-          queryParams.append(`sort_by[${key}]`, value);
-        }
-      });
-    }
+    // Weakest-to-strongest is the expected reading order everywhere in the UI.
+    const sortBy = params.sort_by ?? { skill_order: 'asc' as const };
+    Object.entries(sortBy).forEach(([key, value]) => {
+      if (value) {
+        queryParams.append(`sort_by[${key}]`, value);
+      }
+    });
 
     const endpoint = `/edition-divisions${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     return this.get<{ data: ApiEditionDivision[]; meta: any }>(endpoint);
@@ -82,6 +86,20 @@ export class EditionDivisionsApiService extends BaseApiService {
    */
   async deleteEditionDivision(id: number): Promise<void> {
     return this.delete(`/edition-divisions/${id}`);
+  }
+
+  /**
+   * Rewrite skill_order for an edition. `divisions` must list every division
+   * of the edition exactly once.
+   */
+  async reorderEditionDivisions(
+    editionId: number,
+    divisions: Array<{ id_edition_division: number; skill_order: number }>
+  ): Promise<{ data: ApiEditionDivision[]; message?: string }> {
+    return this.patch<{ data: ApiEditionDivision[]; message?: string }>(
+      '/edition-divisions/reorder',
+      { edition_id: editionId, divisions }
+    );
   }
 
   /**

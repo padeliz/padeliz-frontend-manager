@@ -24,6 +24,7 @@ function divisionTitle(d: ApiEditionDivision): string {
 
 function KnobsReadonly({ state }: { state: ScheduleState }) {
   const ed = state.edition_division || {};
+  const schedule = state.schedule || null;
   const courts = state.courts || [];
   return (
     <View className="gap-2">
@@ -35,17 +36,18 @@ function KnobsReadonly({ state }: { state: ScheduleState }) {
       </Text>
       <Text className="text-sm text-gray-800">
         {ed.playing_start_time || '—'} – {ed.playing_end_time || '—'} ·
-        opponents {ed.player_opponents_nr ?? '—'} · repeat{' '}
-        {ed.player_matches_repeat ?? '—'} · final points{' '}
-        {ed.final_points_target ?? '—'}
+        opponents {schedule?.player_opponents_nr ?? '—'} · repeat{' '}
+        {schedule?.player_matches_repeat ?? '—'} · final points{' '}
+        {schedule?.final_points_target ?? '—'}
       </Text>
       <Text className="text-sm text-gray-600">
-        include_final: {ed.include_final ? 'yes' : 'no'} · demonstrative:{' '}
-        {ed.has_demonstrative_match ? 'yes' : 'no'} · scores:{' '}
-        {ed.include_scores ? 'yes' : 'no'} · replacements:{' '}
-        {ed.allow_replacements ? 'yes' : 'no'}
-        {ed.points_per_match != null
-          ? ` · points/match ${ed.points_per_match}`
+        include_final: {schedule?.include_final ? 'yes' : 'no'} ·
+        demonstrative: {schedule?.has_demonstrative_match ? 'yes' : 'no'} ·
+        scores: {schedule?.include_scores ? 'yes' : 'no'} · replacements:{' '}
+        {schedule?.allow_replacements ? 'yes' : 'no'} · adjust{' '}
+        {schedule?.adjust ?? 0}
+        {schedule?.points_per_match != null
+          ? ` · points/match ${schedule.points_per_match}`
           : ''}
       </Text>
       <Text className="text-sm text-gray-600">

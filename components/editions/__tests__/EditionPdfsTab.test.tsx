@@ -15,7 +15,6 @@ const mockGenerateRanking = jest.fn(async () => ({
 const mockDownloadMatches = jest.fn(async () => undefined);
 const mockDownloadRanking = jest.fn(async () => undefined);
 const mockDownloadPrinted = jest.fn(async () => undefined);
-const mockGetBranding = jest.fn();
 
 jest.mock('@/services/api/scheduleApi', () => ({
   scheduleApi: {
@@ -32,12 +31,6 @@ jest.mock('@/services/api/postersApi', () => ({
     downloadRankingPdf: (...args: unknown[]) => mockDownloadRanking(...args),
     downloadPrinted: (...args: unknown[]) => mockDownloadPrinted(...args),
     uploadPrinted: jest.fn(),
-  },
-}));
-
-jest.mock('@/services/api/brandingApi', () => ({
-  brandingApi: {
-    getBranding: (...args: unknown[]) => mockGetBranding(...args),
   },
 }));
 
@@ -58,12 +51,6 @@ describe('EditionPdfsTab', () => {
     Object.defineProperty(Platform, 'OS', {
       configurable: true,
       get: () => 'web',
-    });
-    mockGetBranding.mockResolvedValue({
-      data: {
-        organizers: [{ id: 1, name: 'ARSH Padel MiniTour', image: '/x' }],
-        partners: [{ id: 1, name: 'PadelMania', image: '/y' }],
-      },
     });
     mockGetSchedule.mockResolvedValue({
       data: {
@@ -117,22 +104,27 @@ describe('EditionPdfsTab', () => {
     expect(getByTestId('ranking-9-generate')).toBeTruthy();
     expect(getByTestId('matches-9-77-generate')).toBeTruthy();
     expect(queryByText(/Court \(edition_division_court/)).toBeNull();
-    expect(await findByText('ARSH Padel MiniTour')).toBeTruthy();
   }, 15000);
 
-  it('generates MATCHES via POST and does not auto-download', async () => {
+  it('generates MATCHES with only the court, no branding ids', async () => {
     const { findByTestId } = renderWithClient(
       <EditionPdfsTab editionDivisionId={9} />
     );
     fireEvent.press(await findByTestId('matches-9-77-generate'));
     await waitFor(() => {
-      expect(mockGenerateMatches).toHaveBeenCalledWith(9, {
-        court: 77,
-        organizer: 1,
-        partner: 1,
-      });
+      expect(mockGenerateMatches).toHaveBeenCalledWith(9, { court: 77 });
     });
     expect(mockDownloadMatches).not.toHaveBeenCalled();
+  });
+
+  it('generates RANKING without branding ids', async () => {
+    const { findByTestId } = renderWithClient(
+      <EditionPdfsTab editionDivisionId={9} />
+    );
+    fireEvent.press(await findByTestId('ranking-9-generate'));
+    await waitFor(() => {
+      expect(mockGenerateRanking).toHaveBeenCalledWith(9);
+    });
   });
 
   it('downloads generated MATCHES only via GET file', async () => {
@@ -275,23 +267,18 @@ describe('EditionPdfsTab', () => {
     });
   });
 
-  it('shows branding columns and generated/printed download labels', async () => {
-    const { findByTestId, getByTestId, getByText, getAllByText } = renderWithClient(
-      <EditionPdfsTab editionDivisionId={9} />
-    );
+  it('shows generated/printed download labels and no branding block', async () => {
+    const { findByTestId, queryByTestId, queryByText, getAllByText } =
+      renderWithClient(<EditionPdfsTab editionDivisionId={9} />);
     const download = await findByTestId('matches-9-77-download');
     const printed = await findByTestId('matches-9-77-download-printed');
     expect(download.props.accessibilityLabel).toBe('Download generated');
     expect(printed.props.accessibilityLabel).toBe('Download printed');
     expect(getAllByText('generated').length).toBeGreaterThan(0);
     expect(getAllByText('printed').length).toBeGreaterThan(0);
-    expect(getByText('Organizer')).toBeTruthy();
-    expect(getByText('Partner')).toBeTruthy();
-    expect(getByTestId('pdfs-branding-row').props.className).toContain(
-      'flex-row'
-    );
-    expect(getByTestId('pdfs-branding-row').props.className).toContain(
-      'flex-wrap'
-    );
+    expect(queryByTestId('pdfs-branding')).toBeNull();
+    expect(queryByTestId('pdfs-branding-row')).toBeNull();
+    expect(queryByText('Organizer')).toBeNull();
+    expect(queryByText('Partner')).toBeNull();
   });
 });

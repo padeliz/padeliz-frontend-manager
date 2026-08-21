@@ -71,10 +71,20 @@ function schedulePayload(overrides: Record<string, unknown> = {}) {
         },
       ],
       edition_division: {
+        id_edition_division: 9,
+        playing_start_time: '10:00',
+        playing_end_time: '18:00',
+      },
+      schedule: {
+        id_edition_division_schedule: 1,
+        edition_division_id: 9,
         allow_replacements: true,
         include_final: false,
         has_demonstrative_match: false,
         include_scores: true,
+        player_matches_repeat: 1,
+        final_points_target: 24,
+        adjust: 0,
       },
       matches: [],
       ...overrides,
@@ -390,6 +400,88 @@ describe('EditionScheduleTab', () => {
     expect(queryByText('Generate')).toBeNull();
     expect(queryByText('Delete schedule')).toBeNull();
     expect(queryByText('Preview')).toBeNull();
+  });
+
+  it('shows the playing window read-only and never sends times back', async () => {
+    const { findByTestId, getByTestId, queryByText } = renderTab(
+      <EditionScheduleTab
+        editionDivisionId={9}
+        locationId={3}
+        section="knobs"
+      />
+    );
+    expect(await findByTestId('schedule-playing-window')).toHaveTextContent(
+      /10:00 – 18:00/
+    );
+    expect(queryByText('Start (HH:MM)')).toBeNull();
+    expect(queryByText('End (HH:MM)')).toBeNull();
+
+    fireEvent.press(getByTestId('chrome-save'));
+    await waitFor(() => {
+      expect(mockUpdateForm).toHaveBeenCalled();
+    });
+    const saveBody = mockUpdateForm.mock.calls[0][1];
+    expect(saveBody).not.toHaveProperty('playing_start_time');
+    expect(saveBody).not.toHaveProperty('playing_end_time');
+    expect(saveBody).not.toHaveProperty('include_club_host_on_pdf');
+  });
+
+  it('seeds knob defaults when the schedule row is missing', async () => {
+    mockGetSchedule.mockResolvedValue(schedulePayload({ schedule: null }));
+    const { findByText, getByTestId } = renderTab(
+      <EditionScheduleTab
+        editionDivisionId={9}
+        locationId={3}
+        section="knobs"
+      />
+    );
+    await findByText('Schedule knobs');
+    fireEvent.press(getByTestId('chrome-save'));
+    await waitFor(() => {
+      expect(mockUpdateForm).toHaveBeenCalled();
+    });
+    expect(mockUpdateForm.mock.calls[0][1]).toEqual(
+      expect.objectContaining({
+        player_matches_repeat: 1,
+        include_scores: true,
+        allow_replacements: true,
+        final_points_target: 24,
+        adjust: 0,
+      })
+    );
+  });
+
+  it('persists adjust from the schedule row through save', async () => {
+    mockGetSchedule.mockResolvedValue(
+      schedulePayload({
+        schedule: {
+          id_edition_division_schedule: 1,
+          edition_division_id: 9,
+          allow_replacements: true,
+          include_final: false,
+          has_demonstrative_match: false,
+          include_scores: true,
+          player_matches_repeat: 1,
+          final_points_target: 24,
+          adjust: 4,
+        },
+      })
+    );
+    const { findByText, getByTestId } = renderTab(
+      <EditionScheduleTab
+        editionDivisionId={9}
+        locationId={3}
+        section="knobs"
+      />
+    );
+    await findByText('Schedule knobs');
+
+    fireEvent.press(getByTestId('schedule-adjust--2'));
+    fireEvent.press(getByTestId('chrome-save'));
+    await waitFor(() => {
+      expect(mockUpdateForm).toHaveBeenCalled();
+    });
+    expect(mockUpdateForm.mock.calls[0][1].adjust).toBe(-2);
   });
 
   it('requests board=1 for ED matches section', async () => {

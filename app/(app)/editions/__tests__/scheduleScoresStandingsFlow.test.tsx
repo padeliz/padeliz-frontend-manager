@@ -23,7 +23,7 @@ const scheduleState = {
       player: { name: 'Mara Lovelace' },
     },
   ],
-  edition_division: { allow_replacements: true },
+  schedule: { allow_replacements: true },
   matches: [
     {
       id_match: 50,

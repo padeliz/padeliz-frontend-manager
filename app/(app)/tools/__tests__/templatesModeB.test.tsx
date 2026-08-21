@@ -89,15 +89,29 @@ jest.mock('@/services/api/playersApi', () => ({
   })),
 }));
 
-jest.mock('@/services/api/brandingApi', () => ({
-  brandingApi: {
-    getBranding: jest.fn(async () => ({
-      data: {
-        organizers: [{ id: 1, name: 'Org' }],
-        partners: [{ id: 1, name: 'Partner' }],
-      },
-    })),
+const mockGetOrganizers = jest.fn(async () => ({
+  data: [
+    { id_organizer: 1, name: 'ARSH Padel MiniTour' },
+    { id_organizer: 2, name: 'Second Org' },
+  ],
+}));
+const mockGetClubs = jest.fn(async () => ({
+  data: [
+    { id_club: 4, name: 'Padel Club Host' },
+    { id_club: 5, name: 'Other Club' },
+  ],
+}));
+
+jest.mock('@/services/api/organizersApi', () => ({
+  organizersApi: {
+    getOrganizers: (...args: unknown[]) => mockGetOrganizers(...args),
   },
+}));
+
+jest.mock('@/services/api/clubsApi', () => ({
+  ClubsApiService: jest.fn().mockImplementation(() => ({
+    getClubs: (...args: unknown[]) => mockGetClubs(...args),
+  })),
 }));
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -163,9 +177,33 @@ describe('Tools templates Mode B', () => {
       expect(payload.player_ids).toEqual([101]);
       expect(payload.collecting_player_ids).toEqual([101]);
       expect(payload.organizer_id).toBe(1);
-      expect(payload.partner_id).toBe(1);
+      expect(payload.club_id).toBeNull();
+      expect(payload).not.toHaveProperty('partner_id');
       expect(payload.color).toBe('#FACC15');
       expect(await findByText(/A:1,2 vs B:3,4/)).toBeTruthy();
+    },
+    15000
+  );
+
+  it(
+    'offers organizers and clubs as branding pickers instead of partners',
+    async () => {
+      const { findByText, getByText, getByTestId, queryByText } = renderPage();
+
+      await waitFor(() => expect(mockCatalog).toHaveBeenCalled());
+      fireEvent.press(getByTestId('tools-tab-mode-b'));
+
+      await waitFor(() => {
+        expect(mockGetOrganizers).toHaveBeenCalled();
+        expect(mockGetClubs).toHaveBeenCalled();
+      });
+
+      expect(await findByText('Organizer branding')).toBeTruthy();
+      expect(getByText('Club host branding')).toBeTruthy();
+      expect(queryByText('Partner branding')).toBeNull();
+      expect(getByText('1. ARSH Padel MiniTour')).toBeTruthy();
+      expect(getByText('4. Padel Club Host')).toBeTruthy();
+      expect(getByText('No club host')).toBeTruthy();
     },
     15000
   );

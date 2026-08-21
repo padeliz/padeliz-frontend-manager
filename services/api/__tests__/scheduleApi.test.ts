@@ -91,7 +91,7 @@ describe('ScheduleApiService', () => {
     const api = new ScheduleApiService();
     await api.preview(12, { adjust: 2 });
     await api.generate(12, { confirm_replace: true });
-    await api.updateForm(12, { playing_start_time: '10:00' });
+    await api.updateForm(12, { player_matches_repeat: 1, adjust: 0 });
     await api.destroySchedule(12);
 
     const urls = fetchMock.mock.calls.map(c => c[0]);

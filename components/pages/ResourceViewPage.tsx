@@ -14,7 +14,7 @@ import { getUploadConfig } from '@/utils/uploadMetadata';
 import { validateFormWithSubmission } from '@/utils/validationRules';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import EditModeToggle from './EditModeToggle';
@@ -40,6 +40,7 @@ export default function ResourceViewPage<
     embedded = false,
     resourceIdOverride = null,
     showLinkedEntities: showLinkedEntitiesProp,
+    excludeLinkedEntities = [],
     externalChrome = false,
     showSave = true,
     onChromeStateChange,
@@ -59,6 +60,10 @@ export default function ResourceViewPage<
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [linkedEntities, setLinkedEntities] = useState<any[]>([]);
+  const excludedLinkedKeys = useMemo(
+    () => new Set(excludeLinkedEntities),
+    [excludeLinkedEntities]
+  );
 
   useEffect(() => {
     if (resourceIdOverride != null && Number.isFinite(resourceIdOverride)) {
@@ -110,7 +115,9 @@ export default function ResourceViewPage<
                 return getMetadata(linkedResourceName);
               }
             );
-          setLinkedEntities(detectedEntities);
+          setLinkedEntities(
+            detectedEntities.filter(e => !excludedLinkedKeys.has(e.key))
+          );
         } catch {
           setLinkedEntities([]);
         }
@@ -126,6 +133,7 @@ export default function ResourceViewPage<
     fetchMetadata,
     getMetadata,
     showLinkedEntities,
+    excludedLinkedKeys,
   ]);
 
   const handleBack = () => {

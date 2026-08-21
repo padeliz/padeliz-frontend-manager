@@ -127,8 +127,7 @@ export default function EditionReplacementsTab({
   const participations = scheduleQuery.data?.participations ?? [];
   const matches = scheduleQuery.data?.matches ?? [];
   const rows = replacementsQuery.data ?? [];
-  const allowed =
-    scheduleQuery.data?.edition_division?.allow_replacements !== false;
+  const allowed = scheduleQuery.data?.schedule?.allow_replacements !== false;
   const finalized = !!scheduleQuery.data?.is_finalized;
   const loading =
     replacementsQuery.isLoading ||

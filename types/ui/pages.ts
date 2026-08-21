@@ -97,6 +97,8 @@ export interface ResourceViewPageConfig<
   resourceIdOverride?: number | null;
   /** Show linked entities even when embedded (default: !embedded) */
   showLinkedEntities?: boolean;
+  /** Linked entity keys to hide, e.g. editions own `divisions` in their own tab */
+  excludeLinkedEntities?: string[];
   /**
    * Parent owns Save/Refresh via onChromeStateChange.
    * Still renders in-page Edit/Cancel (Save hidden via showSave=false).

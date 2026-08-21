@@ -1,15 +1,11 @@
-import { brandingApi, BrandingOption } from '@/services/api/brandingApi';
 import { postersApi } from '@/services/api/postersApi';
 import { scheduleApi } from '@/services/api/scheduleApi';
 import { PosterRow } from '@/types/api/edition';
 import { ApiEditionDivision } from '@/types/api/entities';
-import SingleSelectDropdown from '@/components/ui/SingleSelectDropdown';
 import { EditionGeneralEditHint } from '@/components/editions/editionGeneralHint';
 import { actionPillClass } from '@/utils/ui/actionButtonClass';
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery } from '@tanstack/react-query';
-import { queryKeys } from '@/lib/queryClient';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Platform,
@@ -91,58 +87,6 @@ function matchesPoster(
   return posters.find(
     p =>
       p.poster_kind === 'MATCHES' && p.edition_division_court_id === courtId
-  );
-}
-
-function BrandingBlock({
-  organizerOptions,
-  partnerOptions,
-  organizerId,
-  partnerId,
-  setOrganizerId,
-  setPartnerId,
-}: {
-  organizerOptions: { label: string; value: number }[];
-  partnerOptions: { label: string; value: number }[];
-  organizerId: number;
-  partnerId: number;
-  setOrganizerId: (n: number) => void;
-  setPartnerId: (n: number) => void;
-}) {
-  return (
-    <View
-      testID="pdfs-branding"
-      className="bg-white border border-gray-200 rounded-lg p-3 gap-2"
-    >
-      <Text className="font-semibold text-gray-900">Branding</Text>
-      <View
-        testID="pdfs-branding-row"
-        className="flex-row flex-wrap items-end gap-2"
-      >
-        <View className="flex-1" style={{ minWidth: 160 }}>
-          <Text className="text-xs text-gray-500 mb-1">Organizer</Text>
-          <SingleSelectDropdown
-            options={organizerOptions}
-            selectedValue={organizerId}
-            onSelectionChange={v => setOrganizerId(Number(v))}
-            placeholder="Organizer"
-            title="Organizer"
-            minWidth={160}
-          />
-        </View>
-        <View className="flex-1" style={{ minWidth: 160 }}>
-          <Text className="text-xs text-gray-500 mb-1">Partner</Text>
-          <SingleSelectDropdown
-            options={partnerOptions}
-            selectedValue={partnerId}
-            onSelectionChange={v => setPartnerId(Number(v))}
-            placeholder="Partner"
-            title="Partner"
-            minWidth={160}
-          />
-        </View>
-      </View>
-    </View>
   );
 }
 
@@ -249,14 +193,12 @@ function PosterActions({
 function EdPdfSection({
   editionDivisionId,
   title,
-  branding,
   allowGenerate,
   allowUpload,
   testID,
 }: {
   editionDivisionId: number;
   title: string;
-  branding: { organizer: number; partner: number };
   allowGenerate: boolean;
   allowUpload: boolean;
   testID?: string;
@@ -380,7 +322,7 @@ function EdPdfSection({
           void run(
             'ranking',
             async () => {
-              await postersApi.generateRanking(editionDivisionId, branding);
+              await postersApi.generateRanking(editionDivisionId);
             },
             'RANKING PDF generated.'
           )
@@ -440,7 +382,6 @@ function EdPdfSection({
                   async () => {
                     await postersApi.generateMatches(editionDivisionId, {
                       court: c.id_edition_division_court,
-                      ...branding,
                     });
                   },
                   'MATCHES PDF generated.'
@@ -485,39 +426,14 @@ function EdPdfSection({
   );
 }
 
+/**
+ * Poster branding (organizer logo, club host logo) is resolved server-side from
+ * the edition, so this tab only drives generation and printed uploads.
+ */
 export default function EditionPdfsTab({
   editionDivisionId,
   divisions = [],
 }: Props) {
-  const [organizerId, setOrganizerId] = useState<number>(1);
-  const [partnerId, setPartnerId] = useState<number>(1);
-
-  const brandingQuery = useQuery({
-    queryKey: queryKeys.branding(),
-    queryFn: async () => {
-      const res = await brandingApi.getBranding();
-      return res.data;
-    },
-    enabled: editionDivisionId != null,
-  });
-
-  const organizers = brandingQuery.data?.organizers || [];
-  const partners = brandingQuery.data?.partners || [];
-
-  const organizerOptions = useMemo(
-    () => organizers.map((o: BrandingOption) => ({ label: o.name, value: o.id })),
-    [organizers]
-  );
-  const partnerOptions = useMemo(
-    () => partners.map((p: BrandingOption) => ({ label: p.name, value: p.id })),
-    [partners]
-  );
-
-  const branding = {
-    organizer: organizerId,
-    partner: partnerId,
-  };
-
   if (editionDivisionId == null) {
     return (
       <View className="gap-3" testID="pdfs-general-view">
@@ -527,7 +443,6 @@ export default function EditionPdfsTab({
             key={d.id_edition_division}
             editionDivisionId={d.id_edition_division}
             title={divisionTitle(d)}
-            branding={branding}
             allowGenerate={false}
             allowUpload={false}
             testID={`pdfs-general-ed-${d.id_edition_division}`}
@@ -542,18 +457,9 @@ export default function EditionPdfsTab({
 
   return (
     <View className="gap-3">
-      <BrandingBlock
-        organizerOptions={organizerOptions}
-        partnerOptions={partnerOptions}
-        organizerId={organizerId}
-        partnerId={partnerId}
-        setOrganizerId={setOrganizerId}
-        setPartnerId={setPartnerId}
-      />
       <EdPdfSection
         editionDivisionId={editionDivisionId}
         title="PDFs"
-        branding={branding}
         allowGenerate
         allowUpload
       />

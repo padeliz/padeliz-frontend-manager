@@ -33,7 +33,8 @@ export const queryKeys = {
     ['schedule', editionDivisionId] as const,
   standings: (editionDivisionId: number | string) =>
     ['standings', editionDivisionId] as const,
-  branding: () => ['branding'] as const,
+  organizers: () => ['organizers'] as const,
+  clubsPicker: () => ['clubsPicker'] as const,
   lotteryLive: (lotteryId: number | string) =>
     ['lotteryLive', lotteryId] as const,
   editionLotteries: (editionId: number | string) =>

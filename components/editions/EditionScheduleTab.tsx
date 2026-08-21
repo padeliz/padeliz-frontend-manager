@@ -52,25 +52,47 @@ type Props = {
   divisions?: ApiEditionDivision[];
 };
 
+/** Applied when an edition division has no schedule row yet. */
+export const SCHEDULE_KNOB_DEFAULTS = {
+  player_matches_repeat: 1,
+  include_scores: true,
+  allow_replacements: true,
+  final_points_target: 24,
+  adjust: 0,
+} as const;
+
 function knobsFormPayload(form: ScheduleFormPayload): ScheduleFormPayload {
   const { is_collecting_points: _collecting, participation_ids: _ids, ...rest } =
     form;
   return rest;
 }
 
-function formFromSchedule(data: ScheduleState): ScheduleFormPayload {
-  const ed = data.edition_division || {};
+/**
+ * Knobs live on the schedule row, which is null until the first upsert.
+ * Playing times stay on the edition division and are never sent back here.
+ */
+export function formFromSchedule(data: ScheduleState): ScheduleFormPayload {
+  const schedule = data.schedule || null;
   return {
-    playing_start_time: ed.playing_start_time || '',
-    playing_end_time: ed.playing_end_time || '',
-    player_opponents_nr: ed.player_opponents_nr,
-    player_matches_repeat: ed.player_matches_repeat,
-    include_final: !!ed.include_final,
-    has_demonstrative_match: !!ed.has_demonstrative_match,
-    include_scores: !!ed.include_scores,
-    allow_replacements: !!ed.allow_replacements,
-    points_per_match: ed.points_per_match,
-    final_points_target: ed.final_points_target,
+    player_opponents_nr: schedule?.player_opponents_nr ?? undefined,
+    player_matches_repeat:
+      schedule?.player_matches_repeat ??
+      SCHEDULE_KNOB_DEFAULTS.player_matches_repeat,
+    include_final: !!schedule?.include_final,
+    has_demonstrative_match: !!schedule?.has_demonstrative_match,
+    include_scores:
+      schedule == null
+        ? SCHEDULE_KNOB_DEFAULTS.include_scores
+        : !!schedule.include_scores,
+    allow_replacements:
+      schedule == null
+        ? SCHEDULE_KNOB_DEFAULTS.allow_replacements
+        : !!schedule.allow_replacements,
+    points_per_match: schedule?.points_per_match ?? undefined,
+    final_points_target:
+      schedule?.final_points_target ??
+      SCHEDULE_KNOB_DEFAULTS.final_points_target,
+    adjust: schedule?.adjust ?? SCHEDULE_KNOB_DEFAULTS.adjust,
     court_ids: (data.courts || []).map((c: any) => c.id_court),
   };
 }
@@ -102,7 +124,6 @@ export default function EditionScheduleTab({
   const [form, setForm] = useState<ScheduleFormPayload>({});
   const [baseline, setBaseline] = useState<string>('');
   const [preview, setPreview] = useState<SchedulePreview | null>(null);
-  const [adjust, setAdjust] = useState<number>(0);
 
   const scheduleQuery = useQuery({
     queryKey:
@@ -136,6 +157,9 @@ export default function EditionScheduleTab({
   const generateBlocked = isGenerateBlocked(state || {});
   const generateBlockReason = generateBlockedReason(state || {});
   const canReplace = canConfirmReplaceSchedule(state || {});
+  const adjust = form.adjust ?? SCHEDULE_KNOB_DEFAULTS.adjust;
+  const playingStartTime = state?.edition_division?.playing_start_time || '—';
+  const playingEndTime = state?.edition_division?.playing_end_time || '—';
 
   useEffect(() => {
     if (!state) return;
@@ -238,8 +262,8 @@ export default function EditionScheduleTab({
         );
       }
       const res = await scheduleApi.preview(editionDivisionId, {
-        adjust: adjust || undefined,
         ...(finalized ? knobsFormPayload(form) : {}),
+        adjust: adjust || undefined,
       });
       setPreview(res.data);
       if (!finalized) {
@@ -396,10 +420,16 @@ export default function EditionScheduleTab({
 
           <View className="bg-white border border-gray-200 rounded-lg p-4 gap-3">
             <Text className="font-semibold text-gray-900">Schedule knobs</Text>
+            <View testID="schedule-playing-window">
+              <Text className="text-xs text-gray-500 mb-1">
+                Playing window (edit on the Divisions tab)
+              </Text>
+              <Text className="text-sm text-gray-800">
+                {playingStartTime} – {playingEndTime}
+              </Text>
+            </View>
             {(
               [
-                ['playing_start_time', 'Start (HH:MM)'],
-                ['playing_end_time', 'End (HH:MM)'],
                 ['player_opponents_nr', 'Opponents / player'],
                 ['player_matches_repeat', 'Repeat partners'],
                 ['final_points_target', 'Final points target'],
@@ -418,14 +448,7 @@ export default function EditionScheduleTab({
                   onChangeText={v =>
                     setForm(prev => ({
                       ...prev,
-                      [key]:
-                        key.includes('time') ||
-                        key.includes('start') ||
-                        key.includes('end')
-                          ? v
-                          : v === ''
-                            ? undefined
-                            : Number(v),
+                      [key]: v === '' ? undefined : Number(v),
                     }))
                   }
                 />
@@ -465,8 +488,9 @@ export default function EditionScheduleTab({
                 {[-6, -4, -2, 0, 2, 4, 6].map(n => (
                   <Pressable
                     key={n}
+                    testID={`schedule-adjust-${n}`}
                     disabled={finalized}
-                    onPress={() => setAdjust(n)}
+                    onPress={() => setForm(prev => ({ ...prev, adjust: n }))}
                     className={`px-3 py-1 rounded border ${
                       adjust === n
                         ? 'bg-blue-600 border-blue-600'
