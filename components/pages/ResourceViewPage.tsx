@@ -22,6 +22,8 @@ import LinkedEntitySection from './LinkedEntitySection';
 import ResourceFieldDisplay from './ResourceFieldDisplay';
 import ResourceFieldEdit from './ResourceFieldEdit';
 
+const EMPTY_EXCLUDE_LINKED_ENTITIES: readonly string[] = [];
+
 export default function ResourceViewPage<
   T extends { [key: string]: any } = any,
 >({ config }: ResourceViewPageProps<T>) {
@@ -40,11 +42,14 @@ export default function ResourceViewPage<
     embedded = false,
     resourceIdOverride = null,
     showLinkedEntities: showLinkedEntitiesProp,
-    excludeLinkedEntities = [],
+    excludeLinkedEntities,
     externalChrome = false,
     showSave = true,
     onChromeStateChange,
   } = config;
+
+  const resolvedExcludeLinked =
+    excludeLinkedEntities ?? EMPTY_EXCLUDE_LINKED_ENTITIES;
 
   const showLinkedEntities =
     showLinkedEntitiesProp !== undefined
@@ -61,8 +66,8 @@ export default function ResourceViewPage<
   const [saving, setSaving] = useState(false);
   const [linkedEntities, setLinkedEntities] = useState<any[]>([]);
   const excludedLinkedKeys = useMemo(
-    () => new Set(excludeLinkedEntities),
-    [excludeLinkedEntities]
+    () => new Set(resolvedExcludeLinked),
+    [resolvedExcludeLinked]
   );
 
   useEffect(() => {

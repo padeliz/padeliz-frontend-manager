@@ -1,5 +1,6 @@
 import EditionRegistrationsTab from '@/app/(app)/editions/[id]/registrations/index';
 import { PageChromeProvider } from '@/components/chrome/PageChromeProvider';
+import { ToastProvider } from '@/context/ToastContext';
 import {
   createTestQueryClient,
   disposeTestQueryClient,
@@ -32,6 +33,22 @@ jest.mock('@/services/api/editionsApi', () => ({
   })),
 }));
 
+jest.mock('@/services/api/editionParticipationMappingApi', () => ({
+  EditionParticipationMappingApiService: jest.fn().mockImplementation(() => ({
+    preview: jest.fn(async () => ({
+      data: {
+        can_map: true,
+        disabled_reason: null,
+        existing_participations_count: 0,
+        registered_player_count: 0,
+        division_specific_registration_count: 0,
+        edition_wide_registration_count: 0,
+      },
+    })),
+    map: jest.fn(),
+  })),
+}));
+
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush }),
   useLocalSearchParams: () => ({ id: '7' }),
@@ -56,9 +73,11 @@ function renderTab() {
   const queryClient = createTestQueryClient();
   const utils = render(
     <QueryClientProvider client={queryClient}>
-      <PageChromeProvider>
-        <EditionRegistrationsTab />
-      </PageChromeProvider>
+      <ToastProvider>
+        <PageChromeProvider>
+          <EditionRegistrationsTab />
+        </PageChromeProvider>
+      </ToastProvider>
     </QueryClientProvider>
   );
   return { ...utils, queryClient };

@@ -142,6 +142,9 @@ function ChromeProbe() {
 function renderTab(opts: {
   editionFinalized: boolean;
   selectedDivisionId: number | null;
+  registeredNotParticipatingCount?: number;
+  participationsLocked?: boolean;
+  participationsOverride?: typeof participations;
 }) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -154,8 +157,12 @@ function renderTab(opts: {
           editionId={1}
           editionFinalized={opts.editionFinalized}
           divisions={divisions as any}
-          participations={participations as any}
+          participations={(opts.participationsOverride ?? participations) as any}
           selectedDivisionId={opts.selectedDivisionId}
+          registeredNotParticipatingCount={
+            opts.registeredNotParticipatingCount ?? 0
+          }
+          participationsLocked={opts.participationsLocked ?? false}
           onRefresh={async () => {}}
         />
       </PageChromeProvider>
@@ -169,7 +176,7 @@ describe('EditionParticipationsTab finalized lock', () => {
     jest.clearAllMocks();
   });
 
-  it('shows add form and delete when not finalized', () => {
+  it('shows add form and exclude when not finalized', () => {
     const { getByTestId, queryByTestId, getByText } = renderTab({
       editionFinalized: false,
       selectedDivisionId: 9,
@@ -185,7 +192,7 @@ describe('EditionParticipationsTab finalized lock', () => {
       'flex-wrap'
     );
     expect(getByTestId('participations-add-button')).toBeTruthy();
-    expect(getByTestId('delete-participation-100')).toBeTruthy();
+    expect(getByTestId('exclude-participation-100')).toBeTruthy();
     expect(getByTestId('participation-row-100')).toBeTruthy();
     expect(queryByTestId('participations-finalized-hint')).toBeNull();
   });
@@ -203,7 +210,7 @@ describe('EditionParticipationsTab finalized lock', () => {
     expect(queryByTestId('ed-color-10')).toBeNull();
   });
 
-  it('disables add/delete when edition finalized', () => {
+  it('disables add/exclude when edition finalized', () => {
     const { getByTestId, queryByTestId } = renderTab({
       editionFinalized: true,
       selectedDivisionId: 9,
@@ -211,7 +218,7 @@ describe('EditionParticipationsTab finalized lock', () => {
     expect(getByTestId('participations-finalized-hint')).toBeTruthy();
     expect(queryByTestId('participations-add-form')).toBeNull();
     expect(queryByTestId('participations-add-button')).toBeNull();
-    expect(queryByTestId('delete-participation-100')).toBeNull();
+    expect(queryByTestId('exclude-participation-100')).toBeNull();
     expect(queryByTestId('move-up-100')).toBeNull();
   });
 });
@@ -456,5 +463,110 @@ describe('EditionParticipationsTab collecting points', () => {
       expect(mockUpdate).not.toHaveBeenCalled();
       expect(mockReorder).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe('EditionParticipationsTab summary UX', () => {
+  afterEach(() => {
+    cleanup();
+    jest.clearAllMocks();
+  });
+
+  it('shows registered-not-participating banner on General view', () => {
+    const { getByTestId } = renderTab({
+      editionFinalized: false,
+      selectedDivisionId: null,
+      registeredNotParticipatingCount: 3,
+    });
+    expect(getByTestId('registered-not-participating-hint')).toHaveTextContent(
+      '3 registered players are not participating.'
+    );
+  });
+
+  it('uses singular copy for one registered non-participant', () => {
+    const { getByTestId } = renderTab({
+      editionFinalized: false,
+      selectedDivisionId: null,
+      registeredNotParticipatingCount: 1,
+    });
+    expect(getByTestId('registered-not-participating-hint')).toHaveTextContent(
+      '1 registered player is not participating.'
+    );
+  });
+
+  it('hides registered-not-participating banner when an ED is selected', () => {
+    const { queryByTestId } = renderTab({
+      editionFinalized: false,
+      selectedDivisionId: 9,
+      registeredNotParticipatingCount: 3,
+    });
+    expect(queryByTestId('registered-not-participating-hint')).toBeNull();
+  });
+
+  it('shows over-limit warning per ED header', () => {
+    const overLimitDivision = {
+      ...divisions[0],
+      players_limit: 1,
+    };
+    const twoInSameEd = [
+      participations[0],
+      {
+        ...participations[0],
+        id_participation: 102,
+        player_id: 3,
+        sort_order: 1,
+        player: { id_player: 3, name: 'Cara' },
+      },
+    ];
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const { getByTestId } = render(
+      <QueryClientProvider client={client}>
+        <PageChromeProvider>
+          <EditionParticipationsTab
+            editionId={1}
+            editionFinalized={false}
+            divisions={[overLimitDivision] as any}
+            participations={twoInSameEd as any}
+            selectedDivisionId={9}
+            onRefresh={async () => {}}
+          />
+        </PageChromeProvider>
+      </QueryClientProvider>
+    );
+    expect(getByTestId('ed-over-limit-9')).toHaveTextContent(
+      '2 participants (limit 1).'
+    );
+  });
+
+  it('renders stackable flag badges without row tint', () => {
+    const flagged = [
+      {
+        ...participations[0],
+        flags: ['duplicate', 'not_registered'],
+      },
+    ];
+    const { getByTestId } = renderTab({
+      editionFinalized: false,
+      selectedDivisionId: 9,
+      participationsOverride: flagged as any,
+    });
+    expect(getByTestId('participation-flag-duplicate-100')).toBeTruthy();
+    expect(getByTestId('participation-flag-not_registered-100')).toBeTruthy();
+    expect(getByTestId('participation-row-100').props.className).not.toContain(
+      'bg-amber'
+    );
+  });
+
+  it('hides exclude and shows lottery lock hint when participationsLocked', () => {
+    const { getByTestId, queryByTestId } = renderTab({
+      editionFinalized: false,
+      selectedDivisionId: 9,
+      participationsLocked: true,
+    });
+    expect(getByTestId('participations-lottery-lock-hint')).toBeTruthy();
+    expect(queryByTestId('exclude-participation-100')).toBeNull();
+    expect(getByTestId('move-up-100')).toBeTruthy();
   });
 });

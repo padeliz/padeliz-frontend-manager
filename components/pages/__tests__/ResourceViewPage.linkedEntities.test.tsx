@@ -116,6 +116,33 @@ describe('ResourceViewPage linked entity exclusions', () => {
     jest.clearAllMocks();
   });
 
+  it('does not loop linked-entity detection when excludeLinkedEntities is omitted', async () => {
+    const { LinkedEntityService } = require('@/utils/linkedEntityService');
+    const detectSpy = jest.spyOn(
+      LinkedEntityService,
+      'detectLinkedEntities'
+    );
+
+    const { findByTestId } = render(
+      <ResourceViewPage
+        config={{
+          resourceName: 'Player',
+          resourceDisplayName: 'Player',
+          fetchResource,
+          embedded: true,
+          showLinkedEntities: true,
+          resourceIdOverride: 748,
+          title: 'Player Details',
+        }}
+      />
+    );
+
+    await waitFor(() => {
+      expect(detectSpy.mock.calls.length).toBeLessThanOrEqual(2);
+    });
+    expect(await findByTestId('linked-entity-divisions')).toBeTruthy();
+  });
+
   it('renders every detected linked entity by default', async () => {
     const { findByTestId } = renderView();
     expect(await findByTestId('linked-entity-divisions')).toBeTruthy();

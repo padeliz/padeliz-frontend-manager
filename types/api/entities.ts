@@ -160,6 +160,7 @@ export interface ApiEditionParticipation {
   division?: ApiDivision;
   player_history?: {
     last_played: {
+      division_id?: number;
       division_title: string;
       rank: number | null;
       participant_count: number;
@@ -168,6 +169,12 @@ export interface ApiEditionParticipation {
     banned_count: number;
     absented_count: number;
   };
+  flags?: string[];
+}
+
+export interface ApiEditionParticipationSummary {
+  registered_not_participating_count: number;
+  participations_locked: boolean;
 }
 
 export interface ApiEditionRegistration {

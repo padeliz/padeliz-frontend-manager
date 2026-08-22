@@ -1,4 +1,5 @@
 import ResourceListPage from '@/components/pages/ResourceListPage';
+import EditionParticipationMappingButton from '@/components/editions/EditionParticipationMappingButton';
 import { useResourcePageConfig } from '@/hooks/useResourcePageConfig';
 import { queryKeys } from '@/lib/queryClient';
 import { EditionRegistrationsApiService } from '@/services/api/editionRegistrationsApi';
@@ -89,6 +90,10 @@ export default function EditionRegistrationsTab() {
           Edition is finalized — registrations cannot be added or deleted.
         </Text>
       )}
+      <EditionParticipationMappingButton
+        editionId={editionId}
+        mutationsDisabled={mutationsDisabled}
+      />
       <ResourceListPage config={config} />
     </View>
   );

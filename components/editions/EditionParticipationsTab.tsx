@@ -19,6 +19,7 @@ import {
   resolveDropTarget,
 } from './editionDivisionsDnD';
 import { confirmAction } from './editionLotteryUtils';
+import ParticipationFlagBadges from './ParticipationFlagBadges';
 import SortableRow, {
   moveInList,
   reorderList,
@@ -37,6 +38,8 @@ type Props = {
   divisions: ApiEditionDivision[];
   participations: ApiEditionParticipation[];
   selectedDivisionId: number | null;
+  registeredNotParticipatingCount?: number;
+  participationsLocked?: boolean;
   onRefresh: () => Promise<void>;
 };
 
@@ -192,6 +195,8 @@ export default function EditionParticipationsTab({
   divisions,
   participations,
   selectedDivisionId,
+  registeredNotParticipatingCount = 0,
+  participationsLocked = false,
   onRefresh,
 }: Props) {
   const [local, setLocal] = useState(participations);
@@ -327,17 +332,17 @@ export default function EditionParticipationsTab({
     setLocal(prev => applyDrop(prev, fromEd, fromIndex, targetEd, toIndex));
   };
 
-  const onDelete = (p: ApiEditionParticipation) => {
-    if (editionFinalized) return;
+  const onExclude = (p: ApiEditionParticipation) => {
+    if (editionFinalized || participationsLocked) return;
     confirmAction(
-      'Delete participation',
-      `Remove ${playerLabel(p)} from this participation?`,
+      'Exclude player',
+      `Exclude ${playerLabel(p)} from participations?`,
       async () => {
         try {
           await participationsApi.deleteParticipation(p.id_participation);
           await onRefresh();
         } catch (e: any) {
-          Alert.alert('Delete failed', e?.message || 'Unknown error');
+          Alert.alert('Exclude failed', e?.message || 'Unknown error');
         }
       }
     );
@@ -500,6 +505,26 @@ export default function EditionParticipationsTab({
         </Text>
       )}
 
+      {participationsLocked && !editionFinalized && (
+        <Text
+          testID="participations-lottery-lock-hint"
+          className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2 mb-3"
+        >
+          Lottery draws exist for this edition — players cannot be excluded.
+        </Text>
+      )}
+
+      {selectedDivisionId == null && registeredNotParticipatingCount > 0 && (
+        <Text
+          testID="registered-not-participating-hint"
+          className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2 mb-3"
+        >
+          {registeredNotParticipatingCount === 1
+            ? '1 registered player is not participating.'
+            : `${registeredNotParticipatingCount} registered players are not participating.`}
+        </Text>
+      )}
+
       {!editionFinalized && (
         <View
           testID="participations-add-form"
@@ -586,6 +611,14 @@ export default function EditionParticipationsTab({
                 {locked ? ' (locked)' : ''}
               </Text>
             </View>
+            {list.length > ed.players_limit && (
+              <Text
+                testID={`ed-over-limit-${ed.id_edition_division}`}
+                className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2 mb-2"
+              >
+                {list.length} participants (limit {ed.players_limit}).
+              </Text>
+            )}
             <View
               testID={`ed-list-${ed.id_edition_division}`}
               ref={node => {
@@ -621,6 +654,10 @@ export default function EditionParticipationsTab({
                     <Text className="text-gray-800 flex-1 mr-2 shrink">
                       {playerLabel(p)}
                     </Text>
+                    <ParticipationFlagBadges
+                      flags={p.flags}
+                      participationId={p.id_participation}
+                    />
                     <Pressable
                       testID={`collecting-points-${p.id_participation}`}
                       onPress={() => toggleCollecting(p)}
@@ -642,29 +679,33 @@ export default function EditionParticipationsTab({
                     <View className="flex-row flex-wrap items-center justify-end gap-1">
                       <PlayerHistoryText p={p} />
                       {!locked && (
-                        <>
-                          <SortableArrows
-                            onUp={() =>
-                              moveWithin(ed.id_edition_division, index, -1)
-                            }
-                            onDown={() =>
-                              moveWithin(ed.id_edition_division, index, 1)
-                            }
-                            upTestID={`move-up-${p.id_participation}`}
-                            downTestID={`move-down-${p.id_participation}`}
+                        <SortableArrows
+                          onUp={() =>
+                            moveWithin(ed.id_edition_division, index, -1)
+                          }
+                          onDown={() =>
+                            moveWithin(ed.id_edition_division, index, 1)
+                          }
+                          upTestID={`move-up-${p.id_participation}`}
+                          downTestID={`move-down-${p.id_participation}`}
+                        />
+                      )}
+                      {!locked && !participationsLocked && (
+                        <Pressable
+                          testID={`exclude-participation-${p.id_participation}`}
+                          accessibilityLabel={`Exclude ${playerLabel(p)}`}
+                          onPress={() => onExclude(p)}
+                          className="p-2 flex-row items-center"
+                        >
+                          <Ionicons
+                            name="remove-circle-outline"
+                            size={18}
+                            color="#dc2626"
                           />
-                          <Pressable
-                            testID={`delete-participation-${p.id_participation}`}
-                            onPress={() => onDelete(p)}
-                            className="p-2"
-                          >
-                            <Ionicons
-                              name="trash-outline"
-                              size={18}
-                              color="#dc2626"
-                            />
-                          </Pressable>
-                        </>
+                          <Text className="ml-1 text-xs text-red-600">
+                            Exclude
+                          </Text>
+                        </Pressable>
                       )}
                     </View>
                   </View>
