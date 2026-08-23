@@ -170,6 +170,11 @@ export interface ApiEditionParticipation {
     absented_count: number;
   };
   flags?: string[];
+  custom_field_values?: Array<{
+    field_id: number;
+    label: string;
+    value: string;
+  }>;
 }
 
 export interface ApiEditionParticipationSummary {

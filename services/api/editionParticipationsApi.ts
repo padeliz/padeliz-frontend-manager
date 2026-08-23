@@ -24,6 +24,7 @@ export class EditionParticipationsApiService extends BaseApiService {
         updated_at?: 'asc' | 'desc';
         sort_order?: 'asc' | 'desc';
       };
+      custom_field_ids?: number[];
     } = {}
   ): Promise<{ data: ApiEditionParticipation[]; meta: any }> {
     const queryParams = new URLSearchParams();
@@ -38,6 +39,11 @@ export class EditionParticipationsApiService extends BaseApiService {
           queryParams.append(`filters[${key}]`, value.toString());
         }
       });
+    }
+    if (params.custom_field_ids?.length) {
+      for (const id of params.custom_field_ids) {
+        queryParams.append('custom_field_ids[]', String(id));
+      }
     }
     if (params.sort_by) {
       Object.entries(params.sort_by).forEach(([key, value]) => {

@@ -172,6 +172,45 @@ export class BaseApiService {
   }
 
   /**
+   * Authenticated request that returns plain text (e.g. HTML preview).
+   */
+  protected async requestText(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<string> {
+    const token = await this.getAuthToken();
+
+    if (!token) {
+      throw new ApiError(401, 'Authentication token not found');
+    }
+
+    const url = `${this.baseUrl}${this.managerPrefix}${endpoint}`;
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${token}`,
+      Accept: 'text/html,*/*',
+      ...(options.headers as Record<string, string> | undefined),
+    };
+
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    });
+
+    if (!response.ok) {
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch {
+        // ignore non-JSON error bodies
+      }
+      throw new ApiError(response.status, errorMessage);
+    }
+
+    return response.text();
+  }
+
+  /**
    * Web-only helper: fetch a PDF blob and trigger a browser download via
    * object URL + temporary `<a download>`.
    */

@@ -2,7 +2,7 @@ import EditionParticipationsTab from '@/components/editions/EditionParticipation
 import { PageChromeProvider, usePageChrome } from '@/components/chrome/PageChromeProvider';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
-import { Pressable, Text } from 'react-native';
+import { Pressable, Text, Platform } from 'react-native';
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 const mockCreate = jest.fn();
@@ -139,12 +139,20 @@ function ChromeProbe() {
   );
 }
 
+const customFieldOptions = [
+  { label: 'Shirt size', value: 10 },
+  { label: 'Club', value: 11 },
+];
+
 function renderTab(opts: {
   editionFinalized: boolean;
   selectedDivisionId: number | null;
   registeredNotParticipatingCount?: number;
   participationsLocked?: boolean;
   participationsOverride?: typeof participations;
+  customFieldOptions?: Array<{ label: string; value: number }>;
+  selectedCustomFieldIds?: number[];
+  onCustomFieldSelectionChange?: (ids: number[]) => void;
 }) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -163,6 +171,9 @@ function renderTab(opts: {
             opts.registeredNotParticipatingCount ?? 0
           }
           participationsLocked={opts.participationsLocked ?? false}
+          customFieldOptions={opts.customFieldOptions}
+          selectedCustomFieldIds={opts.selectedCustomFieldIds}
+          onCustomFieldSelectionChange={opts.onCustomFieldSelectionChange}
           onRefresh={async () => {}}
         />
       </PageChromeProvider>
@@ -568,5 +579,133 @@ describe('EditionParticipationsTab summary UX', () => {
     expect(getByTestId('participations-lottery-lock-hint')).toBeTruthy();
     expect(queryByTestId('exclude-participation-100')).toBeNull();
     expect(getByTestId('move-up-100')).toBeTruthy();
+  });
+});
+
+describe('EditionParticipationsTab custom fields', () => {
+  afterEach(() => {
+    cleanup();
+    jest.clearAllMocks();
+  });
+
+  it('shows custom fields multiselect beside add form when not finalized', () => {
+    const { getByTestId } = renderTab({
+      editionFinalized: false,
+      selectedDivisionId: 9,
+      customFieldOptions,
+    });
+    const outer = getByTestId('participations-add-form-row-outer');
+    const form = getByTestId('participations-add-form');
+    const row = getByTestId('participations-add-form-row');
+    const picker = getByTestId('participations-custom-fields-picker');
+    expect(outer).toContainElement(form);
+    expect(outer).toContainElement(picker);
+    expect(row).not.toContainElement(picker);
+    expect(picker.props.style).toEqual(
+      expect.objectContaining({ minWidth: 180 })
+    );
+  });
+
+  it('hides custom fields picker when not finalized and no options', () => {
+    const { queryByTestId } = renderTab({
+      editionFinalized: false,
+      selectedDivisionId: 9,
+    });
+    expect(queryByTestId('participations-custom-fields-picker')).toBeNull();
+  });
+
+  it('shows custom fields filter row when finalized with options', () => {
+    const { getByTestId, queryByTestId } = renderTab({
+      editionFinalized: true,
+      selectedDivisionId: 9,
+      customFieldOptions,
+    });
+    expect(getByTestId('participations-custom-fields-filter-row')).toBeTruthy();
+    expect(queryByTestId('participations-add-form')).toBeNull();
+    expect(queryByTestId('participations-custom-fields-picker')).toBeNull();
+  });
+
+  it('hides custom fields filter row when finalized without options', () => {
+    const { queryByTestId } = renderTab({
+      editionFinalized: true,
+      selectedDivisionId: 9,
+    });
+    expect(queryByTestId('participations-custom-fields-filter-row')).toBeNull();
+  });
+
+  it('renders custom field values with EllipsisText after player history', () => {
+    const withCustomFields = [
+      {
+        ...participations[0],
+        player_history: {
+          last_played: {
+            division_title: 'Explorers',
+            rank: 3,
+            participant_count: 12,
+          },
+          participated_count: 2,
+          banned_count: 0,
+          absented_count: 0,
+        },
+        custom_field_values: [
+          {
+            field_id: 10,
+            label: 'Shirt size',
+            value: 'Very long custom field value text',
+          },
+        ],
+      },
+    ];
+    const originalOs = Platform.OS;
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
+
+    try {
+      const { getByTestId, getByText, queryByText } = renderTab({
+        editionFinalized: false,
+        selectedDivisionId: 9,
+        participationsOverride: withCustomFields as any,
+      });
+      expect(getByTestId('player-history-100')).toBeTruthy();
+      expect(queryByText('Shirt size:')).toBeNull();
+      expect(getByTestId('custom-field-value-100-10-tooltip')).toBeTruthy();
+      const valueNode = getByText('Very long custom field value text');
+      expect(valueNode.props.numberOfLines).toBe(1);
+      expect(valueNode.props.className).toContain('truncate');
+      expect(valueNode.props.title).toBeUndefined();
+    } finally {
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: originalOs });
+    }
+  });
+
+  it('reflects selectedCustomFieldIds and calls onCustomFieldSelectionChange from add form', () => {
+    const onChange = jest.fn();
+    const { getByText } = renderTab({
+      editionFinalized: false,
+      selectedDivisionId: 9,
+      customFieldOptions,
+      selectedCustomFieldIds: [10],
+      onCustomFieldSelectionChange: onChange,
+    });
+    expect(getByText('Shirt size')).toBeTruthy();
+    fireEvent.press(getByText('Shirt size'));
+    fireEvent.press(getByText('Club'));
+    fireEvent.press(getByText('Apply'));
+    expect(onChange).toHaveBeenCalledWith([10, 11]);
+  });
+
+  it('reflects selectedCustomFieldIds and calls onCustomFieldSelectionChange when finalized', () => {
+    const onChange = jest.fn();
+    const { getByText } = renderTab({
+      editionFinalized: true,
+      selectedDivisionId: 9,
+      customFieldOptions,
+      selectedCustomFieldIds: [11],
+      onCustomFieldSelectionChange: onChange,
+    });
+    expect(getByText('Club')).toBeTruthy();
+    fireEvent.press(getByText('Club'));
+    fireEvent.press(getByText('Shirt size'));
+    fireEvent.press(getByText('Apply'));
+    expect(onChange).toHaveBeenCalledWith([11, 10]);
   });
 });

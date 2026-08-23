@@ -1,4 +1,5 @@
 import { postersApi } from '@/services/api/postersApi';
+import { editionPostersApi } from '@/services/api/editionPostersApi';
 import { scheduleApi } from '@/services/api/scheduleApi';
 import { PosterRow } from '@/types/api/edition';
 import { ApiEditionDivision } from '@/types/api/entities';
@@ -15,6 +16,8 @@ import {
 } from 'react-native';
 
 type Props = {
+  editionId: number;
+  editionFinalized?: boolean;
   editionDivisionId: number | null;
   divisions?: ApiEditionDivision[];
 };
@@ -95,10 +98,12 @@ function PosterActions({
   testPrefix,
   poster,
   allowGenerate,
+  allowPreview = false,
   allowUpload,
   finalized,
   busy,
   onGenerate,
+  onPreview,
   onDownloadGenerated,
   onDownloadPrinted,
   onUploadPrinted,
@@ -107,14 +112,17 @@ function PosterActions({
   testPrefix: string;
   poster: PosterRow | undefined;
   allowGenerate: boolean;
+  allowPreview?: boolean;
   allowUpload: boolean;
   finalized: boolean;
   busy: boolean;
   onGenerate: () => void;
+  onPreview?: () => void;
   onDownloadGenerated: () => void;
   onDownloadPrinted: () => void;
   onUploadPrinted: () => void;
 }) {
+  const canPreview = allowPreview && !busy;
   const canGenerate = allowGenerate && !finalized && !busy;
   const canUpload = allowUpload && !finalized && poster != null && !busy;
   const canDownloadGenerated = hasGenerated(poster) && !busy;
@@ -127,6 +135,21 @@ function PosterActions({
     <View className="border border-gray-100 rounded-lg p-2 gap-2">
       <Text className="text-sm font-semibold text-gray-800">{title}</Text>
       <View className="flex-row flex-wrap gap-2">
+        {allowPreview && (
+          <Pressable
+            testID={`${testPrefix}-preview`}
+            onPress={() => {
+              if (!canPreview || !onPreview) return;
+              onPreview();
+            }}
+            disabled={!canPreview}
+            className={actionPillClass(canPreview, 'blue')}
+          >
+            <Text className="text-white text-sm">
+              {busy ? 'Loading…' : 'Preview'}
+            </Text>
+          </Pressable>
+        )}
         {allowGenerate && (
           <Pressable
             testID={`${testPrefix}-generate`}
@@ -426,32 +449,197 @@ function EdPdfSection({
   );
 }
 
+function attendancePoster(posters: PosterRow[]): PosterRow | undefined {
+  return posters.find(
+    p => p.poster_kind === 'ATTENDANCE' && p.edition_division_id == null
+  );
+}
+
+function GeneralPdfsView({
+  editionId,
+  editionFinalized = false,
+  divisions,
+}: {
+  editionId: number;
+  editionFinalized?: boolean;
+  divisions: ApiEditionDivision[];
+}) {
+  const [editionPosters, setEditionPosters] = useState<PosterRow[]>([]);
+  const [loadingEditionPosters, setLoadingEditionPosters] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+
+  const loadEditionPosters = useCallback(async () => {
+    setLoadingEditionPosters(true);
+    try {
+      const res = await editionPostersApi.listEditionPosters(editionId);
+      setEditionPosters(res.data || []);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load edition posters');
+    } finally {
+      setLoadingEditionPosters(false);
+    }
+  }, [editionId]);
+
+  useEffect(() => {
+    void loadEditionPosters();
+  }, [loadEditionPosters]);
+
+  const requireWeb = (): boolean => {
+    if (Platform.OS !== 'web') {
+      setMessage('PDF download is web-only.');
+      return false;
+    }
+    return true;
+  };
+
+  const requireWebForPreview = (): boolean => {
+    if (Platform.OS !== 'web') {
+      setMessage('Attendance preview is web-only.');
+      return false;
+    }
+    return true;
+  };
+
+  const run = async (key: string, fn: () => Promise<void>, ok: string) => {
+    setError(null);
+    setMessage(null);
+    setBusyKey(key);
+    try {
+      await fn();
+      setMessage(ok);
+      await loadEditionPosters();
+    } catch (e: any) {
+      setError(e?.message || 'Request failed');
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  const attendance = attendancePoster(editionPosters);
+
+  return (
+    <View className="gap-3" testID="pdfs-general-view">
+      <EditionGeneralEditHint />
+      <View className="bg-white border border-gray-200 rounded-lg p-3 gap-2">
+        <Text className="font-semibold text-gray-900">All division posters</Text>
+        <Pressable
+          testID="download-all-pdfs"
+          onPress={() => {
+            if (!requireWeb()) return;
+            void run(
+              'download-all',
+              async () => {
+                await editionPostersApi.downloadMergedPostersPdf(editionId);
+              },
+              'Merged PDF downloaded.'
+            );
+          }}
+          disabled={busyKey === 'download-all'}
+          className={actionPillClass(busyKey !== 'download-all', 'green')}
+        >
+          <Text className="text-white text-sm font-medium">
+            {busyKey === 'download-all' ? 'Downloading…' : 'Download all PDFs'}
+          </Text>
+        </Pressable>
+      </View>
+
+      <View
+        testID="attendance-pdf-section"
+        className="bg-white border border-gray-200 rounded-lg p-3 gap-2"
+      >
+        <Text className="font-semibold text-gray-900">Attendance sheet</Text>
+        {loadingEditionPosters && editionPosters.length === 0 ? (
+          <ActivityIndicator />
+        ) : (
+          <PosterActions
+            title="ATTENDANCE"
+            testPrefix={`attendance-${editionId}`}
+            poster={attendance}
+            allowGenerate
+            allowPreview
+            allowUpload={false}
+            finalized={editionFinalized}
+            busy={busyKey === 'attendance-preview' || busyKey === 'attendance'}
+            onPreview={() => {
+              if (!requireWebForPreview()) return;
+              void run(
+                'attendance-preview',
+                async () => {
+                  await editionPostersApi.openAttendancePreview(editionId);
+                },
+                'Attendance preview opened.'
+              );
+            }}
+            onGenerate={() =>
+              void run(
+                'attendance',
+                async () => {
+                  await editionPostersApi.generateAttendance(editionId);
+                },
+                'Attendance PDF generated.'
+              )
+            }
+            onDownloadGenerated={() => {
+              if (!requireWeb() || !hasGenerated(attendance)) return;
+              void run(
+                'dl-attendance',
+                async () => {
+                  await editionPostersApi.downloadAttendancePdf(editionId);
+                },
+                'Attendance PDF downloaded.'
+              );
+            }}
+            onDownloadPrinted={() => undefined}
+            onUploadPrinted={() => undefined}
+          />
+        )}
+      </View>
+
+      {error && (
+        <Text className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</Text>
+      )}
+      {message && (
+        <Text className="text-sm text-blue-700 bg-blue-50 p-2 rounded">
+          {message}
+        </Text>
+      )}
+
+      {divisions.map(d => (
+        <EdPdfSection
+          key={d.id_edition_division}
+          editionDivisionId={d.id_edition_division}
+          title={divisionTitle(d)}
+          allowGenerate={false}
+          allowUpload={false}
+          testID={`pdfs-general-ed-${d.id_edition_division}`}
+        />
+      ))}
+      {divisions.length === 0 && (
+        <Text className="text-sm text-gray-500">No edition divisions.</Text>
+      )}
+    </View>
+  );
+}
+
 /**
  * Poster branding (organizer logo, club host logo) is resolved server-side from
  * the edition, so this tab only drives generation and printed uploads.
  */
 export default function EditionPdfsTab({
+  editionId,
+  editionFinalized = false,
   editionDivisionId,
   divisions = [],
 }: Props) {
   if (editionDivisionId == null) {
     return (
-      <View className="gap-3" testID="pdfs-general-view">
-        <EditionGeneralEditHint />
-        {divisions.map(d => (
-          <EdPdfSection
-            key={d.id_edition_division}
-            editionDivisionId={d.id_edition_division}
-            title={divisionTitle(d)}
-            allowGenerate={false}
-            allowUpload={false}
-            testID={`pdfs-general-ed-${d.id_edition_division}`}
-          />
-        ))}
-        {divisions.length === 0 && (
-          <Text className="text-sm text-gray-500">No edition divisions.</Text>
-        )}
-      </View>
+      <GeneralPdfsView
+        editionId={editionId}
+        editionFinalized={editionFinalized}
+        divisions={divisions}
+      />
     );
   }
 

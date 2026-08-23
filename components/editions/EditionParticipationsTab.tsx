@@ -4,6 +4,8 @@
 
 import { useRegisterPageActions } from '@/components/chrome/PageChromeProvider';
 import SingleSelectDropdown from '@/components/ui/SingleSelectDropdown';
+import MultiSelectDropdown from '@/components/ui/MultiSelectDropdown';
+import EllipsisText from '@/components/ui/EllipsisText';
 import { usePlayerPicker } from '@/hooks/usePlayerPicker';
 import { EditionParticipationsApiService } from '@/services/api/editionParticipationsApi';
 import {
@@ -40,6 +42,9 @@ type Props = {
   selectedDivisionId: number | null;
   registeredNotParticipatingCount?: number;
   participationsLocked?: boolean;
+  customFieldOptions?: Array<{ label: string; value: number }>;
+  selectedCustomFieldIds?: number[];
+  onCustomFieldSelectionChange?: (ids: number[]) => void;
   onRefresh: () => Promise<void>;
 };
 
@@ -133,6 +138,29 @@ function PlayerHistoryText({ p }: { p: ApiEditionParticipation }) {
   );
 }
 
+function ParticipationCustomFieldValues({ p }: { p: ApiEditionParticipation }) {
+  const values = p.custom_field_values || [];
+  if (values.length === 0) return null;
+
+  return (
+    <Text className="text-xs text-gray-500">
+      {values.map((entry, i) => (
+        <React.Fragment key={entry.field_id}>
+          {i > 0 ? ' • ' : null}
+          <EllipsisText
+            className="text-xs text-gray-500"
+            maxWidth={128}
+            tooltip={`${entry.label}: ${entry.value}`}
+            testID={`custom-field-value-${p.id_participation}-${entry.field_id}`}
+          >
+            {entry.value}
+          </EllipsisText>
+        </React.Fragment>
+      ))}
+    </Text>
+  );
+}
+
 /**
  * Same-ED reordering is the shared primitive; when the "General" ED view is
  * active a drop can also land in another ED's list, which needs the measured
@@ -197,6 +225,9 @@ export default function EditionParticipationsTab({
   selectedDivisionId,
   registeredNotParticipatingCount = 0,
   participationsLocked = false,
+  customFieldOptions = [],
+  selectedCustomFieldIds = [],
+  onCustomFieldSelectionChange,
   onRefresh,
 }: Props) {
   const [local, setLocal] = useState(participations);
@@ -527,55 +558,97 @@ export default function EditionParticipationsTab({
 
       {!editionFinalized && (
         <View
-          testID="participations-add-form"
-          className="mb-4 border border-gray-200 rounded-lg p-3 bg-white gap-2"
+          testID="participations-add-form-row-outer"
+          className="flex-row flex-wrap items-end gap-3 mb-4"
         >
-          <Text className="font-semibold text-gray-900">Add player</Text>
           <View
-            testID="participations-add-form-row"
-            className="flex-row flex-wrap items-end gap-2"
+            testID="participations-add-form"
+            className="flex-1 border border-gray-200 rounded-lg p-3 bg-white gap-2"
+            style={{ minWidth: 280 }}
           >
-            <View testID="participations-player-picker" className="flex-1" style={{ minWidth: 160 }}>
-              <SingleSelectDropdown
-                options={playerPicker.options}
-                selectedValue={playerId}
-                onSelectionChange={v => setPlayerId(Number(v))}
-                placeholder="Select player"
-                title="Player"
-                minWidth={160}
-                searchable
-                onSearch={playerPicker.onSearch}
-                loading={playerPicker.loading}
-              />
-            </View>
-            {selectedDivisionId == null && (
-              <View className="flex-1" style={{ minWidth: 160 }}>
+            <Text className="font-semibold text-gray-900">Add player</Text>
+            <View
+              testID="participations-add-form-row"
+              className="flex-row flex-wrap items-end gap-2"
+            >
+              <View testID="participations-player-picker" className="flex-1" style={{ minWidth: 160 }}>
                 <SingleSelectDropdown
-                  options={edOptions}
-                  selectedValue={targetEdId}
-                  onSelectionChange={v => setTargetEdId(Number(v))}
-                  placeholder="Select edition division"
-                  title="Edition division"
+                  options={playerPicker.options}
+                  selectedValue={playerId}
+                  onSelectionChange={v => setPlayerId(Number(v))}
+                  placeholder="Select player"
+                  title="Player"
                   minWidth={160}
+                  searchable
+                  onSearch={playerPicker.onSearch}
+                  loading={playerPicker.loading}
                 />
               </View>
+              {selectedDivisionId == null && (
+                <View className="flex-1" style={{ minWidth: 160 }}>
+                  <SingleSelectDropdown
+                    options={edOptions}
+                    selectedValue={targetEdId}
+                    onSelectionChange={v => setTargetEdId(Number(v))}
+                    placeholder="Select edition division"
+                    title="Edition division"
+                    minWidth={160}
+                  />
+                </View>
+              )}
+              <Pressable
+                testID="participations-add-button"
+                disabled={adding}
+                onPress={() => void onAdd()}
+                className={`px-3 py-2 rounded-lg ${
+                  adding ? 'bg-gray-300' : 'bg-blue-600'
+                }`}
+              >
+                <Text className="text-white text-sm font-medium">
+                  {adding ? 'Adding…' : 'Add'}
+                </Text>
+              </Pressable>
+            </View>
+            {addError && (
+              <Text className="text-sm text-red-600">{addError}</Text>
             )}
-            <Pressable
-              testID="participations-add-button"
-              disabled={adding}
-              onPress={() => void onAdd()}
-              className={`px-3 py-2 rounded-lg ${
-                adding ? 'bg-gray-300' : 'bg-blue-600'
-              }`}
-            >
-              <Text className="text-white text-sm font-medium">
-                {adding ? 'Adding…' : 'Add'}
-              </Text>
-            </Pressable>
           </View>
-          {addError && (
-            <Text className="text-sm text-red-600">{addError}</Text>
+          {customFieldOptions.length > 0 && (
+            <View testID="participations-custom-fields-picker" style={{ minWidth: 180 }}>
+              <MultiSelectDropdown
+                options={customFieldOptions}
+                selectedValues={selectedCustomFieldIds}
+                onSelectionChange={values =>
+                  onCustomFieldSelectionChange?.(
+                    values.map(v => Number(v)).filter(Number.isFinite)
+                  )
+                }
+                placeholder="Custom fields"
+                title="Custom fields"
+                minWidth={180}
+              />
+            </View>
           )}
+        </View>
+      )}
+
+      {editionFinalized && customFieldOptions.length > 0 && (
+        <View
+          testID="participations-custom-fields-filter-row"
+          className="mb-4 border border-gray-200 rounded-lg p-3 bg-white"
+        >
+          <MultiSelectDropdown
+            options={customFieldOptions}
+            selectedValues={selectedCustomFieldIds}
+            onSelectionChange={values =>
+              onCustomFieldSelectionChange?.(
+                values.map(v => Number(v)).filter(Number.isFinite)
+              )
+            }
+            placeholder="Custom fields"
+            title="Custom fields"
+            minWidth={220}
+          />
         </View>
       )}
 
@@ -678,6 +751,7 @@ export default function EditionParticipationsTab({
                     </Pressable>
                     <View className="flex-row flex-wrap items-center justify-end gap-1">
                       <PlayerHistoryText p={p} />
+                      <ParticipationCustomFieldValues p={p} />
                       {!locked && (
                         <SortableArrows
                           onUp={() =>
