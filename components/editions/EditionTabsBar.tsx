@@ -2,6 +2,7 @@
  * Href-driven edition tab strip (top or nested).
  */
 
+import { isEditionTabActive } from '@/utils/editionTabMatch';
 import { usePathname, useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, ScrollView, Text } from 'react-native';
@@ -28,20 +29,6 @@ type Props = {
   onBeforeNavigate?: () => boolean | Promise<boolean>;
 };
 
-function isSegmentActive(
-  pathname: string,
-  match: string,
-  matchExact = false
-): boolean {
-  const segment = match.replace(/^\/+|\/+$/g, '');
-  if (!segment) return false;
-  const parts = pathname.split('/').filter(Boolean);
-  if (matchExact) {
-    return parts[parts.length - 1] === segment;
-  }
-  return parts.includes(segment);
-}
-
 export default function EditionTabsBar({ tabs, onBeforeNavigate }: Props) {
   const pathname = usePathname();
   const router = useRouter();
@@ -58,7 +45,7 @@ export default function EditionTabsBar({ tabs, onBeforeNavigate }: Props) {
         const isLive = tab.variant === 'live';
         const isActive =
           !isAction &&
-          isSegmentActive(pathname, tab.match, tab.matchExact);
+          isEditionTabActive(pathname, tab.match, tab.matchExact);
         return (
           <Pressable
             key={isAction ? `action-${tab.label}` : tab.href}

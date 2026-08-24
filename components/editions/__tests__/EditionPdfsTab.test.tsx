@@ -1,7 +1,10 @@
 import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { Platform } from 'react-native';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import {
+  createTestQueryClient,
+} from '@/testing/createTestQueryClient';
 import EditionPdfsTab from '@/components/editions/EditionPdfsTab';
 
 const mockGetSchedule = jest.fn();
@@ -55,9 +58,7 @@ jest.mock('@/services/api/editionPostersApi', () => ({
 }));
 
 function renderWithClient(ui: React.ReactElement) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+  const client = createTestQueryClient();
   return render(
     <QueryClientProvider client={client}>{ui}</QueryClientProvider>
   );
@@ -460,5 +461,18 @@ describe('EditionPdfsTab', () => {
     fireEvent.press(await findByTestId('attendance-1-download'));
     expect(await findByText('PDF download is web-only.')).toBeTruthy();
     expect(mockDownloadAttendancePdf).not.toHaveBeenCalled();
+  });
+
+  it('skips listEditionPosters when editionId is not finite', async () => {
+    renderWithClient(
+      <EditionPdfsTab
+        editionId={NaN}
+        editionDivisionId={null}
+        divisions={[]}
+      />
+    );
+    await waitFor(() => {
+      expect(mockListEditionPosters).not.toHaveBeenCalled();
+    });
   });
 });

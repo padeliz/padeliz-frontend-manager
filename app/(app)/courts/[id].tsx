@@ -21,6 +21,8 @@ export default function ViewCourtPage() {
   const config = useResourceViewPageConfig<ApiCourt>({
     resourceName: 'Court',
     resourceDisplayName: 'Court',
+    sectionLabel: 'Courts',
+    sectionHref: '/courts',
     fetchResource,
     updateResource,
   });

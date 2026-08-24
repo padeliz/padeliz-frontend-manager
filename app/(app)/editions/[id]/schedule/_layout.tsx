@@ -1,20 +1,23 @@
-import EditionTabsBar from '@/components/editions/EditionTabsBar';
 import { usePageChrome } from '@/components/chrome/PageChromeProvider';
+import { useBreadcrumbSegments } from '@/components/layout/BreadcrumbProvider';
+import { useSubTabBar } from '@/components/layout/SubTabBarProvider';
 import {
   parseEditionDivisionIdOptimistic,
   withEdQuery,
 } from '@/utils/editionWorkspace';
+import { findActiveEditionTabLabel } from '@/utils/editionTabMatch';
 import { queryKeys } from '@/lib/queryClient';
 import { EditionDivisionsApiService } from '@/services/api/editionDivisionsApi';
 import { useQuery } from '@tanstack/react-query';
-import { Slot, useGlobalSearchParams, useLocalSearchParams } from 'expo-router';
+import { Slot, useGlobalSearchParams, useLocalSearchParams, usePathname } from 'expo-router';
 import React, { useCallback, useMemo } from 'react';
-import { View } from 'react-native';
 import { confirmDiscardDirty } from '@/utils/softDirtyNav';
+import type { EditionTabLink } from '@/components/editions/EditionTabsBar';
 
 const editionDivisionsApi = new EditionDivisionsApiService();
 
 export default function ScheduleLayout() {
+  const pathname = usePathname();
   const localParams = useLocalSearchParams<{ id: string; ed?: string }>();
   const globalParams = useGlobalSearchParams<{ id?: string; ed?: string }>();
   const editionId = Number(localParams.id ?? globalParams.id);
@@ -48,26 +51,31 @@ export default function ScheduleLayout() {
     return true;
   }, [actions]);
 
-  const tabs = useMemo(() => {
+  const tabs = useMemo((): EditionTabLink[] => {
     const base = `/editions/${editionId}/schedule`;
     return [
       {
         label: 'Knobs',
         href: withEdQuery(`${base}/knobs`, edId),
-        match: '/schedule/knobs',
+        match: 'knobs',
       },
       {
         label: 'Matches',
         href: withEdQuery(`${base}/matches`, edId),
-        match: '/schedule/matches',
+        match: 'matches',
       },
     ];
   }, [editionId, edId]);
 
-  return (
-    <View className="flex-1">
-      <EditionTabsBar tabs={tabs} onBeforeNavigate={onBeforeNavigate} />
-      <Slot />
-    </View>
+  const activeTabLabel = findActiveEditionTabLabel(pathname, tabs) ?? 'Knobs';
+
+  useBreadcrumbSegments(
+    'edition-schedule-subtab',
+    [{ label: activeTabLabel }],
+    1
   );
+
+  useSubTabBar('edition-schedule-subtab', tabs, onBeforeNavigate);
+
+  return <Slot />;
 }

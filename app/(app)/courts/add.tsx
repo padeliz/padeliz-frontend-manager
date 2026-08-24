@@ -14,6 +14,8 @@ export default function AddCourtPage() {
   const config = useResourceCreatePageConfig<ApiCourt>({
     resourceName: 'Court',
     resourceDisplayName: 'Court',
+    sectionLabel: 'Courts',
+    sectionHref: '/courts',
     createResource,
     getViewPath: id => '/courts/' + id,
   });

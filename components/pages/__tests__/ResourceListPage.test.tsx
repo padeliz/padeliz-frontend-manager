@@ -88,9 +88,13 @@ jest.mock('@/components/layout/AppLayout', () => {
   const { View, Text } = require('react-native');
   return {
     __esModule: true,
-    default: ({ children, title }: any) => (
+    default: ({ children, title, description, headerActions }: any) => (
       <View testID="app-layout">
-        <Text>{title}</Text>
+        <Text testID="app-layout-title">{title}</Text>
+        {description ? <Text testID="app-layout-description">{description}</Text> : null}
+        {headerActions ? (
+          <View testID="app-header-actions">{headerActions}</View>
+        ) : null}
         {children}
       </View>
     ),
@@ -141,6 +145,7 @@ function ChromeProbe() {
     <View>
       <Text testID="chrome-has-refresh">{actions?.refresh ? 'yes' : 'no'}</Text>
       <Text testID="chrome-can-save">{actions?.canSave ? 'yes' : 'no'}</Text>
+      <View testID="chrome-header-actions">{actions?.headerActions}</View>
       <Pressable
         testID="chrome-refresh"
         onPress={() => void actions?.refresh?.()}
@@ -155,25 +160,36 @@ describe('ResourceListPage', () => {
     mockList.selectedItems = [];
   });
 
-  it('wraps the global list in AppLayout with a back-arrow header', () => {
-    const { getByTestId, queryByTestId } = render(
+  it('standalone: actions in Page Header, no back button, no Management label', () => {
+    const { getByTestId, queryByTestId, queryByText } = render(
       <ResourceListPage config={baseConfig} />
     );
     expect(getByTestId('app-layout')).toBeTruthy();
-    expect(getByTestId('resource-list-back')).toBeTruthy();
-    expect(queryByTestId('resource-list-embedded')).toBeNull();
+    expect(getByTestId('app-header-actions')).toBeTruthy();
     expect(getByTestId('resource-list-add')).toBeTruthy();
+    expect(getByTestId('resource-list-export')).toBeTruthy();
+    expect(getByTestId('resource-list-refresh')).toBeTruthy();
+    expect(queryByTestId('resource-list-back')).toBeNull();
+    expect(queryByTestId('resource-list-embedded')).toBeNull();
+    expect(queryByText('Widget Management')).toBeNull();
   });
 
-  it('omits AppLayout and the back-arrow header when embedded', () => {
-    const { getByTestId, queryByTestId, getByText } = render(
-      <ResourceListPage config={{ ...baseConfig, embedded: true }} />
+  it('omits AppLayout when embedded and registers chrome headerActions', async () => {
+    const { getByTestId, queryByTestId } = render(
+      <PageChromeProvider>
+        <ChromeProbe />
+        <ResourceListPage config={{ ...baseConfig, embedded: true }} />
+      </PageChromeProvider>
     );
     expect(queryByTestId('app-layout')).toBeNull();
     expect(queryByTestId('resource-list-back')).toBeNull();
     expect(getByTestId('resource-list-embedded')).toBeTruthy();
-    expect(getByText('Add Widget')).toBeTruthy();
-    expect(getByTestId('resource-list-export')).toBeTruthy();
+
+    await waitFor(() => {
+      expect(getByTestId('chrome-has-refresh')).toHaveTextContent('yes');
+      expect(getByTestId('resource-list-add')).toBeTruthy();
+      expect(getByTestId('resource-list-export')).toBeTruthy();
+    });
   });
 
   it('keeps Add and Delete Selected visible but non-pressable when mutationsDisabled', () => {
@@ -199,7 +215,7 @@ describe('ResourceListPage', () => {
     expect(mockList.onBulkAction).toHaveBeenCalledWith('export');
   });
 
-  it('registers chrome refresh only when embedded and clears it on unmount', async () => {
+  it('registers chrome refresh when embedded and clears it on unmount', async () => {
     function Harness({ showList }: { showList: boolean }) {
       return (
         <PageChromeProvider>

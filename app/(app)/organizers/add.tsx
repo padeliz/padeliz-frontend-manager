@@ -14,6 +14,8 @@ export default function AddOrganizerPage() {
   const config = useResourceCreatePageConfig<ApiOrganizer>({
     resourceName: 'Organizer',
     resourceDisplayName: 'Organizer',
+    sectionLabel: 'Organizers',
+    sectionHref: '/organizers',
     createResource,
     getViewPath: id => '/organizers/' + id,
   });

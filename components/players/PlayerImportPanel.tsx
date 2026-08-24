@@ -23,7 +23,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import React, { useCallback, useState } from 'react';
 import {
   Pressable,
-  ScrollView,
   Switch,
   Text,
   TextInput,
@@ -256,7 +255,7 @@ export default function PlayerImportPanel() {
   });
 
   return (
-    <ScrollView className="flex-1 p-4" testID="player-import-panel">
+    <View className="flex-1 p-4" testID="player-import-panel">
       <View className="flex-row items-center justify-between mb-4">
         <CsvFilePicker
           onFile={onFile}
@@ -369,7 +368,7 @@ export default function PlayerImportPanel() {
           })}
         </View>
       )}
-    </ScrollView>
+    </View>
   );
 }
 

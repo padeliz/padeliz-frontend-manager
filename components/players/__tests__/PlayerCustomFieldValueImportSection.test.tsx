@@ -3,9 +3,13 @@
  */
 import PlayerImportSectionLayout from '@/components/players/PlayerImportSectionLayout';
 import { PageChromeProvider } from '@/components/chrome/PageChromeProvider';
+import {
+  SubTabBarProvider,
+  useSubTabBarTrail,
+} from '@/components/layout/SubTabBarProvider';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
-import { Text } from 'react-native';
+import { Text, View } from 'react-native';
 
 const mockPush = jest.fn();
 const pathnameState = {
@@ -19,11 +23,16 @@ jest.mock('expo-router', () => ({
   },
   usePathname: () => pathnameState.value,
   useRouter: () => ({ push: mockPush }),
+  Link: ({ children }: any) => children,
 }));
 
 jest.mock('@/utils/softDirtyNav', () => ({
   confirmDiscardDirty: jest.fn(async () => true),
 }));
+
+function SubTabChrome() {
+  return <View testID="subtab-chrome">{useSubTabBarTrail()}</View>;
+}
 
 describe('PlayerImportSectionLayout custom field values', () => {
   beforeEach(() => {
@@ -31,15 +40,18 @@ describe('PlayerImportSectionLayout custom field values', () => {
     pathnameState.value = '/players/import-custom-field-values';
   });
 
-  it('wires import-custom-field-values tabs', async () => {
+  it('wires import-custom-field-values tabs via useSubTabBar', async () => {
     const { getByTestId } = render(
-      <PageChromeProvider>
-        <PlayerImportSectionLayout
-          sectionSegment="import-custom-field-values"
-          importHref="/players/import-custom-field-values"
-          importsHref="/players/import-custom-field-values/imports"
-        />
-      </PageChromeProvider>
+      <SubTabBarProvider>
+        <SubTabChrome />
+        <PageChromeProvider>
+          <PlayerImportSectionLayout
+            sectionSegment="import-custom-field-values"
+            importHref="/players/import-custom-field-values"
+            importsHref="/players/import-custom-field-values/imports"
+          />
+        </PageChromeProvider>
+      </SubTabBarProvider>
     );
 
     expect(getByTestId('edition-tab-Import')).toBeTruthy();

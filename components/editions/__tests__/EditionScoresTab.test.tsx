@@ -1,7 +1,10 @@
 import React from 'react';
 import { TextInput, Pressable, Text, View } from 'react-native';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import {
+  createTestQueryClient,
+} from '@/testing/createTestQueryClient';
 import {
   PageChromeProvider,
   usePageChrome,
@@ -43,9 +46,7 @@ function ChromeSaveButton() {
 }
 
 function renderTab(ui: React.ReactElement) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+  const client = createTestQueryClient();
   return render(
     <QueryClientProvider client={client}>
       <PageChromeProvider>

@@ -37,6 +37,8 @@ export default function SponsorsPage() {
   const config = useResourcePageConfig<ApiSponsor>({
     resourceName: 'Sponsor',
     resourceDisplayName: 'Sponsor',
+    sectionLabel: 'Sponsors',
+    sectionHref: '/sponsors',
     fetchData,
     bulkDelete,
     title: 'Sponsors',

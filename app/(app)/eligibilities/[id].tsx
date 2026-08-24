@@ -21,6 +21,8 @@ export default function ViewEligibilityPage() {
   const config = useResourceViewPageConfig<ApiPlayerEligibility>({
     resourceName: 'Eligibility',
     resourceDisplayName: 'Eligibility',
+    sectionLabel: 'Eligibilities',
+    sectionHref: '/eligibilities',
     fetchResource,
     updateResource,
   });

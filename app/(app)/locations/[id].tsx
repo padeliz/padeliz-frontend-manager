@@ -21,6 +21,8 @@ export default function ViewLocationPage() {
   const config = useResourceViewPageConfig<ApiLocation>({
     resourceName: 'Location',
     resourceDisplayName: 'Location',
+    sectionLabel: 'Locations',
+    sectionHref: '/locations',
     fetchResource,
     updateResource,
   });

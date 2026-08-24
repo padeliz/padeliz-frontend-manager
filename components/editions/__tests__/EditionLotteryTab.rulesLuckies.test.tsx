@@ -14,7 +14,10 @@ import EditionLotteryTab from '@/components/editions/EditionLotteryTab';
 import { queryKeys } from '@/lib/queryClient';
 import { ApiError } from '@/services/api/baseApi';
 import { formatFinalizedAt } from '@/utils/softDirtyNav';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import {
+  createTestQueryClient,
+} from '@/testing/createTestQueryClient';
 import React from 'react';
 import {
   act,
@@ -232,12 +235,13 @@ function prizeLinesWithLuckiesFixture(extraLuckies: any[] = []) {
   };
 }
 
-function renderWithClient(ui: React.ReactElement, client?: QueryClient) {
+function renderWithClient(
+  ui: React.ReactElement,
+  client?: ReturnType<typeof createTestQueryClient>
+) {
   const c =
     client ??
-    new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
+    createTestQueryClient();
   return {
     client: c,
     ...render(<QueryClientProvider client={c}>{ui}</QueryClientProvider>),
@@ -471,9 +475,7 @@ describe('EditionLotteryTab rules/luckies', () => {
   });
 
   it('invalidates rules-with-luckies on accept and reject', async () => {
-    const client = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
+    const client = createTestQueryClient();
     const spy = jest.spyOn(client, 'invalidateQueries');
     const { findByTestId, getByTestId } = renderWithClient(
       <EditionLotteryTab

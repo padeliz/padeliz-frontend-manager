@@ -38,9 +38,11 @@ export default function EligibilitiesPage() {
   const config = useResourcePageConfig<ApiPlayerEligibility>({
     resourceName: 'Eligibility',
     resourceDisplayName: 'Eligibility',
+    sectionLabel: 'Eligibilities',
+    sectionHref: '/eligibilities',
     fetchData,
     bulkDelete,
-    title: 'Player Eligibilities',
+    title: 'Eligibilities',
     description: 'Manage player eligibility reviews',
     onAdd: handleAdd,
     onView: handleView,

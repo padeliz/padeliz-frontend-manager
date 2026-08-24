@@ -21,6 +21,8 @@ export default function ViewDivisionPage() {
   const config = useResourceViewPageConfig<ApiDivision>({
     resourceName: 'Division',
     resourceDisplayName: 'Division',
+    sectionLabel: 'Divisions',
+    sectionHref: '/divisions',
     fetchResource,
     updateResource,
   });

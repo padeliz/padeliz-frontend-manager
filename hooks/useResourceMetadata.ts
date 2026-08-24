@@ -18,8 +18,6 @@ interface UseApiResourceMetadataReturn {
   getError: (schema: string) => string | null;
   fetchMetadata: (schema: string) => Promise<void>;
   refetch: (schema: string) => Promise<void>;
-  clearCache: (schema: string) => Promise<void>;
-  clearAllCache: () => Promise<void>;
 }
 
 const metadataApi = new ApiResourceMetadataApiService();
@@ -131,48 +129,6 @@ export function useResourceMetadata(
     [fetchMetadata]
   );
 
-  const clearCache = useCallback(
-    async (schema: string) => {
-      try {
-        await metadataApi.clearApiResourceMetadataCache(schema);
-        delete sharedCache[schema];
-        delete inFlight[schema];
-        delete metadataRef.current[schema];
-        delete loadingRef.current[schema];
-        delete errorsRef.current[schema];
-        forceRender();
-      } catch (err) {
-        console.error(
-          'Failed to clear metadata cache for schema:',
-          schema,
-          err
-        );
-        handleApiError(err);
-      }
-    },
-    [handleApiError, forceRender]
-  );
-
-  const clearAllCache = useCallback(async () => {
-    try {
-      const schemasCached = Object.keys(sharedCache);
-      await Promise.all(
-        schemasCached.map(schema =>
-          metadataApi.clearApiResourceMetadataCache(schema)
-        )
-      );
-      schemasCached.forEach(k => delete sharedCache[k]);
-      Object.keys(inFlight).forEach(k => delete inFlight[k]);
-      metadataRef.current = {};
-      loadingRef.current = {};
-      errorsRef.current = {};
-      forceRender();
-    } catch (err) {
-      console.error('Failed to clear all metadata caches:', err);
-      handleApiError(err);
-    }
-  }, [handleApiError, forceRender]);
-
   const getMetadata = useCallback((schema: string) => {
     return metadataRef.current[schema] || sharedCache[schema] || null;
   }, []);
@@ -197,7 +153,6 @@ export function useResourceMetadata(
 
     schemas.forEach(schema => {
       if (schema) {
-        // Hydrate from shared cache immediately
         if (sharedCache[schema] && !metadataRef.current[schema]) {
           metadataRef.current[schema] = sharedCache[schema];
         }
@@ -216,7 +171,5 @@ export function useResourceMetadata(
     getError,
     fetchMetadata,
     refetch,
-    clearCache,
-    clearAllCache,
   };
 }

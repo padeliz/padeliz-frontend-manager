@@ -1,5 +1,5 @@
 /**
- * Page chrome: parent layout Save/Refresh registration for nested routes.
+ * Page chrome: parent layout Save/Refresh/headerActions registration for nested routes.
  */
 
 import React, {
@@ -22,6 +22,15 @@ export type PageChromeActions = {
   isSaving?: boolean;
   canSave?: boolean;
   isDirty?: boolean;
+  /** Child-owned Page Header action cluster (list Add/Export, etc.). */
+  headerActions?: React.ReactNode;
+  /**
+   * Bump when headerActions content should refresh the parent
+   * (e.g. selected row count). Avoids infinite loops from new React node identities.
+   */
+  headerActionsKey?: string | number;
+  /** Optional entity label for parent Page Header (e.g. Player detail). */
+  displayTitle?: string | null;
 };
 
 type PageChromeContextValue = {
@@ -51,7 +60,9 @@ export function PageChromeProvider({
         prev.save === next.save &&
         prev.refresh === next.refresh &&
         prev.edit === next.edit &&
-        prev.cancel === next.cancel
+        prev.cancel === next.cancel &&
+        prev.headerActionsKey === next.headerActionsKey &&
+        prev.displayTitle === next.displayTitle
       ) {
         return prev;
       }
@@ -82,6 +93,11 @@ export function usePageChrome() {
   return ctx;
 }
 
+/** True when nested under PageChromeProvider (safe outside provider). */
+export function useHasPageChrome(): boolean {
+  return useContext(PageChromeContext) != null;
+}
+
 const noopRegister = (_next: PageChromeActions | null) => {};
 
 export function useRegisterPageActions(actions: PageChromeActions | null) {
@@ -89,6 +105,9 @@ export function useRegisterPageActions(actions: PageChromeActions | null) {
   const register = ctx?.register ?? noopRegister;
   const actionsRef = useRef(actions);
   actionsRef.current = actions;
+
+  const headerActionsRef = useRef(actions?.headerActions);
+  headerActionsRef.current = actions?.headerActions;
 
   const save = useCallback(async () => {
     await actionsRef.current?.save?.();
@@ -107,6 +126,8 @@ export function useRegisterPageActions(actions: PageChromeActions | null) {
   const isSaving = actions?.isSaving;
   const canSave = actions?.canSave;
   const isDirty = actions?.isDirty;
+  const displayTitle = actions?.displayTitle;
+  const headerActionsKey = actions?.headerActionsKey;
   const hasActions = !!actions;
 
   useLayoutEffect(() => {
@@ -123,6 +144,11 @@ export function useRegisterPageActions(actions: PageChromeActions | null) {
       isSaving,
       canSave,
       isDirty,
+      displayTitle,
+      headerActionsKey,
+      get headerActions() {
+        return headerActionsRef.current;
+      },
     });
   }, [
     register,
@@ -135,6 +161,8 @@ export function useRegisterPageActions(actions: PageChromeActions | null) {
     refresh,
     edit,
     cancel,
+    displayTitle,
+    headerActionsKey,
   ]);
 
   useEffect(() => {

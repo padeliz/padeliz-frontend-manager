@@ -16,7 +16,7 @@ import { isListImageUrl } from '@/utils/imageMetadata';
 import { confirmDiscardDirty } from '@/utils/softDirtyNav';
 import { useQueryClient } from '@tanstack/react-query';
 import React, { useCallback, useState } from 'react';
-import { Image, ScrollView, Switch, Text, View } from 'react-native';
+import { Image, Switch, Text, View } from 'react-native';
 
 const api = new EditionRegistrationImportApiService();
 const PREVIEW_IMAGE_SIZE = 40;
@@ -254,7 +254,7 @@ export default function EditionRegistrationImportPanel({
   });
 
   return (
-    <ScrollView
+    <View
       className="flex-1"
       testID="edition-registration-import-panel"
     >
@@ -380,6 +380,6 @@ export default function EditionRegistrationImportPanel({
           })}
         </View>
       )}
-    </ScrollView>
+    </View>
   );
 }

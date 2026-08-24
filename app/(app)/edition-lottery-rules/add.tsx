@@ -14,6 +14,8 @@ export default function AddEditionLotteryRulePage() {
   const config = useResourceCreatePageConfig<ApiEditionLotteryRule>({
     resourceName: 'EditionLotteryRule',
     resourceDisplayName: 'Lottery Rule',
+    sectionLabel: 'Lottery Rules',
+    sectionHref: '/edition-lottery-rules',
     createResource,
     getViewPath: id => '/edition-lottery-rules/' + id,
   });

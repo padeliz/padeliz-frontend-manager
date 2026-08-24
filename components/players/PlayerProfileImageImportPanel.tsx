@@ -25,7 +25,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Image,
   Pressable,
-  ScrollView,
   Switch,
   Text,
   View,
@@ -409,7 +408,7 @@ export default function PlayerProfileImageImportPanel() {
   });
 
   return (
-    <ScrollView className="flex-1 p-4" testID="player-profile-image-import-panel">
+    <View className="flex-1 p-4" testID="player-profile-image-import-panel">
       <View className="flex-row items-center justify-between mb-4">
         <ImageFilesPicker
           onFiles={onFiles}
@@ -631,6 +630,6 @@ export default function PlayerProfileImageImportPanel() {
           })}
         </View>
       )}
-    </ScrollView>
+    </View>
   );
 }

@@ -21,6 +21,8 @@ export default function ViewEditionLotteryLuckyPage() {
   const config = useResourceViewPageConfig<ApiEditionLuckyOne>({
     resourceName: 'EditionLotteryLucky',
     resourceDisplayName: 'Lottery Lucky',
+    sectionLabel: 'Lucky Ones',
+    sectionHref: '/edition-lottery-luckies',
     fetchResource,
     updateResource,
   });

@@ -38,6 +38,8 @@ export default function CourtsPage() {
   const config = useResourcePageConfig<ApiCourt>({
     resourceName: 'Court',
     resourceDisplayName: 'Court',
+    sectionLabel: 'Courts',
+    sectionHref: '/courts',
     fetchData,
     bulkDelete,
     title: 'Courts',

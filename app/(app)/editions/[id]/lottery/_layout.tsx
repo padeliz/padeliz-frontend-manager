@@ -1,30 +1,33 @@
-import EditionTabsBar, {
-  EditionTabLink,
-} from '@/components/editions/EditionTabsBar';
 import { usePageChrome } from '@/components/chrome/PageChromeProvider';
+import { useBreadcrumbSegments } from '@/components/layout/BreadcrumbProvider';
+import { useSubTabBar } from '@/components/layout/SubTabBarProvider';
 import {
   parseEditionDivisionIdOptimistic,
   parseLotteryId,
   withEdQuery,
   withLotteryQuery,
 } from '@/utils/editionWorkspace';
+import { findActiveEditionTabLabel } from '@/utils/editionTabMatch';
 import {
   Slot,
   useGlobalSearchParams,
   useLocalSearchParams,
+  usePathname,
   useRouter,
 } from 'expo-router';
 import React, { useCallback, useMemo } from 'react';
-import { Platform, View } from 'react-native';
+import { Platform } from 'react-native';
 import { queryKeys } from '@/lib/queryClient';
 import { EditionDivisionsApiService } from '@/services/api/editionDivisionsApi';
 import { useQuery } from '@tanstack/react-query';
 import { confirmDiscardDirty } from '@/utils/softDirtyNav';
+import type { EditionTabLink } from '@/components/editions/EditionTabsBar';
 
 const editionDivisionsApi = new EditionDivisionsApiService();
 
 export default function LotteryLayout() {
   const router = useRouter();
+  const pathname = usePathname();
   const localParams = useLocalSearchParams<{
     id: string;
     ed?: string;
@@ -88,17 +91,17 @@ export default function LotteryLayout() {
       {
         label: 'Prizes',
         href: href('/prizes'),
-        match: '/lottery/prizes',
+        match: 'prizes',
       },
       {
         label: 'Rules',
         href: href('/rules'),
-        match: '/lottery/rules',
+        match: 'rules',
       },
       {
         label: 'Luckies',
         href: href('/luckies'),
-        match: '/lottery/luckies',
+        match: 'luckies',
       },
       {
         label: 'Open LIVE lottery',
@@ -110,10 +113,15 @@ export default function LotteryLayout() {
     ];
   }, [editionId, edId, lotteryId, openLiveLottery]);
 
-  return (
-    <View className="flex-1">
-      <EditionTabsBar tabs={tabs} onBeforeNavigate={onBeforeNavigate} />
-      <Slot />
-    </View>
+  const activeTabLabel = findActiveEditionTabLabel(pathname, tabs) ?? 'Prizes';
+
+  useBreadcrumbSegments(
+    'edition-lottery-subtab',
+    [{ label: activeTabLabel }],
+    1
   );
+
+  useSubTabBar('edition-lottery-subtab', tabs, onBeforeNavigate);
+
+  return <Slot />;
 }

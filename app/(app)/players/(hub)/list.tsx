@@ -44,7 +44,7 @@ export default function PlayersListPage() {
     fetchData,
     bulkDelete,
     excludeFields: ['first_name', 'middle_name', 'last_name'],
-    title: 'Players Management',
+    title: 'Players',
     description:
       'Manage padel players with advanced search, filters, and bulk operations',
     onAdd: handleAddPlayer,

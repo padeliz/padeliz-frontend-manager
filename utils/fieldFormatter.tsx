@@ -696,6 +696,13 @@ function formatDate(dateString: string): string {
 }
 
 /**
+ * Format date strings for display (e.g. edition header, resource fields).
+ */
+export function formatDisplayDate(dateString: string): string {
+  return formatDate(dateString);
+}
+
+/**
  * Get ordinal suffix for day numbers
  */
 function getOrdinalSuffix(day: number): string {

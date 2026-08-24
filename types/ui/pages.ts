@@ -3,7 +3,14 @@
  * Types for page components
  */
 
+import type { ResourceSubHeaderProps } from '@/components/pages/ResourceSubHeader';
 import { UiBulkActionConfig } from './tables';
+
+/** Optional in-body sub-header strip (below Page Header). */
+export type ResourcePageSubHeaderConfig = Pick<
+  ResourceSubHeaderProps,
+  'title' | 'description' | 'actions'
+>;
 
 export interface ResourceListPageConfig<
   T extends { [key: string]: any } = any,
@@ -29,6 +36,12 @@ export interface ResourceListPageConfig<
   // Page configuration
   title: string;
   description?: string;
+  /** Breadcrumb section label (defaults to title). */
+  sectionLabel?: string;
+  /** Breadcrumb section href for add/view leaves (defaults to '/'). */
+  sectionHref?: string;
+  /** Optional sub-header strip below Page Header. */
+  subHeader?: ResourcePageSubHeaderConfig | null;
   emptyMessage?: string;
 
   // Action handlers
@@ -87,8 +100,11 @@ export interface ResourceViewPageConfig<
   excludeFields?: string[];
 
   // Page configuration
-  title: string;
+  title?: string;
   description?: string;
+  sectionLabel?: string;
+  sectionHref?: string;
+  subHeader?: ResourcePageSubHeaderConfig | null;
   onBack?: () => void;
 
   /** When true, omit AppLayout (e.g. Editions Details tab) */
@@ -109,12 +125,13 @@ export interface ResourceViewPageConfig<
   onChromeStateChange?: (state: {
     save: () => void | Promise<void>;
     refresh: () => void | Promise<void>;
-    edit: () => void;
-    cancel: () => void;
+    edit?: () => void;
+    cancel?: () => void;
     isEditing: boolean;
     isSaving: boolean;
     canSave: boolean;
     isDirty: boolean;
+    displayTitle?: string;
   }) => void;
 }
 
@@ -131,6 +148,9 @@ export interface ResourceCreatePageConfig<
   excludeFields?: string[];
   title: string;
   description?: string;
+  sectionLabel?: string;
+  sectionHref?: string;
+  subHeader?: ResourcePageSubHeaderConfig | null;
   onBack?: () => void;
   /** Path after successful create (default: list-style /{resource}/{id}) */
   getViewPath?: (id: number, created: T) => string;

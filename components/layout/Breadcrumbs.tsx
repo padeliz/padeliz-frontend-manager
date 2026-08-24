@@ -1,9 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
-interface BreadcrumbItem {
+export interface BreadcrumbItem {
   label: string;
   href?: string;
 }
@@ -21,10 +21,14 @@ export default function Breadcrumbs({ items }: BreadcrumbsProps) {
 
   return (
     <View className="px-6 py-3 bg-white border-b border-gray-200">
-      <View className="flex-row items-center">
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        testID="breadcrumbs-scroll"
+        contentContainerClassName="flex-row items-center"
+      >
         {items.map((item, index) => (
-          <View key={index} className="flex-row items-center">
-            {/* Separator */}
+          <View key={index} className="flex-row items-center shrink-0">
             {index > 0 && (
               <Ionicons
                 name="chevron-forward"
@@ -34,24 +38,23 @@ export default function Breadcrumbs({ items }: BreadcrumbsProps) {
               />
             )}
 
-            {/* Breadcrumb item */}
             {item.href ? (
               <Pressable
                 onPress={() => handleNavigation(item.href!)}
-                className="hover:bg-gray-50 px-2 py-1 rounded"
+                className="hover:bg-gray-50 px-2 py-1 rounded shrink-0"
               >
                 <Text className="text-blue-600 hover:text-blue-800 font-medium">
                   {item.label}
                 </Text>
               </Pressable>
             ) : (
-              <Text className="text-gray-900 font-medium px-2 py-1">
+              <Text className="text-gray-900 font-medium px-2 py-1 shrink-0">
                 {item.label}
               </Text>
             )}
           </View>
         ))}
-      </View>
+      </ScrollView>
     </View>
   );
 }

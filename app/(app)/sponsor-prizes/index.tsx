@@ -37,6 +37,8 @@ export default function SponsorPrizesPage() {
   const config = useResourcePageConfig<ApiSponsorPrize>({
     resourceName: 'SponsorPrize',
     resourceDisplayName: 'Sponsor Prize',
+    sectionLabel: 'Sponsor Prizes',
+    sectionHref: '/sponsor-prizes',
     fetchData,
     bulkDelete,
     title: 'Sponsor Prizes',

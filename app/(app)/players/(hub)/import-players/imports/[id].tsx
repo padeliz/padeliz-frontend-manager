@@ -37,6 +37,7 @@ export default function PlayerImportViewPage() {
             refresh: chrome.refresh,
             canSave: false,
             isDirty: false,
+            displayTitle: chrome.displayTitle,
           }
         : null,
     [chrome]

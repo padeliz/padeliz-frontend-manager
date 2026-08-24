@@ -13,6 +13,7 @@ const mockFetchAllPaginated = jest.fn();
 const mockGetParticipations = jest.fn();
 const mockGetEditionDivisions = jest.fn();
 const mockGetEdition = jest.fn();
+const mockGetPlayerCustomFields = jest.fn();
 
 jest.mock('@/utils/fetchAllPaginated', () => ({
   fetchAllPaginated: (...args: unknown[]) => mockFetchAllPaginated(...args),
@@ -42,6 +43,13 @@ jest.mock('@/services/api/editionDivisionsApi', () => ({
 jest.mock('@/services/api/editionsApi', () => ({
   EditionsApiService: jest.fn().mockImplementation(() => ({
     getEdition: (...args: unknown[]) => mockGetEdition(...args),
+  })),
+}));
+
+jest.mock('@/services/api/playerCustomFieldsApi', () => ({
+  PlayerCustomFieldsApiService: jest.fn().mockImplementation(() => ({
+    getPlayerCustomFields: (...args: unknown[]) =>
+      mockGetPlayerCustomFields(...args),
   })),
 }));
 
@@ -88,6 +96,7 @@ describe('Edition participations route', () => {
         },
       },
     });
+    mockGetPlayerCustomFields.mockResolvedValue({ data: [] });
     mockFetchAllPaginated.mockImplementation(async fetchPage => {
       const res = await fetchPage(1);
       return { data: res.data, meta: res.meta };
@@ -131,5 +140,9 @@ describe('Edition participations route', () => {
     );
     expect(capturedTabProps.registeredNotParticipatingCount).toBe(2);
     expect(capturedTabProps.participationsLocked).toBe(true);
+    await waitFor(() => {
+      expect(mockGetPlayerCustomFields).toHaveBeenCalled();
+      expect(capturedTabProps.customFieldOptions).toEqual([]);
+    });
   });
 });

@@ -3,6 +3,8 @@
  */
 
 import AppLayout from '@/components/layout/AppLayout';
+import { useBreadcrumbSegments } from '@/components/layout/BreadcrumbProvider';
+import HeaderActionButton from '@/components/ui/HeaderActionButton';
 import ManagerFileUpload, {
   PendingUploadFile,
   uploadPendingFiles,
@@ -10,17 +12,18 @@ import ManagerFileUpload, {
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useResourceMetadata } from '@/hooks/useResourceMetadata';
 import { ResourceCreatePageProps } from '@/types/ui/pages';
+import { buildResourceBreadcrumbs } from '@/utils/buildResourceBreadcrumbs';
 import { formatField } from '@/utils/fieldFormatter';
 import { isNestedRelationProperty } from '@/utils/nestedRelationProperty';
 import { PrimaryKeyService } from '@/utils/primaryKeyService';
 import { seedFormValuesFromQuery } from '@/utils/seedFormValuesFromQuery';
 import { getUploadConfig } from '@/utils/uploadMetadata';
 import { validateFormWithSubmission } from '@/utils/validationRules';
-import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import ResourceFieldEdit from './ResourceFieldEdit';
+import ResourceSubHeader from './ResourceSubHeader';
 
 export default function ResourceCreatePage<
   T extends { [key: string]: any } = any,
@@ -33,7 +36,9 @@ export default function ResourceCreatePage<
     excludeFields = [],
     title,
     description,
-    onBack,
+    sectionLabel,
+    sectionHref,
+    subHeader,
     getViewPath,
     seedFromQuery,
   } = config;
@@ -56,6 +61,18 @@ export default function ResourceCreatePage<
   const metadata = getMetadata(resourceName);
   const metadataError = getError(resourceName);
   const metadataLoading = isLoading(resourceName);
+
+  const breadcrumbItems = useMemo(
+    () =>
+      buildResourceBreadcrumbs({
+        sectionLabel: sectionLabel || title,
+        sectionHref: sectionHref || '/',
+        leaf: 'Add',
+      }),
+    [sectionHref, sectionLabel, title]
+  );
+
+  useBreadcrumbSegments(`resource-create-${resourceName}`, breadcrumbItems);
 
   useEffect(() => {
     if (!seedFromQuery || !metadata || seededRef.current) return;
@@ -86,11 +103,6 @@ export default function ResourceCreatePage<
       return true;
     });
   }, [metadata, excludeFields]);
-
-  const handleBack = () => {
-    if (onBack) onBack();
-    else router.back();
-  };
 
   const handleFieldChange = (fieldKey: string, value: any) => {
     setValues(prev => ({ ...prev, [fieldKey]: value }));
@@ -188,9 +200,86 @@ export default function ResourceCreatePage<
     }
   };
 
+  const headerActions = (
+    <HeaderActionButton
+      label="Save"
+      variant="primary"
+      loading={saving}
+      disabled={saving || metadataLoading || !metadata}
+      onPress={() => void handleSave()}
+      testID="resource-create-save"
+    />
+  );
+
+  const formBody = (
+    <View className="flex-1">
+      {subHeader ? (
+        <ResourceSubHeader
+          title={subHeader.title}
+          description={subHeader.description}
+          actions={subHeader.actions}
+        />
+      ) : null}
+
+      <View className="flex-1 p-4">
+        {error || mediaWarning ? (
+          <Text
+            className={`text-sm p-2 rounded mb-3 ${
+              error ? 'text-red-600 bg-red-50' : 'text-amber-800 bg-amber-50'
+            }`}
+          >
+            {error || mediaWarning}
+          </Text>
+        ) : null}
+
+        <View className="bg-white border rounded-lg p-4">
+          {fieldKeys.map(fieldKey => {
+            const def = metadata!.swagger_schema.properties[fieldKey];
+            const uploadCfg = getUploadConfig(def);
+            if (uploadCfg) {
+              return (
+                <ManagerFileUpload
+                  key={fieldKey}
+                  label={def.title || fieldKey}
+                  config={uploadCfg}
+                  pendingFiles={pendingByField[fieldKey] || []}
+                  onPendingChange={files =>
+                    setPendingByField(prev => ({
+                      ...prev,
+                      [fieldKey]: files,
+                    }))
+                  }
+                  error={errors[fieldKey]}
+                  disabled={saving}
+                />
+              );
+            }
+
+            if (def.readOnly) return null;
+            if (def.type === 'array' || def.type === 'object') return null;
+
+            return (
+              <ResourceFieldEdit
+                key={fieldKey}
+                fieldKey={fieldKey}
+                fieldValue={values[fieldKey]}
+                metadata={metadata!}
+                onChange={handleFieldChange}
+                onBlur={() => {}}
+                error={errors[fieldKey]}
+                excludeFields={excludeFields}
+                disabled={saving}
+              />
+            );
+          })}
+        </View>
+      </View>
+    </View>
+  );
+
   if (metadataLoading) {
     return (
-      <AppLayout title={title}>
+      <AppLayout title={title} description={description} headerActions={headerActions}>
         <View className="flex-1 justify-center items-center p-6">
           <LoadingSpinner text="Loading form..." />
         </View>
@@ -200,99 +289,19 @@ export default function ResourceCreatePage<
 
   if (metadataError || !metadata) {
     return (
-      <AppLayout title={title}>
+      <AppLayout title={title} description={description} headerActions={headerActions}>
         <View className="flex-1 justify-center items-center p-6">
-          <Text className="text-red-600">{metadataError || 'Metadata missing'}</Text>
+          <Text className="text-red-600">
+            {metadataError || 'Metadata missing'}
+          </Text>
         </View>
       </AppLayout>
     );
   }
 
   return (
-    <AppLayout title={title}>
-      <View className="flex-1">
-        <View className="flex-row items-center p-4 border-b border-gray-200">
-          <Pressable onPress={handleBack} className="mr-3 p-2">
-            <Ionicons name="arrow-back" size={24} color="#4b5563" />
-          </Pressable>
-          <View className="flex-1">
-            <Text className="text-lg font-semibold text-gray-900">{title}</Text>
-            {description && (
-              <Text className="text-sm text-gray-600">{description}</Text>
-            )}
-          </View>
-          <Pressable
-            onPress={() => void handleSave()}
-            disabled={saving}
-            className="bg-blue-600 rounded-lg px-4 py-2"
-          >
-            <Text className="text-white font-semibold">
-              {saving ? 'Saving…' : 'Save'}
-            </Text>
-          </Pressable>
-        </View>
-
-        <ScrollView className="flex-1 p-4">
-          {(error || mediaWarning) && (
-            <Text
-              className={`text-sm p-2 rounded mb-3 ${
-                error
-                  ? 'text-red-600 bg-red-50'
-                  : 'text-amber-800 bg-amber-50'
-              }`}
-            >
-              {error || mediaWarning}
-            </Text>
-          )}
-
-          <View className="bg-white border rounded-lg p-4">
-            <Text className="text-xl font-semibold text-gray-900 mb-4">
-              New {resourceDisplayName}
-            </Text>
-            {fieldKeys.map(fieldKey => {
-              const def = metadata.swagger_schema.properties[fieldKey];
-              const uploadCfg = getUploadConfig(def);
-              if (uploadCfg) {
-                return (
-                  <ManagerFileUpload
-                    key={fieldKey}
-                    label={def.title || fieldKey}
-                    config={uploadCfg}
-                    pendingFiles={pendingByField[fieldKey] || []}
-                    onPendingChange={files =>
-                      setPendingByField(prev => ({
-                        ...prev,
-                        [fieldKey]: files,
-                      }))
-                    }
-                    error={errors[fieldKey]}
-                    disabled={saving}
-                  />
-                );
-              }
-
-              // Skip readOnly without upload (PK, timestamps, computed)
-              if (def.readOnly) return null;
-              // Skip nested objects/arrays without upload
-              if (def.type === 'array' || def.type === 'object') return null;
-
-              return (
-                <ResourceFieldEdit
-                  key={fieldKey}
-                  fieldKey={fieldKey}
-                  fieldValue={values[fieldKey]}
-                  metadata={metadata}
-                  onChange={handleFieldChange}
-                  onBlur={() => {}}
-                  error={errors[fieldKey]}
-                  excludeFields={excludeFields}
-                  disabled={saving}
-                />
-              );
-            })}
-          </View>
-        </ScrollView>
-      </View>
+    <AppLayout title={title} description={description} headerActions={headerActions}>
+      {formBody}
     </AppLayout>
   );
 }

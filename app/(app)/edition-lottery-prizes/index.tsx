@@ -37,6 +37,8 @@ export default function EditionLotteryPrizesPage() {
   const config = useResourcePageConfig<ApiEditionLotteryPrize>({
     resourceName: 'EditionLotteryPrize',
     resourceDisplayName: 'Lottery Prize',
+    sectionLabel: 'Lottery Prizes',
+    sectionHref: '/edition-lottery-prizes',
     fetchData,
     bulkDelete,
     title: 'Lottery Prizes',

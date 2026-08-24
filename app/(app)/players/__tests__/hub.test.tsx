@@ -25,16 +25,36 @@ jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
 
 jest.mock('@/components/layout/AppLayout', () => {
   const React = require('react');
-  const { View } = require('react-native');
-  return {
-    __esModule: true,
-    default: ({ children }: any) => <View testID="app-layout">{children}</View>,
-  };
+  const { View, Text } = require('react-native');
+  return ({
+    children,
+    title,
+    headerActions,
+    belowHeader,
+    tabBar,
+  }: {
+    children: React.ReactNode;
+    title?: string;
+    headerActions?: React.ReactNode;
+    belowHeader?: React.ReactNode;
+    tabBar?: React.ReactNode;
+  }) => (
+    <View testID="app-layout">
+      {title ? <Text>{title}</Text> : null}
+      {headerActions}
+      {tabBar ?? belowHeader}
+      {children}
+    </View>
+  );
 });
 
 const mockConfirm = jest.fn(async () => true);
 jest.mock('@/utils/softDirtyNav', () => ({
   confirmDiscardDirty: () => mockConfirm(),
+}));
+
+jest.mock('@/components/layout/BreadcrumbProvider', () => ({
+  useBreadcrumbSegments: jest.fn(),
 }));
 
 describe('Players hub', () => {
@@ -61,6 +81,8 @@ describe('Players hub', () => {
     expect(getByTestId('edition-tab-Import Custom Field Values')).toBeTruthy();
     expect(queryByTestId('edition-tab-Import')).toBeNull();
     expect(queryByTestId('edition-tab-Imports')).toBeNull();
+    expect(queryByTestId('players-chrome-back')).toBeNull();
+    expect(getByTestId('players-chrome-refresh')).toBeTruthy();
   });
 
   it('shows Save on import-players draft route only', () => {
@@ -108,6 +130,17 @@ describe('Players hub', () => {
       </PageChromeProvider>
     );
     expect(queryByTestId('players-chrome-save')).toBeNull();
+  });
+
+  it('registers no breadcrumbs on List tab', () => {
+    const { useBreadcrumbSegments } = require('@/components/layout/BreadcrumbProvider');
+    pathnameState.value = '/players/list';
+    render(
+      <PageChromeProvider>
+        <PlayersChrome />
+      </PageChromeProvider>
+    );
+    expect(useBreadcrumbSegments).toHaveBeenCalledWith('players-chrome', []);
   });
 
   it('confirms dirty before switching tabs', async () => {

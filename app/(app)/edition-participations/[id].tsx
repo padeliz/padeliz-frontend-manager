@@ -21,6 +21,8 @@ export default function ViewEditionParticipationPage() {
   const config = useResourceViewPageConfig<ApiEditionParticipation>({
     resourceName: 'EditionParticipation',
     resourceDisplayName: 'Participation',
+    sectionLabel: 'Participations',
+    sectionHref: '/edition-participations',
     fetchResource,
     updateResource,
   });

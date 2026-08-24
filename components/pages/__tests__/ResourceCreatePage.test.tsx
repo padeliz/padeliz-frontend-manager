@@ -62,7 +62,12 @@ jest.mock('@/components/layout/AppLayout', () => {
   const { View } = require('react-native');
   return {
     __esModule: true,
-    default: ({ children }: any) => <View>{children}</View>,
+    default: ({ children, headerActions }: any) => (
+      <View>
+        {headerActions ? <View testID="app-header-actions">{headerActions}</View> : null}
+        {children}
+      </View>
+    ),
   };
 });
 
@@ -100,7 +105,7 @@ describe('ResourceCreatePage', () => {
   });
 
   it(
-    'shows upload UI and navigates after create-then-attach',
+    'Save in Page Header, no New heading, navigates after create-then-attach',
     async () => {
       const createResource = jest.fn(async () => ({
         data: { id_prize: 42, name: 'Racket' },
@@ -118,8 +123,11 @@ describe('ResourceCreatePage', () => {
         />
       );
 
+      expect(screen.getByTestId('app-header-actions')).toBeTruthy();
+      expect(screen.getByTestId('resource-create-save')).toBeTruthy();
+      expect(screen.queryByText('New Prize')).toBeNull();
       expect(screen.getByTestId('create-upload')).toBeTruthy();
-      fireEvent.press(screen.getByText('Save'));
+      fireEvent.press(screen.getByTestId('resource-create-save'));
 
       await waitFor(() => {
         expect(createResource).toHaveBeenCalled();

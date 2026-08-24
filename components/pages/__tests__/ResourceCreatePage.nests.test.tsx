@@ -75,7 +75,12 @@ jest.mock('@/components/layout/AppLayout', () => {
   const { View } = require('react-native');
   return {
     __esModule: true,
-    default: ({ children }: any) => <View>{children}</View>,
+    default: ({ children, headerActions }: any) => (
+      <View>
+        {headerActions ? <View testID="app-header-actions">{headerActions}</View> : null}
+        {children}
+      </View>
+    ),
   };
 });
 
@@ -148,7 +153,7 @@ describe('ResourceCreatePage nested relations + resource_path', () => {
         />
       );
 
-      fireEvent.press(screen.getByText('Save'));
+      fireEvent.press(screen.getByTestId('resource-create-save'));
 
       await waitFor(() => {
         expect(createResource).toHaveBeenCalled();

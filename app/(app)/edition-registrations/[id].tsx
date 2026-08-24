@@ -21,6 +21,8 @@ export default function ViewEditionRegistrationPage() {
   const config = useResourceViewPageConfig<ApiEditionRegistration>({
     resourceName: 'EditionRegistration',
     resourceDisplayName: 'Registration',
+    sectionLabel: 'Registrations',
+    sectionHref: '/edition-registrations',
     fetchResource,
     updateResource,
   });

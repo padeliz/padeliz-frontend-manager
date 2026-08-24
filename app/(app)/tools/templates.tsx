@@ -3,7 +3,9 @@
  */
 
 import AppLayout from '@/components/layout/AppLayout';
+import { useBreadcrumbSegments } from '@/components/layout/BreadcrumbProvider';
 import AdvancedDataTable from '@/components/ui/AdvancedDataTable';
+import HeaderActionButton from '@/components/ui/HeaderActionButton';
 import SingleSelectDropdown from '@/components/ui/SingleSelectDropdown';
 import { queryKeys } from '@/lib/queryClient';
 import { ClubsApiService } from '@/services/api/clubsApi';
@@ -21,13 +23,11 @@ import {
 import { flattenMatchesByCourt } from '@/utils/edition/schedulePreview';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Platform,
   Pressable,
-  ScrollView,
   Text,
   TextInput,
   View,
@@ -40,7 +40,6 @@ const clubsApi = new ClubsApiService();
 const NO_CLUB = 0;
 
 export default function ToolsTemplatesPage() {
-  const router = useRouter();
   const organizersQuery = useQuery({
     queryKey: queryKeys.organizers(),
     queryFn: async () => {
@@ -272,29 +271,20 @@ export default function ToolsTemplatesPage() {
   };
 
   return (
-    <AppLayout title="Tools — Templates">
-      <View className="flex-1">
-        <View className="flex-row items-center p-4 border-b border-gray-200">
-          <Pressable onPress={() => router.back()} className="mr-3 p-2">
-            <Ionicons name="arrow-back" size={24} color="#4b5563" />
-          </Pressable>
-          <View className="flex-1">
-            <Text className="text-lg font-semibold text-gray-900">
-              Templates & Scratch Schedule
-            </Text>
-            <Text className="text-sm text-gray-600">
-              Catalog, metrics, Mode B preview / PDF
-            </Text>
-          </View>
-          <Pressable
-            onPress={() => void loadTools()}
-            className="bg-gray-100 border border-gray-300 rounded-lg px-3 py-2"
-          >
-            <Text className="text-sm text-gray-700">Reload</Text>
-          </Pressable>
-        </View>
-
-        <ScrollView className="flex-1 p-4">
+    <AppLayout
+      title="Templates"
+      description="Catalog, metrics, Mode B preview / PDF"
+      headerActions={
+        <HeaderActionButton
+          label="Reload"
+          icon="refresh"
+          variant="secondary"
+          onPress={() => void loadTools()}
+        />
+      }
+    >
+      <TemplatesBreadcrumbs />
+      <View className="p-4">
           {error && (
             <Text className="text-sm text-red-600 bg-red-50 p-2 rounded mb-3">
               {error}
@@ -629,8 +619,12 @@ export default function ToolsTemplatesPage() {
             )}
           </View>
           )}
-        </ScrollView>
       </View>
     </AppLayout>
   );
+}
+
+function TemplatesBreadcrumbs() {
+  useBreadcrumbSegments('tools-templates', [{ label: 'Templates' }]);
+  return null;
 }

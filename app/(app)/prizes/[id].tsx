@@ -21,6 +21,8 @@ export default function ViewPrizePage() {
   const config = useResourceViewPageConfig<ApiPrize>({
     resourceName: 'Prize',
     resourceDisplayName: 'Prize',
+    sectionLabel: 'Prizes',
+    sectionHref: '/prizes',
     fetchResource,
     updateResource,
   });

@@ -14,6 +14,8 @@ export default function AddPrizePage() {
   const config = useResourceCreatePageConfig<ApiPrize>({
     resourceName: 'Prize',
     resourceDisplayName: 'Prize',
+    sectionLabel: 'Prizes',
+    sectionHref: '/prizes',
     createResource,
     getViewPath: id => '/prizes/' + id,
   });

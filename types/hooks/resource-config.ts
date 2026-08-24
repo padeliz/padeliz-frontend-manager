@@ -26,6 +26,8 @@ export interface HookResourcePageConfigOptions<
   // Page configuration
   title: string;
   description?: string;
+  sectionLabel?: string;
+  sectionHref?: string;
   emptyMessage?: string;
 
   // Action handlers
@@ -71,8 +73,10 @@ export interface HookResourceViewPageConfigOptions<
   excludeFields?: string[];
 
   // Page configuration
-  title: string;
+  title?: string;
   description?: string;
+  sectionLabel?: string;
+  sectionHref?: string;
   onBack?: () => void;
 
   // Debug configuration
@@ -97,6 +101,8 @@ export interface HookResourceCreatePageConfigOptions<
   excludeFields?: string[];
   title?: string;
   description?: string;
+  sectionLabel?: string;
+  sectionHref?: string;
   onBack?: () => void;
   getViewPath?: (id: number, created: T) => string;
   seedFromQuery?: boolean | string[];

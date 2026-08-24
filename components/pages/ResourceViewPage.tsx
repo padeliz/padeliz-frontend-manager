@@ -3,32 +3,40 @@
  * Generic component for displaying individual resource details with linked entities
  */
 
+import {
+  useHasPageChrome,
+  useRegisterPageActions,
+} from '@/components/chrome/PageChromeProvider';
 import AppLayout from '@/components/layout/AppLayout';
+import { useBreadcrumbSegments } from '@/components/layout/BreadcrumbProvider';
+import HeaderActionButton from '@/components/ui/HeaderActionButton';
 import ManagerFileUpload from '@/components/ui/ManagerFileUpload';
 import { useResourceMetadata } from '@/hooks/useResourceMetadata';
 import { ResourceViewPageProps } from '@/types/ui/pages';
 import { formatField } from '@/utils/fieldFormatter';
+import { getResourceDisplayLabel, formatResourceHeaderTitle } from '@/utils/getResourceDisplayLabel';
+import { buildResourceBreadcrumbs } from '@/utils/buildResourceBreadcrumbs';
 import { LinkedEntityService } from '@/utils/linkedEntityService';
 import { isNestedRelationProperty } from '@/utils/nestedRelationProperty';
 import { getUploadConfig } from '@/utils/uploadMetadata';
 import { validateFormWithSubmission } from '@/utils/validationRules';
-import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Pressable, Text, View } from 'react-native';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import EditModeToggle from './EditModeToggle';
 import LinkedEntitySection from './LinkedEntitySection';
 import ResourceFieldDisplay from './ResourceFieldDisplay';
 import ResourceFieldEdit from './ResourceFieldEdit';
+import ResourceSubHeader from './ResourceSubHeader';
 
 const EMPTY_EXCLUDE_LINKED_ENTITIES: readonly string[] = [];
 
 export default function ResourceViewPage<
   T extends { [key: string]: any } = any,
 >({ config }: ResourceViewPageProps<T>) {
-  const router = useRouter();
   const params = useLocalSearchParams<{ id: string }>();
+  const hasPageChrome = useHasPageChrome();
 
   const {
     resourceName,
@@ -38,7 +46,9 @@ export default function ResourceViewPage<
     excludeFields = [],
     title,
     description,
-    onBack,
+    sectionLabel,
+    sectionHref,
+    subHeader,
     embedded = false,
     resourceIdOverride = null,
     showLinkedEntities: showLinkedEntitiesProp,
@@ -82,9 +92,34 @@ export default function ResourceViewPage<
   const { getMetadata, getError, isLoading, fetchMetadata } =
     useResourceMetadata([resourceName]);
 
+  const fetchMetadataRef = useRef(fetchMetadata);
+  const getMetadataRef = useRef(getMetadata);
+  fetchMetadataRef.current = fetchMetadata;
+  getMetadataRef.current = getMetadata;
+
   const metadata = getMetadata(resourceName);
   const metadataError = getError(resourceName);
   const metadataLoading = isLoading(resourceName);
+
+  const displayLabel = useMemo(
+    () => getResourceDisplayLabel(metadata, resource, resourceId),
+    [metadata, resource, resourceId]
+  );
+
+  const breadcrumbItems = useMemo(
+    () =>
+      buildResourceBreadcrumbs({
+        sectionLabel: sectionLabel || title || resourceDisplayName,
+        sectionHref: sectionHref || '/',
+        leaf: displayLabel,
+      }),
+    [displayLabel, resourceDisplayName, sectionHref, sectionLabel, title]
+  );
+
+  useBreadcrumbSegments(
+    `resource-view-${resourceName}-${resourceId ?? 'pending'}`,
+    embedded ? [] : breadcrumbItems
+  );
 
   const loadResource = useCallback(async () => {
     if (!resourceId) return;
@@ -105,6 +140,8 @@ export default function ResourceViewPage<
   }, [resourceId, loadResource]);
 
   useEffect(() => {
+    let cancelled = false;
+
     if (metadata && resourceId && showLinkedEntities) {
       const detectLinkedEntities = async () => {
         try {
@@ -116,53 +153,54 @@ export default function ResourceViewPage<
                 metadata,
               },
               async (linkedResourceName: string) => {
-                await fetchMetadata(linkedResourceName);
-                return getMetadata(linkedResourceName);
+                await fetchMetadataRef.current(linkedResourceName);
+                return getMetadataRef.current(linkedResourceName);
               }
             );
+          if (cancelled) return;
           setLinkedEntities(
             detectedEntities.filter(e => !excludedLinkedKeys.has(e.key))
           );
         } catch {
+          if (cancelled) return;
           setLinkedEntities([]);
         }
       };
-      detectLinkedEntities();
+      void detectLinkedEntities();
     } else if (!showLinkedEntities) {
       setLinkedEntities(prev => (prev.length === 0 ? prev : []));
     }
+
+    return () => {
+      cancelled = true;
+    };
   }, [
     metadata,
     resourceId,
     resourceName,
-    fetchMetadata,
-    getMetadata,
     showLinkedEntities,
     excludedLinkedKeys,
   ]);
 
-  const handleBack = () => {
-    if (onBack) onBack();
-    else router.back();
-  };
+  const handleRefresh = useCallback(() => {
+    void loadResource();
+  }, [loadResource]);
 
-  const handleRefresh = () => loadResource();
-
-  const handleEdit = () => {
+  const handleEdit = useCallback(() => {
     if (resource) {
       setEditValues({ ...resource });
       setEditErrors({});
       setIsEditing(true);
     }
-  };
+  }, [resource]);
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     setEditValues({});
     setEditErrors({});
     setIsEditing(false);
-  };
+  }, []);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (!resourceId || !updateResource) {
       setError('Update functionality not available');
       return;
@@ -212,7 +250,7 @@ export default function ResourceViewPage<
     } finally {
       setSaving(false);
     }
-  };
+  }, [editValues, metadata, resourceId, updateResource]);
 
   const handleFieldChange = (fieldKey: string, value: any) => {
     setEditValues(prev => ({ ...prev, [fieldKey]: value }));
@@ -225,11 +263,15 @@ export default function ResourceViewPage<
     }
   };
 
+  const isDirty = useMemo(
+    () =>
+      isEditing &&
+      JSON.stringify(editValues) !== JSON.stringify(resource ?? {}),
+    [editValues, isEditing, resource]
+  );
+
   useEffect(() => {
     if (!onChromeStateChange) return;
-    const dirty =
-      isEditing &&
-      JSON.stringify(editValues) !== JSON.stringify(resource ?? {});
     onChromeStateChange({
       save: handleSave,
       refresh: handleRefresh,
@@ -239,22 +281,107 @@ export default function ResourceViewPage<
       isEditing: !!updateResource && isEditing,
       isSaving: saving,
       canSave: !!updateResource && isEditing,
-      isDirty: dirty,
+      isDirty,
+      displayTitle: displayLabel,
     });
   }, [
     onChromeStateChange,
     isEditing,
     saving,
     updateResource,
-    editValues,
-    resource,
+    isDirty,
+    displayLabel,
+    handleSave,
+    handleRefresh,
+    handleEdit,
+    handleCancel,
   ]);
+
+  const editModeToggle = updateResource ? (
+    <EditModeToggle
+      isEditing={isEditing}
+      onEdit={handleEdit}
+      onSave={handleSave}
+      onCancel={handleCancel}
+      loading={saving}
+      showSave={externalChrome ? false : showSave}
+    />
+  ) : null;
+
+  const standaloneHeaderActions = (
+    <>
+      {!isEditing ? (
+        <HeaderActionButton
+          label="Refresh"
+          icon="refresh"
+          onPress={handleRefresh}
+          testID="resource-view-refresh"
+        />
+      ) : null}
+      {editModeToggle}
+    </>
+  );
+
+  const embeddedHeaderActions = useMemo(
+    () =>
+      updateResource && !externalChrome ? (
+        <>
+          {!isEditing ? (
+            <HeaderActionButton
+              label="Refresh"
+              icon="refresh"
+              onPress={handleRefresh}
+              testID="resource-view-refresh"
+            />
+          ) : null}
+          {editModeToggle}
+        </>
+      ) : null,
+    [editModeToggle, externalChrome, handleRefresh, isEditing, updateResource]
+  );
+
+  const embeddedHeaderActionsKey = `${isEditing ? 1 : 0}-${saving ? 1 : 0}`;
+
+  useRegisterPageActions(
+    embedded
+      ? externalChrome
+        ? null
+        : hasPageChrome
+          ? {
+              refresh: handleRefresh,
+              edit: updateResource ? handleEdit : undefined,
+              cancel: updateResource ? handleCancel : undefined,
+              save: updateResource ? handleSave : undefined,
+              isEditing: !!updateResource && isEditing,
+              isSaving: saving,
+              canSave: !!updateResource && isEditing,
+              isDirty,
+              displayTitle: displayLabel,
+              headerActions: embeddedHeaderActions,
+              headerActionsKey: embeddedHeaderActionsKey,
+            }
+          : null
+      : null
+  );
+
+  const showInlineEditToggle =
+    embedded &&
+    updateResource &&
+    !externalChrome &&
+    !hasPageChrome &&
+    editModeToggle;
 
   const wrap = (children: React.ReactNode) =>
     embedded ? (
       <View className="flex-1">{children}</View>
     ) : (
-      <AppLayout title={title}>{children}</AppLayout>
+      <AppLayout
+        title={formatResourceHeaderTitle(resourceDisplayName, displayLabel)}
+        description={description}
+        headerActions={standaloneHeaderActions}
+      >
+        {children}
+      </AppLayout>
     );
 
   if (loading || metadataLoading) {
@@ -362,93 +489,48 @@ export default function ResourceViewPage<
     );
   };
 
+  const fieldCard = (
+    <View className="bg-white border rounded-lg p-4">
+      {fieldKeys.map(fieldKey => renderField(fieldKey))}
+    </View>
+  );
+
+  const linkedSections =
+    showLinkedEntities &&
+    linkedEntities.map(linkedEntity => (
+      <LinkedEntitySection
+        key={linkedEntity.key}
+        config={linkedEntity}
+        parentId={resourceId!}
+      />
+    ));
+
   return wrap(
     <View className="flex-1">
-      {!embedded && (
-        <View className="flex-row items-center p-4 border-b border-gray-200">
-          <Pressable onPress={handleBack} className="mr-3 p-2">
-            <Ionicons name="arrow-back" size={24} color="#4b5563" />
-          </Pressable>
-          <View className="flex-1">
-            <Text className="text-lg font-semibold text-gray-900">{title}</Text>
-            {description && (
-              <Text className="text-sm text-gray-600">{description}</Text>
-            )}
-          </View>
-          <View className="flex-row items-center space-x-2">
-            {!isEditing && (
-              <Pressable
-                onPress={handleRefresh}
-                className="bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 flex-row items-center"
-              >
-                <Ionicons name="refresh" size={16} color="#4b5563" />
-                <Text className="text-gray-700 text-sm ml-1">Refresh</Text>
-              </Pressable>
-            )}
-            {updateResource && (
-              <EditModeToggle
-                isEditing={isEditing}
-                onEdit={handleEdit}
-                onSave={handleSave}
-                onCancel={handleCancel}
-                loading={saving}
-              />
-            )}
-          </View>
-        </View>
-      )}
+      {subHeader ? (
+        <ResourceSubHeader
+          title={subHeader.title}
+          description={subHeader.description}
+          actions={subHeader.actions}
+        />
+      ) : null}
 
-      {embedded && updateResource && (
-        <View className="flex-row justify-end mb-3">
-          <EditModeToggle
-            isEditing={isEditing}
-            onEdit={handleEdit}
-            onSave={handleSave}
-            onCancel={handleCancel}
-            loading={saving}
-            showSave={externalChrome ? false : showSave}
-          />
+      {showInlineEditToggle ? (
+        <View className="flex-row justify-end px-4 pt-3">
+          {editModeToggle}
         </View>
-      )}
+      ) : null}
 
       {embedded ? (
-        <View className="p-4">
-          <View className="mb-8">
-            <Text className="text-xl font-semibold text-gray-900 mb-4">
-              {resourceDisplayName} Information
-            </Text>
-            <View className="bg-white border rounded-lg p-4">
-              {fieldKeys.map(fieldKey => renderField(fieldKey))}
-            </View>
-          </View>
-          {showLinkedEntities &&
-            linkedEntities.map(linkedEntity => (
-              <LinkedEntitySection
-                key={linkedEntity.key}
-                config={linkedEntity}
-                parentId={resourceId!}
-              />
-            ))}
+        <View className="flex-1 p-4">
+          <View className="mb-8">{fieldCard}</View>
+          {linkedSections}
         </View>
       ) : (
-        <ScrollView className="flex-1 p-4">
-          <View className="mb-8">
-            <Text className="text-xl font-semibold text-gray-900 mb-4">
-              {resourceDisplayName} Information
-            </Text>
-            <View className="bg-white border rounded-lg p-4">
-              {fieldKeys.map(fieldKey => renderField(fieldKey))}
-            </View>
-          </View>
-          {showLinkedEntities &&
-            linkedEntities.map(linkedEntity => (
-              <LinkedEntitySection
-                key={linkedEntity.key}
-                config={linkedEntity}
-                parentId={resourceId!}
-              />
-            ))}
-        </ScrollView>
+        <View className="flex-1 p-4">
+          <View className="mb-8">{fieldCard}</View>
+          {linkedSections}
+        </View>
       )}
     </View>
   );

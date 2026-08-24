@@ -38,6 +38,8 @@ export default function EditionParticipationsPage() {
   const config = useResourcePageConfig<ApiEditionParticipation>({
     resourceName: 'EditionParticipation',
     resourceDisplayName: 'Participation',
+    sectionLabel: 'Participations',
+    sectionHref: '/edition-participations',
     fetchData,
     bulkDelete,
     title: 'Participations',

@@ -1,6 +1,9 @@
 import { EditionChrome } from '@/components/editions/EditionDetailChrome';
 import { PageChromeProvider } from '@/components/chrome/PageChromeProvider';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import {
+  createTestQueryClient,
+} from '@/testing/createTestQueryClient';
 import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
@@ -34,8 +37,23 @@ jest.mock('expo-router', () => ({
 }));
 
 jest.mock('@/components/layout/AppLayout', () => {
-  const { View } = require('react-native');
-  return ({ children }: any) => <View>{children}</View>;
+  const React = require('react');
+  const { View, Text } = require('react-native');
+  return ({
+    children,
+    title,
+    headerActions,
+  }: {
+    children: React.ReactNode;
+    title?: string;
+    headerActions?: React.ReactNode;
+  }) => (
+    <View>
+      {title ? <Text>{title}</Text> : null}
+      {headerActions}
+      {children}
+    </View>
+  );
 });
 
 describe('EditionChrome finalize', () => {
@@ -47,9 +65,7 @@ describe('EditionChrome finalize', () => {
   });
 
   function renderChrome() {
-    const client = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
+    const client = createTestQueryClient();
     return render(
       <QueryClientProvider client={client}>
         <PageChromeProvider>

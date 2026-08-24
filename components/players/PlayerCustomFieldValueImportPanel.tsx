@@ -21,7 +21,7 @@ import { DropdownOption } from '@/types/ui/dropdowns';
 import { confirmDiscardDirty } from '@/utils/softDirtyNav';
 import { useQueryClient } from '@tanstack/react-query';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ScrollView, Switch, Text, View } from 'react-native';
+import { Switch, Text, View } from 'react-native';
 
 const api = new PlayerCustomFieldValueImportApiService();
 const editionsApi = new EditionsApiService();
@@ -246,7 +246,7 @@ export default function PlayerCustomFieldValueImportPanel() {
   });
 
   return (
-    <ScrollView
+    <View
       className="flex-1 p-4"
       testID="player-custom-field-value-import-panel"
     >
@@ -347,6 +347,6 @@ export default function PlayerCustomFieldValueImportPanel() {
           })}
         </View>
       )}
-    </ScrollView>
+    </View>
   );
 }

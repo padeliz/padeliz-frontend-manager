@@ -17,6 +17,8 @@ export default function AddEditionLotteryPrizePage() {
   const config = useResourceCreatePageConfig<ApiEditionLotteryPrize>({
     resourceName: 'EditionLotteryPrize',
     resourceDisplayName: 'Lottery Prize',
+    sectionLabel: 'Lottery Prizes',
+    sectionHref: '/edition-lottery-prizes',
     createResource,
     getViewPath: id => '/edition-lottery-prizes/' + id,
   });

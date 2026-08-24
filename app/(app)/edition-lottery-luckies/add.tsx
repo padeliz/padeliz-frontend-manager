@@ -14,6 +14,8 @@ export default function AddEditionLotteryLuckyPage() {
   const config = useResourceCreatePageConfig<ApiEditionLuckyOne>({
     resourceName: 'EditionLotteryLucky',
     resourceDisplayName: 'Lottery Lucky',
+    sectionLabel: 'Lucky Ones',
+    sectionHref: '/edition-lottery-luckies',
     createResource,
     getViewPath: id => '/edition-lottery-luckies/' + id,
   });

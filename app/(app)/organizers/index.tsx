@@ -37,9 +37,11 @@ export default function OrganizersPage() {
   const config = useResourcePageConfig<ApiOrganizer>({
     resourceName: 'Organizer',
     resourceDisplayName: 'Organizer',
+    sectionLabel: 'Organizers',
+    sectionHref: '/organizers',
     fetchData,
     bulkDelete,
-    title: 'Organizers Management',
+    title: 'Organizers',
     description: 'Manage poster branding organizers',
     onAdd: handleAdd,
     onView: handleView,

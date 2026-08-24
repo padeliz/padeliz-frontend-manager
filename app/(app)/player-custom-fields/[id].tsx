@@ -1,19 +1,94 @@
+/**
+ * Custom field detail — hybrid AppLayout + embedded ResourceViewPage.
+ */
+
+import { PageChromeProvider, usePageChrome } from '@/components/chrome/PageChromeProvider';
 import AppLayout from '@/components/layout/AppLayout';
-import PlayerCustomFieldOptionsPanel from '@/components/playerCustomFields/PlayerCustomFieldOptionsPanel';
+import { useBreadcrumbSegments } from '@/components/layout/BreadcrumbProvider';
+import EditModeToggle from '@/components/pages/EditModeToggle';
 import ResourceViewPage from '@/components/pages/ResourceViewPage';
+import PlayerCustomFieldOptionsPanel from '@/components/playerCustomFields/PlayerCustomFieldOptionsPanel';
+import HeaderActionButton from '@/components/ui/HeaderActionButton';
 import { useToast } from '@/context/ToastContext';
+import { useResourceMetadata } from '@/hooks/useResourceMetadata';
 import { useResourceViewPageConfig } from '@/hooks/useResourceViewPageConfig';
 import { PlayerCustomFieldsApiService } from '@/services/api/playerCustomFieldsApi';
 import { ApiPlayerCustomField } from '@/types/api/entities';
-import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { getResourceDisplayLabel, formatResourceHeaderTitle } from '@/utils/getResourceDisplayLabel';
+import { useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { View } from 'react-native';
 
 const api = new PlayerCustomFieldsApiService();
 
+function CustomFieldChrome({
+  fieldId,
+  field,
+  archiving,
+  onArchiveToggle,
+  children,
+}: {
+  fieldId: number;
+  field: ApiPlayerCustomField | null;
+  archiving: boolean;
+  onArchiveToggle: () => void;
+  children: React.ReactNode;
+}) {
+  const { actions } = usePageChrome();
+  const { getMetadata } = useResourceMetadata(['PlayerCustomField']);
+  const metadata = getMetadata('PlayerCustomField');
+
+  const displayLabel =
+    actions?.displayTitle ||
+    getResourceDisplayLabel(metadata, field, fieldId) ||
+    'Custom Field';
+
+  const headerTitle = formatResourceHeaderTitle('Custom field', displayLabel);
+
+  useBreadcrumbSegments('custom-field-view', [
+    { label: 'Custom fields', href: '/player-custom-fields' },
+    { label: displayLabel },
+  ]);
+
+  const headerActions = (
+    <>
+      <HeaderActionButton
+        testID="player-custom-field-archive-toggle"
+        label={field?.archived_at != null ? 'Unarchive' : 'Archive'}
+        onPress={onArchiveToggle}
+        disabled={archiving}
+        variant={field?.archived_at != null ? 'success' : 'warning'}
+      />
+      {actions?.headerActions}
+      {actions?.refresh ? (
+        <HeaderActionButton
+          label="Refresh"
+          icon="refresh"
+          variant="secondary"
+          onPress={() => void actions.refresh?.()}
+        />
+      ) : null}
+      {actions?.edit ? (
+        <EditModeToggle
+          isEditing={!!actions.isEditing}
+          onEdit={() => actions.edit?.()}
+          onSave={() => void actions.save?.()}
+          onCancel={() => actions.cancel?.()}
+          loading={!!actions.isSaving}
+          showSave
+        />
+      ) : null}
+    </>
+  );
+
+  return (
+    <AppLayout title={headerTitle} headerActions={headerActions}>
+      {children}
+    </AppLayout>
+  );
+}
+
 export default function ViewPlayerCustomFieldPage() {
-  const router = useRouter();
   const params = useLocalSearchParams<{ id: string }>();
   const fieldId = Number(params.id);
   const { showSuccess, showError } = useToast();
@@ -45,12 +120,15 @@ export default function ViewPlayerCustomFieldPage() {
     fetchResource,
     updateResource,
     excludeFields: ['rules_json', 'type', 'code', 'archived_at', 'options'],
-    title: 'Custom Field Details',
     resourceIdOverride:
       fieldId && !Number.isNaN(fieldId) ? fieldId : null,
     showLinkedEntities: false,
     embedded: true,
-  });
+    externalChrome: true,
+    showSave: false,
+    sectionLabel: 'Custom fields',
+    sectionHref: '/player-custom-fields',
+  } as any);
 
   const isSelect = useMemo(
     () => field?.type === 'single_select' || field?.type === 'multi_select',
@@ -74,49 +152,30 @@ export default function ViewPlayerCustomFieldPage() {
       }
       refresh();
     } catch (err: any) {
-      showError('Update failed', err?.message || 'Could not update archive state');
+      showError(
+        'Update failed',
+        err?.message || 'Could not update archive state'
+      );
     } finally {
       setArchiving(false);
     }
   };
 
   return (
-    <AppLayout title="Custom Field">
-      <View className="flex-1">
-        <View className="flex-row items-center p-4 border-b border-gray-200">
-          <Pressable
-            testID="player-custom-field-back"
-            onPress={() => router.push('/player-custom-fields' as any)}
-            className="mr-3 p-2"
-          >
-            <Ionicons name="arrow-back" size={24} color="#4b5563" />
-          </Pressable>
-          <View className="flex-1">
-            <Text className="text-lg font-semibold text-gray-900">
-              Custom Field #{fieldId}
-            </Text>
-          </View>
-          <Pressable
-            testID="player-custom-field-archive-toggle"
-            disabled={archiving}
-            onPress={() => void onArchiveToggle()}
-            className={`rounded-lg px-3 py-2 ${
-              field?.archived_at != null ? 'bg-green-600' : 'bg-amber-600'
-            }`}
-          >
-            <Text className="text-white text-sm font-medium">
-              {field?.archived_at != null ? 'Unarchive' : 'Archive'}
-            </Text>
-          </Pressable>
-        </View>
-
-        <ScrollView className="flex-1">
+    <PageChromeProvider>
+      <CustomFieldChrome
+        fieldId={fieldId}
+        field={field}
+        archiving={archiving}
+        onArchiveToggle={() => void onArchiveToggle()}
+      >
+        <View>
           <ResourceViewPage config={config} />
           {isSelect && fieldId && !Number.isNaN(fieldId) ? (
             <PlayerCustomFieldOptionsPanel fieldId={fieldId} />
           ) : null}
-        </ScrollView>
-      </View>
-    </AppLayout>
+        </View>
+      </CustomFieldChrome>
+    </PageChromeProvider>
   );
 }

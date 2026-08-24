@@ -38,9 +38,11 @@ export default function EditionLotteryRulesPage() {
   const config = useResourcePageConfig<ApiEditionLotteryRule>({
     resourceName: 'EditionLotteryRule',
     resourceDisplayName: 'Lottery Rule',
+    sectionLabel: 'Lottery Rules',
+    sectionHref: '/edition-lottery-rules',
     fetchData,
     bulkDelete,
-    title: 'Edition Lottery Rules',
+    title: 'Lottery Rules',
     description: 'Manage lottery eligibility rules',
     onAdd: handleAdd,
     onView: handleView,

@@ -1,6 +1,9 @@
 import EditionParticipationsTab from '@/components/editions/EditionParticipationsTab';
 import { PageChromeProvider, usePageChrome } from '@/components/chrome/PageChromeProvider';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import {
+  createTestQueryClient,
+} from '@/testing/createTestQueryClient';
 import React from 'react';
 import { Pressable, Text, Platform } from 'react-native';
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react-native';
@@ -154,9 +157,7 @@ function renderTab(opts: {
   selectedCustomFieldIds?: number[];
   onCustomFieldSelectionChange?: (ids: number[]) => void;
 }) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+  const client = createTestQueryClient();
   return render(
     <QueryClientProvider client={client}>
       <PageChromeProvider>
@@ -312,9 +313,7 @@ describe('EditionParticipationsTab player history', () => {
         },
       },
     ];
-    const client = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
+    const client = createTestQueryClient();
     const { getByText, queryByText, getByTestId, getAllByTestId } = render(
       <QueryClientProvider client={client}>
         <PageChromeProvider>
@@ -360,9 +359,7 @@ describe('EditionParticipationsTab player history', () => {
         },
       },
     ];
-    const client = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
+    const client = createTestQueryClient();
     const { queryByTestId, getByText } = render(
       <QueryClientProvider client={client}>
         <PageChromeProvider>
@@ -434,9 +431,7 @@ describe('EditionParticipationsTab collecting points', () => {
         player: { id_player: 3, name: 'Cara' },
       },
     ];
-    const client = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
+    const client = createTestQueryClient();
     const { getByTestId } = render(
       <QueryClientProvider client={client}>
         <PageChromeProvider>
@@ -529,9 +524,7 @@ describe('EditionParticipationsTab summary UX', () => {
         player: { id_player: 3, name: 'Cara' },
       },
     ];
-    const client = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
+    const client = createTestQueryClient();
     const { getByTestId } = render(
       <QueryClientProvider client={client}>
         <PageChromeProvider>

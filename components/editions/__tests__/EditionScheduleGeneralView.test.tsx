@@ -1,6 +1,9 @@
 import EditionScheduleGeneralView from '@/components/editions/EditionScheduleGeneralView';
 import { PageChromeProvider } from '@/components/chrome/PageChromeProvider';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import {
+  createTestQueryClient,
+} from '@/testing/createTestQueryClient';
 import React from 'react';
 import { render, waitFor } from '@testing-library/react-native';
 
@@ -13,9 +16,7 @@ jest.mock('@/services/api/scheduleApi', () => ({
 }));
 
 function renderView(ui: React.ReactElement) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+  const client = createTestQueryClient();
   return render(
     <QueryClientProvider client={client}>
       <PageChromeProvider>{ui}</PageChromeProvider>

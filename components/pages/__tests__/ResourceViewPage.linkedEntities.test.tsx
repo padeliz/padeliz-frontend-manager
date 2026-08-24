@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 import ResourceViewPage from '@/components/pages/ResourceViewPage';
-import { render, waitFor } from '@testing-library/react-native';
+import { act, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
 jest.mock('@expo/vector-icons', () => ({
@@ -14,22 +14,24 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ id: '36' }),
 }));
 
+const editionMetadata = {
+  display_field: 'name',
+  resource_path: 'editions',
+  schema_name: 'Edition',
+  swagger_schema: {
+    properties: {
+      id_edition: { type: 'integer', readOnly: true },
+      name: { type: 'string', title: 'Name' },
+    },
+  },
+  filterable_fields: {},
+  searchable_fields: ['name'],
+  sortable_fields: ['name'],
+};
+
 jest.mock('@/hooks/useResourceMetadata', () => ({
   useResourceMetadata: () => ({
-    getMetadata: () => ({
-      display_field: 'name',
-      resource_path: 'editions',
-      schema_name: 'Edition',
-      swagger_schema: {
-        properties: {
-          id_edition: { type: 'integer', readOnly: true },
-          name: { type: 'string', title: 'Name' },
-        },
-      },
-      filterable_fields: {},
-      searchable_fields: ['name'],
-      sortable_fields: ['name'],
-    }),
+    getMetadata: () => editionMetadata,
     getError: () => null,
     isLoading: () => false,
     fetchMetadata: jest.fn(),
@@ -56,14 +58,14 @@ jest.mock('@/components/layout/AppLayout', () => {
 
 jest.mock('@/utils/linkedEntityService', () => ({
   LinkedEntityService: {
-    detectLinkedEntities: async () => [
+    detectLinkedEntities: jest.fn(async () => [
       { key: 'divisions', label: 'Divisions', resourceName: 'EditionDivision' },
       {
         key: 'participations',
         label: 'Participations',
         resourceName: 'EditionParticipation',
       },
-    ],
+    ]),
   },
 }));
 
@@ -111,6 +113,21 @@ function renderView(excludeLinkedEntities?: string[]) {
   );
 }
 
+async function waitForLinkedEntityDetectionSettled() {
+  const { LinkedEntityService } = require('@/utils/linkedEntityService');
+  await waitFor(() => {
+    expect(LinkedEntityService.detectLinkedEntities).toHaveBeenCalled();
+  });
+  await act(async () => {
+    await Promise.all(
+      LinkedEntityService.detectLinkedEntities.mock.results.map((r: any) =>
+        Promise.resolve(r.value)
+      )
+    );
+    await Promise.resolve();
+  });
+}
+
 describe('ResourceViewPage linked entity exclusions', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -118,10 +135,7 @@ describe('ResourceViewPage linked entity exclusions', () => {
 
   it('does not loop linked-entity detection when excludeLinkedEntities is omitted', async () => {
     const { LinkedEntityService } = require('@/utils/linkedEntityService');
-    const detectSpy = jest.spyOn(
-      LinkedEntityService,
-      'detectLinkedEntities'
-    );
+    const detectSpy = LinkedEntityService.detectLinkedEntities as jest.Mock;
 
     const { findByTestId } = render(
       <ResourceViewPage
@@ -137,16 +151,17 @@ describe('ResourceViewPage linked entity exclusions', () => {
       />
     );
 
-    await waitFor(() => {
-      expect(detectSpy.mock.calls.length).toBeLessThanOrEqual(2);
-    });
     expect(await findByTestId('linked-entity-divisions')).toBeTruthy();
+    await waitForLinkedEntityDetectionSettled();
+    expect(detectSpy.mock.calls.length).toBeGreaterThanOrEqual(1);
+    expect(detectSpy.mock.calls.length).toBeLessThanOrEqual(2);
   });
 
   it('renders every detected linked entity by default', async () => {
     const { findByTestId } = renderView();
     expect(await findByTestId('linked-entity-divisions')).toBeTruthy();
     expect(await findByTestId('linked-entity-participations')).toBeTruthy();
+    await waitForLinkedEntityDetectionSettled();
   });
 
   it('hides excluded linked entities', async () => {
@@ -155,5 +170,6 @@ describe('ResourceViewPage linked entity exclusions', () => {
     await waitFor(() => {
       expect(queryByTestId('linked-entity-divisions')).toBeNull();
     });
+    await waitForLinkedEntityDetectionSettled();
   });
 });

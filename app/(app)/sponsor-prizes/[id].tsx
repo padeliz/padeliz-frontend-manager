@@ -21,6 +21,8 @@ export default function ViewSponsorPrizePage() {
   const config = useResourceViewPageConfig<ApiSponsorPrize>({
     resourceName: 'SponsorPrize',
     resourceDisplayName: 'Sponsor Prize',
+    sectionLabel: 'Sponsor Prizes',
+    sectionHref: '/sponsor-prizes',
     fetchResource,
     updateResource,
   });

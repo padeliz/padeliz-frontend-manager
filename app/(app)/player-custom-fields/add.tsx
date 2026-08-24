@@ -14,6 +14,8 @@ export default function AddPlayerCustomFieldPage() {
   const config = useResourceCreatePageConfig<ApiPlayerCustomField>({
     resourceName: 'PlayerCustomField',
     resourceDisplayName: 'Custom Field',
+    sectionLabel: 'Custom fields',
+    sectionHref: '/player-custom-fields',
     createResource,
     excludeFields: ['rules_json'],
     getViewPath: id => `/player-custom-fields/${id}`,

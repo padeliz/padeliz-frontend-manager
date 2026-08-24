@@ -3,7 +3,10 @@ import {
   PageChromeProvider,
   usePageChrome,
 } from '@/components/chrome/PageChromeProvider';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import {
+  createTestQueryClient,
+} from '@/testing/createTestQueryClient';
 import React from 'react';
 import { Pressable } from 'react-native';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
@@ -118,9 +121,7 @@ function ChromeSaveProbe() {
 }
 
 function renderTab(props: Partial<React.ComponentProps<typeof EditionDivisionsTab>> = {}) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+  const client = createTestQueryClient();
   const onRefresh = jest.fn(async () => undefined);
   const utils = render(
     <QueryClientProvider client={client}>

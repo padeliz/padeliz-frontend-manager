@@ -1,6 +1,9 @@
 import { PageChromeProvider } from '@/components/chrome/PageChromeProvider';
 import EditionStandingsTab from '@/components/editions/EditionStandingsTab';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import {
+  createTestQueryClient,
+} from '@/testing/createTestQueryClient';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
@@ -46,9 +49,7 @@ jest.mock('@/services/api/scheduleApi', () => ({
 }));
 
 function renderTab(ui: React.ReactElement) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+  const client = createTestQueryClient();
   return render(
     <QueryClientProvider client={client}>
       <PageChromeProvider>{ui}</PageChromeProvider>

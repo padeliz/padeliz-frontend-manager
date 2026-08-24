@@ -6,7 +6,10 @@ import EditionScheduleTab from '@/components/editions/EditionScheduleTab';
 import EditionScoresTab from '@/components/editions/EditionScoresTab';
 import EditionStandingsTab from '@/components/editions/EditionStandingsTab';
 import { matchesApi } from '@/services/api/matchesApi';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import {
+  createTestQueryClient,
+} from '@/testing/createTestQueryClient';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
@@ -121,9 +124,7 @@ jest.mock('@/services/api/standingsApi', () => ({
 }));
 
 function renderWithProviders(ui: React.ReactElement) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+  const client = createTestQueryClient();
   return render(
     <QueryClientProvider client={client}>
       <PageChromeProvider>{ui}</PageChromeProvider>

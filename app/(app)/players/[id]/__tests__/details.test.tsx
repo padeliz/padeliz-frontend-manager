@@ -2,6 +2,7 @@
  * @jest-environment jsdom
  */
 import ViewPlayerDetailsPage from '@/app/(app)/players/[id]/details';
+import { PageChromeProvider } from '@/components/chrome/PageChromeProvider';
 import { render, screen } from '@testing-library/react-native';
 import React from 'react';
 
@@ -46,15 +47,26 @@ describe('ViewPlayerDetailsPage', () => {
     capturedConfig = null;
   });
 
-  it('passes embedded and showLinkedEntities to ResourceViewPage', () => {
-    render(<ViewPlayerDetailsPage />);
+  it('passes embedded, externalChrome, and showLinkedEntities to ResourceViewPage', () => {
+    render(
+      <PageChromeProvider>
+        <ViewPlayerDetailsPage />
+      </PageChromeProvider>
+    );
     expect(screen.getByTestId('resource-view-page')).toBeTruthy();
     expect(capturedConfig?.embedded).toBe(true);
+    expect(capturedConfig?.externalChrome).toBe(true);
+    expect(capturedConfig?.showSave).toBe(false);
     expect(capturedConfig?.showLinkedEntities).toBe(true);
+    expect(typeof capturedConfig?.onChromeStateChange).toBe('function');
   });
 
   it('does not render AppLayout on the route', () => {
-    render(<ViewPlayerDetailsPage />);
+    render(
+      <PageChromeProvider>
+        <ViewPlayerDetailsPage />
+      </PageChromeProvider>
+    );
     expect(screen.queryByTestId('app-layout')).toBeNull();
   });
 });

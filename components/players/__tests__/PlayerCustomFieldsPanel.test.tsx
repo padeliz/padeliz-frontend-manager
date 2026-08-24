@@ -2,7 +2,10 @@
  * @jest-environment jsdom
  */
 import PlayerCustomFieldsPanel from '@/components/players/PlayerCustomFieldsPanel';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import {
+  createTestQueryClient,
+} from '@/testing/createTestQueryClient';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
@@ -72,7 +75,7 @@ jest.mock('@/components/ui/SingleSelectDropdown', () => {
 });
 
 function renderPanel() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const client = createTestQueryClient();
   return render(
     <QueryClientProvider client={client}>
       <PlayerCustomFieldsPanel playerId={42} />

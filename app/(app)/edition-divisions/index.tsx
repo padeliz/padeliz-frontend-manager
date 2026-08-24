@@ -38,6 +38,8 @@ export default function EditionDivisionsPage() {
   const config = useResourcePageConfig<ApiEditionDivision>({
     resourceName: 'EditionDivision',
     resourceDisplayName: 'Edition Division',
+    sectionLabel: 'Edition Divisions',
+    sectionHref: '/edition-divisions',
     fetchData,
     bulkDelete,
     title: 'Edition Divisions',

@@ -21,6 +21,8 @@ export default function ViewSponsorPage() {
   const config = useResourceViewPageConfig<ApiSponsor>({
     resourceName: 'Sponsor',
     resourceDisplayName: 'Sponsor',
+    sectionLabel: 'Sponsors',
+    sectionHref: '/sponsors',
     fetchResource,
     updateResource,
   });

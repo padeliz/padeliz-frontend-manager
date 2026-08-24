@@ -21,9 +21,10 @@ export default function ViewOrganizerPage() {
   const config = useResourceViewPageConfig<ApiOrganizer>({
     resourceName: 'Organizer',
     resourceDisplayName: 'Organizer',
+    sectionLabel: 'Organizers',
+    sectionHref: '/organizers',
     fetchResource,
     updateResource,
-    title: 'Organizer Details',
   });
 
   return <ResourceViewPage config={config} />;

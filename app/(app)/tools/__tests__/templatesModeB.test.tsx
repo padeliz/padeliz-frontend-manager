@@ -11,7 +11,30 @@ jest.mock('expo-router', () => ({
 
 jest.mock('@/components/layout/AppLayout', () => {
   const { View } = require('react-native');
+  return ({ children, headerActions }: any) => (
+    <View>
+      {headerActions}
+      {children}
+    </View>
+  );
+});
+
+jest.mock('@/components/layout/AppContentScroll', () => {
+  const { View } = require('react-native');
   return ({ children }: any) => <View>{children}</View>;
+});
+
+jest.mock('@/components/layout/BreadcrumbProvider', () => ({
+  useBreadcrumbSegments: jest.fn(),
+}));
+
+jest.mock('@/components/ui/HeaderActionButton', () => {
+  const { Pressable, Text } = require('react-native');
+  return ({ label, onPress }: any) => (
+    <Pressable onPress={onPress}>
+      <Text>{label}</Text>
+    </Pressable>
+  );
 });
 
 jest.mock('@/components/ui/AdvancedDataTable', () => {
@@ -114,13 +137,14 @@ jest.mock('@/services/api/clubsApi', () => ({
   })),
 }));
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import {
+  createTestQueryClient,
+} from '@/testing/createTestQueryClient';
 import ToolsTemplatesPage from '@/app/(app)/tools/templates';
 
 function renderPage() {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+  const client = createTestQueryClient();
   return render(
     <QueryClientProvider client={client}>
       <ToolsTemplatesPage />

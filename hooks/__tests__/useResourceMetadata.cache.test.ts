@@ -9,8 +9,6 @@ const mockGet = jest.fn();
 jest.mock('@/services/api/resourceMetadataApi', () => ({
   ApiResourceMetadataApiService: jest.fn().mockImplementation(() => ({
     getApiResourceMetadata: (...args: unknown[]) => mockGet(...args),
-    clearApiResourceMetadataCache: jest.fn(async () => ({})),
-    clearAllMetadataCache: jest.fn(async () => ({})),
   })),
 }));
 

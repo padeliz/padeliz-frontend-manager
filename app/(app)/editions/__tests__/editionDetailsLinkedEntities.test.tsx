@@ -2,6 +2,8 @@
  * @jest-environment jsdom
  */
 import EditionDetailsRoute from '@/app/(app)/editions/[id]/details';
+import fs from 'fs';
+import path from 'path';
 import { render } from '@testing-library/react-native';
 import React from 'react';
 
@@ -40,5 +42,14 @@ describe('Edition Details linked entities', () => {
     expect(lastViewConfig.showLinkedEntities).toBe(true);
     expect(lastViewConfig.excludeLinkedEntities).toContain('divisions');
     expect(lastViewConfig.excludeLinkedEntities).toContain('edition_divisions');
+  });
+
+  it('route wrapper uses View only without stray text nodes', () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, '..', '[id]', 'details.tsx'),
+      'utf8'
+    );
+    expect(src).not.toMatch(/>\s*\.\s*</);
+    expect(src).not.toMatch(/ScrollView/);
   });
 });

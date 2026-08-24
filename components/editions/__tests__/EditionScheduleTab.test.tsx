@@ -2,7 +2,10 @@ import { PageChromeProvider, usePageChrome } from '@/components/chrome/PageChrom
 import EditionScheduleTab, {
   mergeCourtSelection,
 } from '@/components/editions/EditionScheduleTab';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import {
+  createTestQueryClient,
+} from '@/testing/createTestQueryClient';
 import React from 'react';
 import { Pressable } from 'react-native';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
@@ -37,9 +40,7 @@ function ChromeSaveProbe() {
 }
 
 function renderTab(ui: React.ReactElement) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+  const client = createTestQueryClient();
   return render(
     <QueryClientProvider client={client}>
       <PageChromeProvider>

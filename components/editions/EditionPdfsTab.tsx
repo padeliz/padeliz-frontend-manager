@@ -471,6 +471,7 @@ function GeneralPdfsView({
   const [busyKey, setBusyKey] = useState<string | null>(null);
 
   const loadEditionPosters = useCallback(async () => {
+    if (!Number.isFinite(editionId)) return;
     setLoadingEditionPosters(true);
     try {
       const res = await editionPostersApi.listEditionPosters(editionId);

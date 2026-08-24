@@ -14,6 +14,8 @@ export default function AddEditionDivisionPage() {
   const config = useResourceCreatePageConfig<ApiEditionDivision>({
     resourceName: 'EditionDivision',
     resourceDisplayName: 'Edition Division',
+    sectionLabel: 'Edition Divisions',
+    sectionHref: '/edition-divisions',
     createResource,
     getViewPath: id => '/edition-divisions/' + id,
   });

@@ -52,9 +52,11 @@ export default function LocationsPage() {
   const config = useResourcePageConfig<ApiLocation>({
     resourceName: 'Location',
     resourceDisplayName: 'Location',
+    sectionLabel: 'Locations',
+    sectionHref: '/locations',
     fetchData,
     bulkDelete,
-    title: 'Locations Management',
+    title: 'Locations',
     description:
       'Manage padel locations with advanced search, filters, and bulk operations',
     onAdd: handleAddLocation,

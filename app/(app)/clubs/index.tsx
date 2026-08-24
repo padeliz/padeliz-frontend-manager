@@ -37,9 +37,11 @@ export default function ClubsPage() {
   const config = useResourcePageConfig<ApiClub>({
     resourceName: 'Club',
     resourceDisplayName: 'Club',
+    sectionLabel: 'Clubs',
+    sectionHref: '/clubs',
     fetchData,
     bulkDelete,
-    title: 'Clubs Management',
+    title: 'Clubs',
     description: 'Manage padel clubs',
     onAdd: handleAdd,
     onView: handleView,

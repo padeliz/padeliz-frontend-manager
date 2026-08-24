@@ -58,6 +58,7 @@ export default function EditionDetailsRoute() {
             isSaving: chrome.isSaving,
             canSave: chrome.canSave,
             isDirty: chrome.isDirty,
+            displayTitle: chrome.displayTitle,
           }
         : null,
     [chrome]

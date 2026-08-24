@@ -2,14 +2,18 @@
  * Edition detail chrome: ED picker, tabs, finalize/save/refresh.
  */
 
+import { usePageChrome } from '@/components/chrome/PageChromeProvider';
 import EditionDivisionPicker from '@/components/editions/EditionDivisionPicker';
 import EditionTabsBar from '@/components/editions/EditionTabsBar';
 import { confirmAction } from '@/components/editions/editionLotteryUtils';
-import { usePageChrome } from '@/components/chrome/PageChromeProvider';
 import AppLayout from '@/components/layout/AppLayout';
+import { useBreadcrumbSegments } from '@/components/layout/BreadcrumbProvider';
+import EditModeToggle from '@/components/pages/EditModeToggle';
+import HeaderActionButton from '@/components/ui/HeaderActionButton';
 import { queryKeys } from '@/lib/queryClient';
 import { EditionDivisionsApiService } from '@/services/api/editionDivisionsApi';
 import { EditionsApiService } from '@/services/api/editionsApi';
+import { findActiveEditionTabLabel } from '@/utils/editionTabMatch';
 import {
   buildEditionTopTabs,
   parseEditionDivisionIdOptimistic,
@@ -21,7 +25,7 @@ import {
   confirmDiscardDirty,
   formatFinalizedAt,
 } from '@/utils/softDirtyNav';
-import { Ionicons } from '@expo/vector-icons';
+import { formatDisplayDate } from '@/utils/fieldFormatter';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Slot,
@@ -35,7 +39,6 @@ import {
   ActivityIndicator,
   Alert,
   BackHandler,
-  Pressable,
   Text,
   View,
 } from 'react-native';
@@ -107,6 +110,19 @@ export function EditionChrome() {
     () => buildEditionTopTabs(editionId, selectedDivisionId, selectedLotteryId),
     [editionId, selectedDivisionId, selectedLotteryId]
   );
+
+  const editionLabel =
+    editionQuery.data?.name ?? String(editionId);
+  const activeTopTabLabel = findActiveEditionTabLabel(pathname, tabs);
+
+  useBreadcrumbSegments('edition-chrome', [
+    { label: 'Editions', href: '/editions' },
+    {
+      label: editionLabel,
+      href: `/editions/${editionId}/details`,
+    },
+    ...(activeTopTabLabel ? [{ label: activeTopTabLabel }] : []),
+  ]);
 
   const discardIfNeeded = useCallback(async (): Promise<boolean> => {
     if (!actions?.isDirty) return true;
@@ -231,7 +247,13 @@ export function EditionChrome() {
 
   const title = editionQuery.data
     ? `Edition: ${editionQuery.data.name}`
-    : 'Edition';
+    : `Edition: ${editionId}`;
+
+  const description = useMemo(() => {
+    const raw = editionQuery.data?.date?.trim();
+    if (!raw) return undefined;
+    return formatDisplayDate(raw);
+  }, [editionQuery.data?.date]);
 
   if (!Number.isFinite(editionId)) {
     return <Text className="p-4 text-red-600">Invalid edition id</Text>;
@@ -240,7 +262,7 @@ export function EditionChrome() {
   if (editionQuery.isLoading && !editionQuery.data) {
     return (
       <AppLayout title="Edition">
-        <ActivityIndicator className="m-8" />
+        <ActivityIndicator className="m-8" testID="edition-chrome-loading" />
       </AppLayout>
     );
   }
@@ -250,72 +272,80 @@ export function EditionChrome() {
     !!actions?.isDirty &&
     (!isFinalized || isDetails);
 
+  const showEditToggle =
+    !!actions?.edit && (isDetails || !!actions?.isEditing);
+
+  const headerActions = (
+    <>
+      {showEdPicker ? (
+        <EditionDivisionPicker
+          divisions={divisions}
+          value={selectedDivisionId}
+          onChange={id => void setEd(id)}
+          includeGeneral
+        />
+      ) : null}
+
+      {isFinalized && finalizedAt != null ? (
+        <View className="rounded-lg px-3 py-2 border bg-gray-100 border-gray-200">
+          <Text className="text-sm font-medium text-gray-700">
+            Finalized {formatFinalizedAt(finalizedAt)}
+          </Text>
+        </View>
+      ) : (
+        <HeaderActionButton
+          label="Finalize"
+          variant="warning"
+          onPress={() => void onFinalize()}
+          testID="edition-chrome-finalize"
+        />
+      )}
+
+      {!actions?.isEditing ? (
+        <HeaderActionButton
+          label="Save"
+          variant="primary"
+          onPress={() => void onSave()}
+          disabled={!canSave}
+          loading={!!actions?.isSaving}
+          testID="edition-chrome-save"
+        />
+      ) : null}
+
+      <HeaderActionButton
+        label="Refresh"
+        icon="refresh"
+        onPress={() => void onRefresh()}
+        testID="edition-chrome-refresh"
+      />
+
+      {actions?.headerActions}
+
+      {showEditToggle ? (
+        <EditModeToggle
+          isEditing={!!actions?.isEditing}
+          onEdit={actions!.edit!}
+          onSave={() => void onSave()}
+          onCancel={actions!.cancel ?? (() => {})}
+          loading={!!actions?.isSaving}
+          disabled={!!actions?.isSaving}
+          showSave
+        />
+      ) : null}
+    </>
+  );
+
   return (
-    <AppLayout title={title}>
-      <View className="flex-1">
-        <View className="flex-row items-center flex-wrap p-4 border-b border-gray-200 gap-2">
-          <Pressable onPress={() => void onBack()} className="mr-1 p-2">
-            <Ionicons name="arrow-back" size={24} color="#4b5563" />
-          </Pressable>
-          <View className="flex-1 min-w-[140px]">
-            <Text className="text-lg font-semibold text-gray-900">{title}</Text>
-            <Text className="text-sm text-gray-600">
-              ID {editionId}
-              {selectedDivisionId ? ` · ED ${selectedDivisionId}` : ' · General'}
-            </Text>
-          </View>
-
-          {showEdPicker && (
-            <EditionDivisionPicker
-              divisions={divisions}
-              value={selectedDivisionId}
-              onChange={id => void setEd(id)}
-              includeGeneral
-            />
-          )}
-
-          {isFinalized && finalizedAt != null ? (
-            <View className="rounded-lg px-3 py-2 border bg-gray-100 border-gray-200">
-              <Text className="text-sm font-medium text-gray-700">
-                Finalized {formatFinalizedAt(finalizedAt)}
-              </Text>
-            </View>
-          ) : (
-            <Pressable
-              onPress={() => void onFinalize()}
-              className="rounded-lg px-3 py-2 border bg-amber-50 border-amber-300"
-            >
-              <Text className="text-sm font-medium text-amber-800">
-                Finalize
-              </Text>
-            </Pressable>
-          )}
-
-          <Pressable
-            onPress={() => void onSave()}
-            disabled={!canSave || !!actions?.isSaving}
-            className={`rounded-lg px-3 py-2 ${
-              canSave && !actions?.isSaving ? 'bg-blue-600' : 'bg-gray-300'
-            }`}
-          >
-            <Text className="text-sm text-white font-medium">
-              {actions?.isSaving ? 'Saving…' : 'Save'}
-            </Text>
-          </Pressable>
-
-          <Pressable
-            onPress={() => void onRefresh()}
-            className="bg-gray-100 border border-gray-300 rounded-lg px-3 py-2"
-          >
-            <Text className="text-sm text-gray-700">Refresh</Text>
-          </Pressable>
-        </View>
-
+    <AppLayout
+      title={title}
+      description={description}
+      headerActions={headerActions}
+      tabBar={
         <EditionTabsBar tabs={tabs} onBeforeNavigate={discardIfNeeded} />
-
-        <View className="flex-1">
-          <Slot />
-        </View>
+      }
+    >
+      <View className="flex-1">
+        <Slot />
       </View>
     </AppLayout>
   );

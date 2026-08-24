@@ -8,7 +8,7 @@ import { FormFieldSchema } from '@/types/validation/schemas';
 import { validateForm } from '@/utils/validationRules';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import LoadingSpinner from './LoadingSpinner';
 import ValidationField from './ValidationField';
 
@@ -125,7 +125,7 @@ export default function DynamicForm({
 
   return (
     <View className="flex-1">
-      <ScrollView className="flex-1 p-4">
+      <View className="flex-1 p-4">
         {schema.title && (
           <View className="mb-6">
             <Text className="text-2xl font-bold text-gray-900">
@@ -172,7 +172,7 @@ export default function DynamicForm({
             ))}
           </View>
         )}
-      </ScrollView>
+      </View>
 
       <View className="border-t border-gray-200 p-4 bg-white">
         <View className="flex-row space-x-3">

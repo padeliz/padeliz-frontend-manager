@@ -52,9 +52,11 @@ export default function EditionsPage() {
   const config = useResourcePageConfig<ApiEdition>({
     resourceName: 'Edition',
     resourceDisplayName: 'Edition',
+    sectionLabel: 'Editions',
+    sectionHref: '/editions',
     fetchData,
     bulkDelete,
-    title: 'Editions Management',
+    title: 'Editions',
     description:
       'Manage padel editions with advanced search, filters, and bulk operations',
     onAdd: handleAddEdition,

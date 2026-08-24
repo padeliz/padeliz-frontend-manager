@@ -1,7 +1,10 @@
 import React from 'react';
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { Platform } from 'react-native';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import {
+  createTestQueryClient,
+} from '@/testing/createTestQueryClient';
 import EditionLotteryTab from '@/components/editions/EditionLotteryTab';
 
 const mockPush = jest.fn();
@@ -72,9 +75,7 @@ jest.mock('@/services/api/lotteryLiveApi', () => ({
 }));
 
 function renderWithClient(ui: React.ReactElement) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+  const client = createTestQueryClient();
   return render(
     <QueryClientProvider client={client}>{ui}</QueryClientProvider>
   );

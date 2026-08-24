@@ -37,6 +37,8 @@ export default function PlayerCustomFieldsPage() {
   const config = useResourcePageConfig<ApiPlayerCustomField>({
     resourceName: 'PlayerCustomField',
     resourceDisplayName: 'Custom Field',
+    sectionLabel: 'Custom fields',
+    sectionHref: '/player-custom-fields',
     fetchData,
     bulkDelete,
     title: 'Custom Fields',

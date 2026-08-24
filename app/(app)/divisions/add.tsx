@@ -14,6 +14,8 @@ export default function AddDivisionPage() {
   const config = useResourceCreatePageConfig<ApiDivision>({
     resourceName: 'Division',
     resourceDisplayName: 'Division',
+    sectionLabel: 'Divisions',
+    sectionHref: '/divisions',
     createResource,
     getViewPath: id => '/divisions/' + id,
   });

@@ -14,6 +14,8 @@ export default function AddLocationPage() {
   const config = useResourceCreatePageConfig<ApiLocation>({
     resourceName: 'Location',
     resourceDisplayName: 'Location',
+    sectionLabel: 'Locations',
+    sectionHref: '/locations',
     createResource,
     getViewPath: id => '/locations/' + id,
   });

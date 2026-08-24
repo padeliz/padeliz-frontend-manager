@@ -38,9 +38,11 @@ export default function LuckiesPage() {
   const config = useResourcePageConfig<ApiEditionLuckyOne>({
     resourceName: 'EditionLotteryLucky',
     resourceDisplayName: 'Lucky',
+    sectionLabel: 'Lucky Ones',
+    sectionHref: '/edition-lottery-luckies',
     fetchData,
     bulkDelete,
-    title: 'Lottery Luckies',
+    title: 'Lucky Ones',
     description: 'Manage drawn luckies',
     onAdd: handleAdd,
     onView: handleView,

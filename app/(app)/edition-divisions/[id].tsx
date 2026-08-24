@@ -21,6 +21,8 @@ export default function ViewEditionDivisionPage() {
   const config = useResourceViewPageConfig<ApiEditionDivision>({
     resourceName: 'EditionDivision',
     resourceDisplayName: 'Edition Division',
+    sectionLabel: 'Edition Divisions',
+    sectionHref: '/edition-divisions',
     fetchResource,
     updateResource,
   });

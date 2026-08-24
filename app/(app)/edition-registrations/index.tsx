@@ -37,6 +37,8 @@ export default function EditionRegistrationsPage() {
   const config = useResourcePageConfig<ApiEditionRegistration>({
     resourceName: 'EditionRegistration',
     resourceDisplayName: 'Registration',
+    sectionLabel: 'Registrations',
+    sectionHref: '/edition-registrations',
     fetchData,
     bulkDelete,
     title: 'Registrations',

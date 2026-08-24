@@ -21,6 +21,8 @@ export default function ViewClubPage() {
   const config = useResourceViewPageConfig<ApiClub>({
     resourceName: 'Club',
     resourceDisplayName: 'Club',
+    sectionLabel: 'Clubs',
+    sectionHref: '/clubs',
     fetchResource,
     updateResource,
   });

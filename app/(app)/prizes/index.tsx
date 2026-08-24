@@ -38,6 +38,8 @@ export default function PrizesPage() {
   const config = useResourcePageConfig<ApiPrize>({
     resourceName: 'Prize',
     resourceDisplayName: 'Prize',
+    sectionLabel: 'Prizes',
+    sectionHref: '/prizes',
     fetchData,
     bulkDelete,
     title: 'Prizes',

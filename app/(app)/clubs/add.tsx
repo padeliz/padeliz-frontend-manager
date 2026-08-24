@@ -14,6 +14,8 @@ export default function AddClubPage() {
   const config = useResourceCreatePageConfig<ApiClub>({
     resourceName: 'Club',
     resourceDisplayName: 'Club',
+    sectionLabel: 'Clubs',
+    sectionHref: '/clubs',
     createResource,
     getViewPath: id => '/clubs/' + id,
   });

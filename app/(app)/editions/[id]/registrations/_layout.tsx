@@ -1,22 +1,23 @@
-import EditionTabsBar, {
-  EditionTabLink,
-} from '@/components/editions/EditionTabsBar';
+import type { EditionTabLink } from '@/components/editions/EditionTabsBar';
 import { usePageChrome } from '@/components/chrome/PageChromeProvider';
+import { useBreadcrumbSegments } from '@/components/layout/BreadcrumbProvider';
+import { useSubTabBar } from '@/components/layout/SubTabBarProvider';
 import {
   parseEditionDivisionIdOptimistic,
   withEdQuery,
 } from '@/utils/editionWorkspace';
+import { findActiveEditionTabLabel } from '@/utils/editionTabMatch';
 import { queryKeys } from '@/lib/queryClient';
 import { EditionDivisionsApiService } from '@/services/api/editionDivisionsApi';
 import { useQuery } from '@tanstack/react-query';
-import { Slot, useGlobalSearchParams, useLocalSearchParams } from 'expo-router';
+import { Slot, useGlobalSearchParams, useLocalSearchParams, usePathname } from 'expo-router';
 import React, { useCallback, useMemo } from 'react';
-import { View } from 'react-native';
 import { confirmDiscardDirty } from '@/utils/softDirtyNav';
 
 const editionDivisionsApi = new EditionDivisionsApiService();
 
 export default function RegistrationsLayout() {
+  const pathname = usePathname();
   const localParams = useLocalSearchParams<{ id: string; ed?: string }>();
   const globalParams = useGlobalSearchParams<{ id?: string; ed?: string }>();
   const editionId = Number(localParams.id ?? globalParams.id);
@@ -67,10 +68,15 @@ export default function RegistrationsLayout() {
     ];
   }, [editionId, edId]);
 
-  return (
-    <View className="flex-1">
-      <EditionTabsBar tabs={tabs} onBeforeNavigate={onBeforeNavigate} />
-      <Slot />
-    </View>
+  const activeTabLabel = findActiveEditionTabLabel(pathname, tabs) ?? 'List';
+
+  useBreadcrumbSegments(
+    'edition-registrations-subtab',
+    [{ label: activeTabLabel }],
+    1
   );
+
+  useSubTabBar('edition-registrations-subtab', tabs, onBeforeNavigate);
+
+  return <Slot />;
 }

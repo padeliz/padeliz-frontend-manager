@@ -38,9 +38,11 @@ export default function DivisionsPage() {
   const config = useResourcePageConfig<ApiDivision>({
     resourceName: 'Division',
     resourceDisplayName: 'Division',
+    sectionLabel: 'Divisions',
+    sectionHref: '/divisions',
     fetchData,
     bulkDelete,
-    title: 'Divisions Management',
+    title: 'Divisions',
     description: 'Manage skill divisions',
     onAdd: handleAdd,
     onView: handleView,

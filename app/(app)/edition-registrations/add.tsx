@@ -14,6 +14,8 @@ export default function AddEditionRegistrationPage() {
   const config = useResourceCreatePageConfig<ApiEditionRegistration>({
     resourceName: 'EditionRegistration',
     resourceDisplayName: 'Registration',
+    sectionLabel: 'Registrations',
+    sectionHref: '/edition-registrations',
     createResource,
     getViewPath: id => '/edition-registrations/' + id,
     seedFromQuery: true,

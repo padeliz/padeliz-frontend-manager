@@ -1,19 +1,52 @@
 /**
- * Player detail chrome: Details | Profile Images tabs with back navigation.
+ * Player detail chrome: Details | Profile Images tabs.
  */
 
-import EditionTabsBar from '@/components/editions/EditionTabsBar';
+import { usePageChrome } from '@/components/chrome/PageChromeProvider';
+import EditionTabsBar, {
+  type EditionTabLink,
+} from '@/components/editions/EditionTabsBar';
 import AppLayout from '@/components/layout/AppLayout';
-import { Ionicons } from '@expo/vector-icons';
-import { Redirect, Slot, useLocalSearchParams, usePathname, useRouter } from 'expo-router';
+import { useBreadcrumbSegments } from '@/components/layout/BreadcrumbProvider';
+import EditModeToggle from '@/components/pages/EditModeToggle';
+import HeaderActionButton from '@/components/ui/HeaderActionButton';
+import { useResourceMetadata } from '@/hooks/useResourceMetadata';
+import { queryKeys } from '@/lib/queryClient';
+import { PlayersApiService } from '@/services/api/playersApi';
+import { findActiveEditionTabLabel } from '@/utils/editionTabMatch';
+import {
+  formatResourceHeaderTitle,
+  getResourceDisplayLabel,
+} from '@/utils/getResourceDisplayLabel';
+import { useQuery } from '@tanstack/react-query';
+import {
+  Redirect,
+  Slot,
+  useLocalSearchParams,
+  usePathname,
+} from 'expo-router';
 import React, { useMemo } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { View } from 'react-native';
+
+const playersApi = new PlayersApiService();
 
 export function PlayerDetailChrome() {
-  const router = useRouter();
   const pathname = usePathname();
   const params = useLocalSearchParams<{ id: string }>();
   const playerId = params.id;
+  const numericPlayerId = playerId ? Number(playerId) : NaN;
+  const { actions } = usePageChrome();
+  const { getMetadata } = useResourceMetadata(['Player']);
+  const metadata = getMetadata('Player');
+
+  const playerQuery = useQuery({
+    queryKey: queryKeys.resourceDetail('Player', numericPlayerId),
+    queryFn: async () => {
+      const res = await playersApi.getPlayer(numericPlayerId);
+      return res.data;
+    },
+    enabled: Number.isFinite(numericPlayerId),
+  });
 
   if (
     playerId &&
@@ -23,7 +56,7 @@ export function PlayerDetailChrome() {
   }
 
   const tabs = useMemo(
-    () => [
+    (): EditionTabLink[] => [
       {
         label: 'Details',
         href: `/players/${playerId}/details`,
@@ -43,27 +76,57 @@ export function PlayerDetailChrome() {
     [playerId]
   );
 
+  const resolvedDisplayTitle = getResourceDisplayLabel(
+    metadata,
+    playerQuery.data,
+    numericPlayerId
+  );
+  const displayTitle = actions?.displayTitle || resolvedDisplayTitle || 'Player';
+  const activeTabLabel = findActiveEditionTabLabel(pathname, tabs);
+
+  useBreadcrumbSegments('player-detail-chrome', [
+    { label: 'Players', href: '/players/list' },
+    {
+      label: displayTitle,
+      href: playerId ? `/players/${playerId}/details` : undefined,
+    },
+    ...(activeTabLabel ? [{ label: activeTabLabel }] : []),
+  ]);
+
+  const title = formatResourceHeaderTitle('Player', displayTitle);
+
+  const headerActions = (
+    <>
+      {actions?.headerActions}
+      {actions?.refresh && !actions?.isEditing ? (
+        <HeaderActionButton
+          label="Refresh"
+          icon="refresh"
+          onPress={() => void actions.refresh?.()}
+          testID="player-detail-refresh"
+        />
+      ) : null}
+      {actions?.edit ? (
+        <EditModeToggle
+          isEditing={!!actions.isEditing}
+          onEdit={actions.edit}
+          onSave={() => void actions.save?.()}
+          onCancel={actions.cancel ?? (() => {})}
+          loading={!!actions.isSaving}
+          disabled={!!actions.isSaving}
+        />
+      ) : null}
+    </>
+  );
+
   return (
-    <AppLayout title="Player">
+    <AppLayout
+      title={title}
+      headerActions={headerActions}
+      tabBar={<EditionTabsBar tabs={tabs} />}
+    >
       <View className="flex-1">
-        <View className="flex-row items-center p-4 border-b border-gray-200 gap-2">
-          <Pressable
-            testID="player-detail-back"
-            onPress={() => router.push('/players/list' as any)}
-            className="mr-1 p-2"
-          >
-            <Ionicons name="arrow-back" size={24} color="#4b5563" />
-          </Pressable>
-          <Text className="text-lg font-semibold text-gray-900 flex-1">
-            Player #{playerId}
-          </Text>
-        </View>
-
-        <EditionTabsBar tabs={tabs} />
-
-        <View className="flex-1">
-          <Slot />
-        </View>
+        <Slot />
       </View>
     </AppLayout>
   );

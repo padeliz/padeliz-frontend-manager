@@ -14,6 +14,8 @@ export default function AddSponsorPage() {
   const config = useResourceCreatePageConfig<ApiSponsor>({
     resourceName: 'Sponsor',
     resourceDisplayName: 'Sponsor',
+    sectionLabel: 'Sponsors',
+    sectionHref: '/sponsors',
     createResource,
     getViewPath: id => '/sponsors/' + id,
   });

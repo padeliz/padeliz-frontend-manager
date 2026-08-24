@@ -3,10 +3,13 @@
  */
 
 import { usePageChrome } from '@/components/chrome/PageChromeProvider';
+import type { EditionTabLink } from '@/components/editions/EditionTabsBar';
+import { useBreadcrumbSegments } from '@/components/layout/BreadcrumbProvider';
+import { useSubTabBar } from '@/components/layout/SubTabBarProvider';
+import { findActiveEditionTabLabel } from '@/utils/editionTabMatch';
 import { confirmDiscardDirty } from '@/utils/softDirtyNav';
-import { Slot, usePathname, useRouter } from 'expo-router';
-import React, { useCallback } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Slot, usePathname } from 'expo-router';
+import React, { useCallback, useMemo } from 'react';
 
 type Props = {
   sectionSegment:
@@ -23,11 +26,9 @@ export default function PlayerImportSectionLayout({
   importsHref,
 }: Props) {
   const pathname = usePathname();
-  const router = useRouter();
   const { actions } = usePageChrome();
 
   const onHistory = pathname.includes(`${sectionSegment}/imports`);
-  const onImport = pathname.includes(sectionSegment) && !onHistory;
 
   const onBeforeNavigate = useCallback(async () => {
     if (!actions?.isDirty) return true;
@@ -37,47 +38,32 @@ export default function PlayerImportSectionLayout({
     return true;
   }, [actions]);
 
-  const navigate = useCallback(
-    async (href: string) => {
-      if (!(await onBeforeNavigate())) return;
-      router.push(href as any);
-    },
-    [onBeforeNavigate, router]
+  const tabs = useMemo((): EditionTabLink[] => {
+    return [
+      {
+        label: 'Import',
+        href: importHref,
+        match: sectionSegment,
+        matchExact: true,
+      },
+      {
+        label: 'Imports History',
+        href: importsHref,
+        match: 'imports',
+      },
+    ];
+  }, [importHref, importsHref, sectionSegment]);
+
+  const subTabLabel =
+    findActiveEditionTabLabel(pathname, tabs) ??
+    (onHistory ? 'Imports History' : 'Import');
+  useBreadcrumbSegments(
+    `player-import-${sectionSegment}`,
+    [{ label: subTabLabel }],
+    1
   );
 
-  const tabs = [
-    { label: 'Import', href: importHref, active: onImport },
-    { label: 'Imports History', href: importsHref, active: onHistory },
-  ];
+  useSubTabBar(`player-import-${sectionSegment}`, tabs, onBeforeNavigate);
 
-  return (
-    <View className="flex-1">
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        className="border-b border-gray-200 max-h-14"
-        contentContainerStyle={{ paddingHorizontal: 8, alignItems: 'center' }}
-      >
-        {tabs.map(tab => (
-          <Pressable
-            key={tab.href}
-            testID={`edition-tab-${tab.label}`}
-            onPress={() => void navigate(tab.href)}
-            className={`mx-1 px-3 py-2 rounded-lg ${
-              tab.active ? 'bg-blue-600' : 'bg-gray-100'
-            }`}
-          >
-            <Text
-              className={`text-sm font-medium ${
-                tab.active ? 'text-white' : 'text-gray-700'
-              }`}
-            >
-              {tab.label}
-            </Text>
-          </Pressable>
-        ))}
-      </ScrollView>
-      <Slot />
-    </View>
-  );
+  return <Slot />;
 }

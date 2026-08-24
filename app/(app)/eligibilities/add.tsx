@@ -14,6 +14,8 @@ export default function AddEligibilityPage() {
   const config = useResourceCreatePageConfig<ApiPlayerEligibility>({
     resourceName: 'Eligibility',
     resourceDisplayName: 'Eligibility',
+    sectionLabel: 'Eligibilities',
+    sectionHref: '/eligibilities',
     createResource,
     getViewPath: id => '/eligibilities/' + id,
   });

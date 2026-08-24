@@ -1,8 +1,16 @@
 import React from 'react';
 import { cleanup, fireEvent, render } from '@testing-library/react-native';
 import { Platform } from 'react-native';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { PageChromeProvider } from '@/components/chrome/PageChromeProvider';
+import {
+  SubTabBarProvider,
+  useSubTabBarTrail,
+} from '@/components/layout/SubTabBarProvider';
+import {
+  createTestQueryClient,
+  disposeTestQueryClient,
+} from '@/testing/createTestQueryClient';
 import LotteryLayout from '@/app/(app)/editions/[id]/lottery/_layout';
 
 const mockPush = jest.fn();
@@ -30,20 +38,27 @@ jest.mock('@/services/api/editionDivisionsApi', () => ({
   })),
 }));
 
-function renderLayout() {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return render(
-    <QueryClientProvider client={client}>
-      <PageChromeProvider>
-        <LotteryLayout />
-      </PageChromeProvider>
-    </QueryClientProvider>
-  );
+function SubTabChrome() {
+  return useSubTabBarTrail();
 }
 
 describe('lottery LIVE link visibility', () => {
+  let activeClient: ReturnType<typeof createTestQueryClient> | null = null;
+
+  function renderLayout() {
+    activeClient = createTestQueryClient();
+    return render(
+      <QueryClientProvider client={activeClient}>
+        <SubTabBarProvider>
+          <SubTabChrome />
+          <PageChromeProvider>
+            <LotteryLayout />
+          </PageChromeProvider>
+        </SubTabBarProvider>
+      </QueryClientProvider>
+    );
+  }
+
   beforeEach(() => {
     jest.clearAllMocks();
     Object.defineProperty(Platform, 'OS', {
@@ -57,8 +72,12 @@ describe('lottery LIVE link visibility', () => {
     };
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     cleanup();
+    if (activeClient) {
+      await disposeTestQueryClient(activeClient);
+      activeClient = null;
+    }
   });
 
   it('shows LIVE in tab strip under General', async () => {

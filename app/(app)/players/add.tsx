@@ -16,6 +16,8 @@ export default function AddPlayerPage() {
     resourceDisplayName: 'Player',
     createResource,
     excludeFields: ['password', 'internal_notes'],
+    sectionLabel: 'Players',
+    sectionHref: '/players',
     getViewPath: id => '/players/' + id,
   });
 
