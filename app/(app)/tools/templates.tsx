@@ -4,6 +4,7 @@
 
 import AppLayout from '@/components/layout/AppLayout';
 import { useBreadcrumbSegments } from '@/components/layout/BreadcrumbProvider';
+import AppTextInput from '@/components/ui/AppTextInput';
 import AdvancedDataTable from '@/components/ui/AdvancedDataTable';
 import HeaderActionButton from '@/components/ui/HeaderActionButton';
 import SingleSelectDropdown from '@/components/ui/SingleSelectDropdown';
@@ -29,7 +30,6 @@ import {
   Platform,
   Pressable,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 
@@ -383,7 +383,7 @@ export default function ToolsTemplatesPage() {
                 : ` (${playerCache.length})`}
               . Type ≥2 characters to filter.
             </Text>
-            <TextInput
+            <AppTextInput
               className="border border-gray-300 rounded px-3 py-2"
               placeholder="Filter players (min 2 chars)"
               value={playerQuery}
@@ -428,20 +428,20 @@ export default function ToolsTemplatesPage() {
               );
             })}
 
-            <TextInput
+            <AppTextInput
               className="border border-gray-300 rounded px-3 py-2"
               placeholder="Courts (comma, max 4)"
               value={courtNames}
               onChangeText={setCourtNames}
             />
             <View className="flex-row gap-2">
-              <TextInput
+              <AppTextInput
                 className="flex-1 border border-gray-300 rounded px-3 py-2"
                 placeholder="Start"
                 value={timeStart}
                 onChangeText={setTimeStart}
               />
-              <TextInput
+              <AppTextInput
                 className="flex-1 border border-gray-300 rounded px-3 py-2"
                 placeholder="End"
                 value={timeEnd}
@@ -449,14 +449,14 @@ export default function ToolsTemplatesPage() {
               />
             </View>
             <View className="flex-row gap-2">
-              <TextInput
+              <AppTextInput
                 className="flex-1 border border-gray-300 rounded px-3 py-2"
                 placeholder="Opponents"
                 value={opponents}
                 onChangeText={setOpponents}
                 keyboardType="numeric"
               />
-              <TextInput
+              <AppTextInput
                 className="flex-1 border border-gray-300 rounded px-3 py-2"
                 placeholder="Repeat"
                 value={repeat}
@@ -556,13 +556,13 @@ export default function ToolsTemplatesPage() {
               />
             </View>
 
-            <TextInput
+            <AppTextInput
               className="border border-gray-300 rounded px-3 py-2"
               placeholder="PDF title"
               value={pdfTitle}
               onChangeText={setPdfTitle}
             />
-            <TextInput
+            <AppTextInput
               className="border border-gray-300 rounded px-3 py-2"
               placeholder="court_index for matches PDF"
               value={courtIndex}

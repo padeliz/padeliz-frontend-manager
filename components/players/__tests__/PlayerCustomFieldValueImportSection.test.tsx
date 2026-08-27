@@ -16,7 +16,8 @@ const pathnameState = {
   value: '/players/import-custom-field-values',
 };
 
-jest.mock('expo-router', () => ({
+jest.mock('expo-router', () =>
+  require('@/testing/expoRouterMock').createExpoRouterMock({
   Slot: () => {
     const { Text } = require('react-native');
     return <Text testID="import-section-slot">slot</Text>;
@@ -24,7 +25,8 @@ jest.mock('expo-router', () => ({
   usePathname: () => pathnameState.value,
   useRouter: () => ({ push: mockPush }),
   Link: ({ children }: any) => children,
-}));
+})
+);
 
 jest.mock('@/utils/softDirtyNav', () => ({
   confirmDiscardDirty: jest.fn(async () => true),

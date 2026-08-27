@@ -14,7 +14,8 @@ import {
 import { clockHi } from '@/utils/edition/clockHi';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Text, TextInput, View } from 'react-native';
+import AppTextInput from '@/components/ui/AppTextInput';
+import { ActivityIndicator, Text, View } from 'react-native';
 
 type Props = {
   editionDivisionId: number | null;
@@ -410,7 +411,7 @@ export default function EditionScoresTab({
                   {matchSidePlayerNames(m, 'LEFT', participationsById)}
                 </Text>
                 {renderCouple(m, 'LEFT')}
-                <TextInput
+                <AppTextInput
                   testID={`score-left-${m.id_match}`}
                   editable={!finalized}
                   className="border border-gray-300 rounded px-2 py-1 text-center"
@@ -427,7 +428,7 @@ export default function EditionScoresTab({
                     }))
                   }
                 />
-                <TextInput
+                <AppTextInput
                   testID={`score-right-${m.id_match}`}
                   editable={!finalized}
                   className="border border-gray-300 rounded px-2 py-1 text-center"

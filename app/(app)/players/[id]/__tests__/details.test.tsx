@@ -6,9 +6,11 @@ import { PageChromeProvider } from '@/components/chrome/PageChromeProvider';
 import { render, screen } from '@testing-library/react-native';
 import React from 'react';
 
-jest.mock('expo-router', () => ({
+jest.mock('expo-router', () =>
+  require('@/testing/expoRouterMock').createExpoRouterMock({
   useLocalSearchParams: () => ({ id: '42' }),
-}));
+})
+);
 
 jest.mock('@/services/api/playersApi', () => ({
   PlayersApiService: jest.fn().mockImplementation(() => ({

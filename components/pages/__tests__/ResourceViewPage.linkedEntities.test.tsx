@@ -9,10 +9,12 @@ jest.mock('@expo/vector-icons', () => ({
   Ionicons: 'Ionicons',
 }));
 
-jest.mock('expo-router', () => ({
+jest.mock('expo-router', () =>
+  require('@/testing/expoRouterMock').createExpoRouterMock({
   useRouter: () => ({ back: jest.fn(), push: jest.fn() }),
   useLocalSearchParams: () => ({ id: '36' }),
-}));
+})
+);
 
 const editionMetadata = {
   display_field: 'name',

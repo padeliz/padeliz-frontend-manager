@@ -8,6 +8,8 @@
  */
 
 import React, { useMemo, useState } from 'react';
+import { View } from 'react-native';
+import { INPUT_PLACEHOLDER_COLOR } from '@/constants/theme';
 import type { DateTimeFormInputProps } from './DateTimeFormInput';
 
 const HTML_INPUT_TYPE: Record<DateTimeFormInputProps['inputType'], string> = {
@@ -105,9 +107,11 @@ export default function DateTimeFormInput({
   const color = disabled ? '#6B7280' : '#111827'; // gray-500 / gray-900
 
   return (
-    <input
-      type={HTML_INPUT_TYPE[inputType]}
-      value={inputValue}
+    <View style={{ ['--input-placeholder-color' as string]: INPUT_PLACEHOLDER_COLOR }}>
+      <input
+        type={HTML_INPUT_TYPE[inputType]}
+        className="app-datetime-input"
+        value={inputValue}
       onChange={event =>
         onChange(parseInputValue(event.target.value, inputType))
       }
@@ -136,5 +140,6 @@ export default function DateTimeFormInput({
         fontFamily: 'inherit',
       }}
     />
+    </View>
   );
 }

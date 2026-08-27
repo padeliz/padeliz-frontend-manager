@@ -4,7 +4,7 @@
  */
 
 import type { ResourceSubHeaderProps } from '@/components/pages/ResourceSubHeader';
-import { UiBulkActionConfig } from './tables';
+import { UiBulkActionConfig, UiDataTableColumn } from './tables';
 
 /** Optional in-body sub-header strip (below Page Header). */
 export type ResourcePageSubHeaderConfig = Pick<
@@ -29,6 +29,10 @@ export interface ResourceListPageConfig<
 
   // Table configuration
   excludeFields?: string[];
+  /** When metadata is unavailable, use these columns instead. */
+  staticColumns?: UiDataTableColumn<T>[];
+  /** Primary key field when using staticColumns (defaults to id). */
+  primaryKeyField?: string;
 
   // Bulk actions configuration
   bulkActions?: UiBulkActionConfig[];

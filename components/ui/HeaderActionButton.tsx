@@ -21,7 +21,11 @@ export type HeaderActionButtonProps = {
   loading?: boolean;
   variant?: HeaderActionVariant;
   icon?: keyof typeof Ionicons.glyphMap;
+  iconOnly?: boolean;
+  iconColor?: string;
+  iconSize?: number;
   testID?: string;
+  accessibilityLabel?: string;
 };
 
 const variantClass: Record<
@@ -67,14 +71,41 @@ export default function HeaderActionButton({
   loading = false,
   variant = 'secondary',
   icon,
+  iconOnly = false,
+  iconColor,
+  iconSize = 18,
   testID,
+  accessibilityLabel,
 }: HeaderActionButtonProps) {
   const styles = variantClass[variant];
   const locked = disabled || loading;
+  const a11yLabel = accessibilityLabel ?? label;
+
+  if (iconOnly && icon) {
+    const color = locked
+      ? '#9ca3af'
+      : (iconColor ?? styles.icon);
+    return (
+      <Pressable
+        testID={testID}
+        accessibilityLabel={a11yLabel}
+        disabled={locked}
+        onPress={onPress}
+        className="p-1"
+      >
+        {loading ? (
+          <Text className="text-sm font-medium text-gray-500">Saving…</Text>
+        ) : (
+          <Ionicons name={icon} size={iconSize} color={color} />
+        )}
+      </Pressable>
+    );
+  }
 
   return (
     <Pressable
       testID={testID}
+      accessibilityLabel={a11yLabel}
       disabled={locked}
       onPress={onPress}
       className={`rounded-lg px-3 py-2 flex-row items-center border ${
@@ -92,7 +123,7 @@ export default function HeaderActionButton({
         />
       ) : null}
       <Text
-        className={`text-sm font-medium ${
+        className={`text-base font-medium ${
           locked ? 'text-gray-500' : styles.text
         }`}
       >

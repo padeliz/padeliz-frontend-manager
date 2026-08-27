@@ -2,6 +2,7 @@
  * Player custom field values: history table, submit form, invalidate.
  */
 
+import AppTextInput from '@/components/ui/AppTextInput';
 import SingleSelectDropdown from '@/components/ui/SingleSelectDropdown';
 import { useToast } from '@/context/ToastContext';
 import { EditionsApiService } from '@/services/api/editionsApi';
@@ -22,7 +23,6 @@ import {
   ScrollView,
   Switch,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 
@@ -242,7 +242,7 @@ export default function PlayerCustomFieldsPanel({ playerId }: Props) {
     switch (selectedField.type) {
       case 'text':
         return (
-          <TextInput
+          <AppTextInput
             testID="custom-field-value-text"
             value={textValue}
             onChangeText={setTextValue}
@@ -252,7 +252,7 @@ export default function PlayerCustomFieldsPanel({ playerId }: Props) {
         );
       case 'integer':
         return (
-          <TextInput
+          <AppTextInput
             testID="custom-field-value-integer"
             value={intValue}
             onChangeText={setIntValue}
@@ -272,7 +272,7 @@ export default function PlayerCustomFieldsPanel({ playerId }: Props) {
         );
       case 'date':
         return (
-          <TextInput
+          <AppTextInput
             testID="custom-field-value-date"
             value={dateValue}
             onChangeText={setDateValue}
@@ -411,7 +411,7 @@ export default function PlayerCustomFieldsPanel({ playerId }: Props) {
                 <View className="mt-2">
                   {invalidatingId === row.id_player_custom_field_value ? (
                     <View>
-                      <TextInput
+                      <AppTextInput
                         testID={`invalidate-reason-${row.id_player_custom_field_value}`}
                         value={invalidationReason}
                         onChangeText={setInvalidationReason}

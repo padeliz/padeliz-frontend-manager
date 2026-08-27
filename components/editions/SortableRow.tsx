@@ -1,11 +1,15 @@
 /**
  * Shared drag-and-drop row primitive for edition lists (participations,
- * divisions, matches board). Drag distance is quantised by row height, so every
- * list that uses it must render rows of `rowHeight`.
+ * divisions, matches board) and challenge waiting lists. Drag distance is
+ * quantised by row height, so every list that uses it must render rows of
+ * `rowHeight`.
+ *
+ * `activationMode="row"` (default): pan from anywhere on the row.
+ * `activationMode="handle"`: pan only from `SortableDragHandle` (required).
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
+import React, { createContext, useContext, useMemo } from 'react';
 import { Pressable, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -16,6 +20,21 @@ import Animated, {
 } from 'react-native-reanimated';
 
 export const SORTABLE_ROW_HEIGHT = 48;
+
+export type SortableActivationMode = 'row' | 'handle';
+
+type SortableRowGestureContextValue = {
+  gesture: ReturnType<typeof Gesture.Pan> | null;
+  activationMode: SortableActivationMode;
+  locked: boolean;
+};
+
+const SortableRowGestureContext =
+  createContext<SortableRowGestureContextValue>({
+    gesture: null,
+    activationMode: 'row',
+    locked: false,
+  });
 
 /**
  * Target index for a same-list drag, clamped to the list bounds.
@@ -64,6 +83,7 @@ type SortableRowProps = {
   count: number;
   locked: boolean;
   rowHeight?: number;
+  activationMode?: SortableActivationMode;
   /** Same-list move. Ignored when `onDragEnd` is provided. */
   onReorder?: (from: number, to: number) => void;
   /**
@@ -80,6 +100,7 @@ export default function SortableRow({
   count,
   locked,
   rowHeight = SORTABLE_ROW_HEIGHT,
+  activationMode = 'row',
   onReorder,
   onDragEnd,
   testID,
@@ -98,28 +119,34 @@ export default function SortableRow({
     if (next !== index) onReorder?.(index, next);
   };
 
-  const gesture = Gesture.Pan()
-    .enabled(!locked)
-    .activeOffsetY([-8, 8])
-    .onStart(() => {
-      zIndex.value = 20;
-      dragging.value = 1;
-    })
-    .onUpdate(e => {
-      translateY.value = e.translationY;
-    })
-    .onEnd(e => {
-      const ty = e.translationY;
-      translateY.value = withSpring(0);
-      zIndex.value = 0;
-      dragging.value = 0;
-      runOnJS(finishDrop)(ty);
-    })
-    .onFinalize(() => {
-      translateY.value = withSpring(0);
-      zIndex.value = 0;
-      dragging.value = 0;
-    });
+  const gesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .enabled(!locked)
+        .activeOffsetY([-8, 8])
+        .onStart(() => {
+          zIndex.value = 20;
+          dragging.value = 1;
+        })
+        .onUpdate(e => {
+          translateY.value = e.translationY;
+        })
+        .onEnd(e => {
+          const ty = e.translationY;
+          translateY.value = withSpring(0);
+          zIndex.value = 0;
+          dragging.value = 0;
+          runOnJS(finishDrop)(ty);
+        })
+        .onFinalize(() => {
+          translateY.value = withSpring(0);
+          zIndex.value = 0;
+          dragging.value = 0;
+        }),
+    // Shared values and finishDrop close over latest index/count via render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [locked, index, count, rowHeight, onDragEnd, onReorder]
+  );
 
   const style = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
@@ -128,21 +155,49 @@ export default function SortableRow({
     opacity: dragging.value ? 0.92 : 1,
   }));
 
+  const row = (
+    <Animated.View testID={testID} style={[{ minHeight: rowHeight }, style]}>
+      {children}
+    </Animated.View>
+  );
+
+  const ctx: SortableRowGestureContextValue = {
+    gesture,
+    activationMode,
+    locked,
+  };
+
   return (
-    <GestureDetector gesture={gesture}>
-      <Animated.View testID={testID} style={[{ minHeight: rowHeight }, style]}>
-        {children}
-      </Animated.View>
-    </GestureDetector>
+    <SortableRowGestureContext.Provider value={ctx}>
+      {activationMode === 'row' ? (
+        <GestureDetector gesture={gesture}>{row}</GestureDetector>
+      ) : (
+        row
+      )}
+    </SortableRowGestureContext.Provider>
   );
 }
 
 export function SortableDragHandle({ testID }: { testID?: string }) {
-  return (
-    <View className="mr-2 p-1" testID={testID}>
-      <Ionicons name="menu" size={18} color="#9ca3af" />
+  const { gesture, activationMode, locked } = useContext(
+    SortableRowGestureContext
+  );
+
+  const handle = (
+    <View className="mr-2 p-1 cursor-pointer" testID={testID}>
+      <Ionicons
+        name="menu"
+        size={18}
+        color={locked ? '#d1d5db' : '#9ca3af'}
+      />
     </View>
   );
+
+  if (activationMode === 'handle' && gesture && !locked) {
+    return <GestureDetector gesture={gesture}>{handle}</GestureDetector>;
+  }
+
+  return handle;
 }
 
 export function SortableArrows({

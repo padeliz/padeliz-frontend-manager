@@ -3,6 +3,7 @@
  */
 
 import { usePageChrome } from '@/components/chrome/PageChromeProvider';
+import FullscreenToggleButton from '@/components/chrome/FullscreenToggleButton';
 import EditionDivisionPicker from '@/components/editions/EditionDivisionPicker';
 import EditionTabsBar from '@/components/editions/EditionTabsBar';
 import { confirmAction } from '@/components/editions/editionLotteryUtils';
@@ -331,6 +332,10 @@ export function EditionChrome() {
           disabled={!!actions?.isSaving}
           showSave
         />
+      ) : null}
+
+      {pathname.includes('/lottery/luckies') ? (
+        <FullscreenToggleButton />
       ) : null}
     </>
   );

@@ -2,6 +2,7 @@
  * Options management for select-type player custom fields.
  */
 
+import AppTextInput from '@/components/ui/AppTextInput';
 import { useToast } from '@/context/ToastContext';
 import { PlayerCustomFieldsApiService } from '@/services/api/playerCustomFieldsApi';
 import { ApiPlayerCustomFieldOption } from '@/types/api/entities';
@@ -11,7 +12,6 @@ import {
   Pressable,
   Switch,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 
@@ -127,7 +127,7 @@ export default function PlayerCustomFieldOptionsPanel({ fieldId }: Props) {
       <Text className="text-xl font-semibold text-gray-900 mb-4">Options</Text>
 
       <View className="flex-row items-center gap-2 mb-4">
-        <TextInput
+        <AppTextInput
           testID="custom-field-option-new-label"
           value={newLabel}
           onChangeText={setNewLabel}
@@ -159,7 +159,7 @@ export default function PlayerCustomFieldOptionsPanel({ fieldId }: Props) {
             <View className="flex-row flex-wrap items-center gap-2">
               {editingId === option.id_player_custom_field_option ? (
                 <>
-                  <TextInput
+                  <AppTextInput
                     testID={`custom-field-option-edit-${option.id_player_custom_field_option}`}
                     value={editLabel}
                     onChangeText={setEditLabel}

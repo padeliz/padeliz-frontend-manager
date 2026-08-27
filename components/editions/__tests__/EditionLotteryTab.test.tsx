@@ -48,12 +48,14 @@ const mockPrizesBoard = jest.fn(async () => ({
   },
 }));
 
-jest.mock('expo-router', () => ({
+jest.mock('expo-router', () =>
+  require('@/testing/expoRouterMock').createExpoRouterMock({
   useRouter: () => ({ push: mockPush, replace: mockReplace }),
   usePathname: () => '/editions/1/lottery/prizes',
   useLocalSearchParams: () => mockSearchParams,
   useGlobalSearchParams: () => mockSearchParams,
-}));
+})
+);
 
 jest.mock('@/services/api/editionLotteriesApi', () => ({
   EditionLotteriesApiService: jest.fn().mockImplementation(() => ({

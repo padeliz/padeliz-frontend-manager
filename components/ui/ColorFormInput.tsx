@@ -4,7 +4,8 @@
  */
 
 import React, { useCallback, useMemo, useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import AppTextInput from '@/components/ui/AppTextInput';
+import { Pressable, Text, View } from 'react-native';
 
 function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n));
@@ -133,7 +134,7 @@ export default function ColorFormInput({
           className="w-10 h-10 rounded border border-gray-300"
           style={{ backgroundColor: normalized || '#FFFFFF' }}
         />
-        <TextInput
+        <AppTextInput
           value={normalized || value || ''}
           onChangeText={text => {
             const t = text.startsWith('#') ? text : `#${text}`;

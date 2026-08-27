@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientConfig } from '@tanstack/react-query';
+import { act } from '@testing-library/react-native';
 
 export function createTestQueryClient(
   config: QueryClientConfig = {}
@@ -24,4 +25,7 @@ export function createTestQueryClient(
 export async function disposeTestQueryClient(client: QueryClient): Promise<void> {
   await client.cancelQueries();
   client.clear();
+  await act(async () => {
+    await new Promise<void>(resolve => setTimeout(resolve, 0));
+  });
 }

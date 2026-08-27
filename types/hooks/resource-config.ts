@@ -3,7 +3,7 @@
  * Types for resource configuration hooks
  */
 
-import { UiBulkActionConfig } from '../ui/tables';
+import { UiBulkActionConfig, UiDataTableColumn } from '../ui/tables';
 
 export interface HookResourcePageConfigOptions<
   T extends { [key: string]: any } = any,
@@ -22,6 +22,8 @@ export interface HookResourcePageConfigOptions<
 
   // Table configuration
   excludeFields?: string[];
+  staticColumns?: UiDataTableColumn<T>[];
+  primaryKeyField?: string;
 
   // Page configuration
   title: string;

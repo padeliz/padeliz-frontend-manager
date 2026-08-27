@@ -10,14 +10,16 @@ jest.mock('@expo/vector-icons', () => ({
 }));
 
 const mockReplace = jest.fn();
-jest.mock('expo-router', () => ({
+jest.mock('expo-router', () =>
+  require('@/testing/expoRouterMock').createExpoRouterMock({
   useRouter: () => ({
     replace: mockReplace,
     back: jest.fn(),
     push: jest.fn(),
   }),
   useLocalSearchParams: () => ({}),
-}));
+})
+);
 
 const divisionMetadata = {
   version: 'v1',

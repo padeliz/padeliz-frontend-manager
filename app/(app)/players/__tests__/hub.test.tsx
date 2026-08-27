@@ -8,7 +8,8 @@ import { Text } from 'react-native';
 const mockPush = jest.fn();
 const pathnameState = { value: '/players/list' };
 
-jest.mock('expo-router', () => ({
+jest.mock('expo-router', () =>
+  require('@/testing/expoRouterMock').createExpoRouterMock({
   Redirect: ({ href }: { href: string }) => {
     const { Text } = require('react-native');
     return <Text testID="players-redirect">{href}</Text>;
@@ -19,7 +20,8 @@ jest.mock('expo-router', () => ({
   },
   usePathname: () => pathnameState.value,
   useRouter: () => ({ push: mockPush }),
-}));
+})
+);
 
 jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
 

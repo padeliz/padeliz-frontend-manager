@@ -112,4 +112,23 @@ describe('SingleSelectDropdown', () => {
     );
     expect(getByTestId('dropdown-trigger-image')).toBeTruthy();
   });
+
+  it('notifies onOpenChange when opening and closing', () => {
+    const onOpenChange = jest.fn();
+    const onSelectionChange = jest.fn();
+    const { getByText } = render(
+      <SingleSelectDropdown
+        options={OPTIONS}
+        selectedValue={null}
+        onSelectionChange={onSelectionChange}
+        placeholder="Pick one"
+        title="Players"
+        onOpenChange={onOpenChange}
+      />
+    );
+    fireEvent.press(getByText('Pick one'));
+    expect(onOpenChange).toHaveBeenCalledWith(true);
+    fireEvent.press(getByText('Alice'));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
 });

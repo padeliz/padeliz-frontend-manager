@@ -2,9 +2,11 @@ import Breadcrumbs from '@/components/layout/Breadcrumbs';
 import { render } from '@testing-library/react-native';
 import React from 'react';
 
-jest.mock('expo-router', () => ({
+jest.mock('expo-router', () =>
+  require('@/testing/expoRouterMock').createExpoRouterMock({
   useRouter: () => ({ push: jest.fn() }),
-}));
+})
+);
 
 describe('Breadcrumbs', () => {
   it('renders a horizontal scroll container for long trails', () => {

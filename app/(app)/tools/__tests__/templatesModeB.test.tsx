@@ -5,9 +5,11 @@ jest.mock('@expo/vector-icons', () => ({
   Ionicons: 'Ionicons',
 }));
 
-jest.mock('expo-router', () => ({
+jest.mock('expo-router', () =>
+  require('@/testing/expoRouterMock').createExpoRouterMock({
   useRouter: () => ({ back: jest.fn(), push: jest.fn() }),
-}));
+})
+);
 
 jest.mock('@/components/layout/AppLayout', () => {
   const { View } = require('react-native');

@@ -7,7 +7,8 @@ import { UtilFilterDefinition } from '@/types/common/filtering';
 import { UiAdvancedSearchFiltersProps } from '@/types/ui/components';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import AppTextInput from '@/components/ui/AppTextInput';
+import { Pressable, Text, View } from 'react-native';
 import MultiSelectDropdown from './MultiSelectDropdown';
 
 export default function AdvancedSearchFilters({
@@ -55,7 +56,7 @@ export default function AdvancedSearchFilters({
                 size={20}
                 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
               />
-              <TextInput
+              <AppTextInput
                 value={searchInput}
                 onChangeText={onInputChange}
                 onKeyPress={onKeyPress}

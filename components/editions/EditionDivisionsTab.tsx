@@ -13,7 +13,8 @@ import { actionPillClass } from '@/utils/ui/actionButtonClass';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import AppTextInput from '@/components/ui/AppTextInput';
+import { Pressable, Text, View } from 'react-native';
 import { confirmAction } from './editionLotteryUtils';
 import SortableRow, {
   moveInList,
@@ -241,7 +242,7 @@ export default function EditionDivisionsTab({
             </View>
             <View className="flex-1" style={{ minWidth: 140 }}>
               <Text className="text-xs text-gray-500 mb-1">Title</Text>
-              <TextInput
+              <AppTextInput
                 testID="divisions-title-input"
                 className="border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
                 value={draft.division_title}
@@ -253,7 +254,7 @@ export default function EditionDivisionsTab({
             </View>
             <View style={{ minWidth: 110 }}>
               <Text className="text-xs text-gray-500 mb-1">Players limit</Text>
-              <TextInput
+              <AppTextInput
                 testID="divisions-players-limit-input"
                 className="border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
                 value={draft.players_limit}
@@ -265,7 +266,7 @@ export default function EditionDivisionsTab({
             </View>
             <View style={{ minWidth: 110 }}>
               <Text className="text-xs text-gray-500 mb-1">Start (HH:MM)</Text>
-              <TextInput
+              <AppTextInput
                 testID="divisions-start-input"
                 className="border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
                 value={draft.playing_start_time}
@@ -276,7 +277,7 @@ export default function EditionDivisionsTab({
             </View>
             <View style={{ minWidth: 110 }}>
               <Text className="text-xs text-gray-500 mb-1">End (HH:MM)</Text>
-              <TextInput
+              <AppTextInput
                 testID="divisions-end-input"
                 className="border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
                 value={draft.playing_end_time}

@@ -49,10 +49,12 @@ jest.mock('@/services/api/editionParticipationMappingApi', () => ({
   })),
 }));
 
-jest.mock('expo-router', () => ({
+jest.mock('expo-router', () =>
+  require('@/testing/expoRouterMock').createExpoRouterMock({
   useRouter: () => ({ push: mockPush }),
   useLocalSearchParams: () => ({ id: '7' }),
-}));
+})
+);
 
 jest.mock('@/components/pages/ResourceListPage', () => ({
   __esModule: true,

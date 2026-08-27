@@ -3,6 +3,7 @@
  * Reusable single-selection dropdown with floating modal behavior
  */
 
+import AppTextInput from '@/components/ui/AppTextInput';
 import { SingleSelectDropdownProps } from '@/types/ui/dropdowns';
 import { normalizeSearchText } from '@/utils/textNormalize';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,7 +14,6 @@ import {
   Pressable,
   ScrollView,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import FloatingDropdown from './FloatingDropdown';
@@ -33,6 +33,7 @@ export default function SingleSelectDropdown({
   onSearch,
   loading = false,
   clearable = false,
+  onOpenChange,
 }: SingleSelectDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -40,6 +41,12 @@ export default function SingleSelectDropdown({
   const close = () => {
     setIsOpen(false);
     setQuery('');
+    onOpenChange?.(false);
+  };
+
+  const open = () => {
+    setIsOpen(true);
+    onOpenChange?.(true);
   };
 
   const handleSelect = (value: string | number | boolean) => {
@@ -121,6 +128,7 @@ export default function SingleSelectDropdown({
     >
       {selectedOption ? avatar(selectedOption.imageUrl, 'dropdown-trigger-image') : null}
       <Text
+        numberOfLines={1}
         className={`
           text-base flex-1
           ${(selectedValue === null || selectedValue === undefined) && !defaultValue
@@ -159,7 +167,7 @@ export default function SingleSelectDropdown({
           testID="dropdown-search-wrapper"
           className="px-3 py-2 border-b border-gray-200"
         >
-          <TextInput
+          <AppTextInput
             value={query}
             onChangeText={handleQueryChange}
             placeholder="Search..."
@@ -236,7 +244,7 @@ export default function SingleSelectDropdown({
     <FloatingDropdown
       trigger={trigger}
       isOpen={isOpen}
-      onOpen={() => setIsOpen(true)}
+      onOpen={open}
       onClose={close}
       title={title}
       maxHeight={maxHeight}

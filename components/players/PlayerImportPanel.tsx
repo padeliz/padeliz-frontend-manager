@@ -3,6 +3,7 @@
  */
 
 import { useRegisterPageActions } from '@/components/chrome/PageChromeProvider';
+import AppTextInput from '@/components/ui/AppTextInput';
 import CsvFilePicker from '@/components/players/CsvFilePicker';
 import SingleSelectDropdown from '@/components/ui/SingleSelectDropdown';
 import { useToast } from '@/context/ToastContext';
@@ -25,7 +26,6 @@ import {
   Pressable,
   Switch,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 
@@ -292,7 +292,7 @@ export default function PlayerImportPanel() {
                   </Text>
                 </View>
                 <View className="flex-row flex-wrap gap-2">
-                  <TextInput
+                  <AppTextInput
                     testID={`import-first-name-${row.index}`}
                     value={row.first_name}
                     editable={!locked}
@@ -300,7 +300,7 @@ export default function PlayerImportPanel() {
                     placeholder="First"
                     className={`border rounded-lg px-2 py-1 w-32 ${locked ? 'bg-gray-100' : 'bg-white'}`}
                   />
-                  <TextInput
+                  <AppTextInput
                     testID={`import-middle-name-${row.index}`}
                     value={row.middle_name ?? ''}
                     editable={!locked}
@@ -310,7 +310,7 @@ export default function PlayerImportPanel() {
                     placeholder="Middle"
                     className={`border rounded-lg px-2 py-1 w-28 ${locked ? 'bg-gray-100' : 'bg-white'}`}
                   />
-                  <TextInput
+                  <AppTextInput
                     testID={`import-last-name-${row.index}`}
                     value={row.last_name ?? ''}
                     editable={!locked}
@@ -320,7 +320,7 @@ export default function PlayerImportPanel() {
                     placeholder="Last"
                     className={`border rounded-lg px-2 py-1 w-32 ${locked ? 'bg-gray-100' : 'bg-white'}`}
                   />
-                  <TextInput
+                  <AppTextInput
                     testID={`import-phone-${row.index}`}
                     value={row.phone}
                     editable={!locked}
@@ -328,7 +328,7 @@ export default function PlayerImportPanel() {
                     placeholder="Phone"
                     className={`border rounded-lg px-2 py-1 w-40 ${locked ? 'bg-gray-100' : 'bg-white'}`}
                   />
-                  <TextInput
+                  <AppTextInput
                     testID={`import-email-${row.index}`}
                     value={row.email}
                     editable={!locked}

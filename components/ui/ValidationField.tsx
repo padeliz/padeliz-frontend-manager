@@ -12,7 +12,8 @@ import {
 } from '@/utils/validationRules';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import AppTextInput from '@/components/ui/AppTextInput';
+import { Pressable, Text, View } from 'react-native';
 import DateTimeFormInput from './DateTimeFormInput';
 import ColorFormInput from './ColorFormInput';
 import YearFormInput from './YearFormInput';
@@ -145,7 +146,7 @@ export default function ValidationField({
       case 'url':
       case 'number':
         return (
-          <TextInput
+          <AppTextInput
             value={String(fieldInfo.inputValue || '')}
             onChangeText={handleChange}
             onFocus={handleFocus}
@@ -232,7 +233,7 @@ export default function ValidationField({
 
       case 'textarea':
         return (
-          <TextInput
+          <AppTextInput
             value={String(fieldInfo.inputValue || '')}
             onChangeText={handleChange}
             onFocus={handleFocus}

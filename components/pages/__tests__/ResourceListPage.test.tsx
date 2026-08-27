@@ -123,9 +123,11 @@ jest.mock('@/components/ui/AdvancedSearchFilters', () => {
   };
 });
 
-jest.mock('expo-router', () => ({
+jest.mock('expo-router', () =>
+  require('@/testing/expoRouterMock').createExpoRouterMock({
   useRouter: () => ({ back: jest.fn(), push: jest.fn() }),
-}));
+})
+);
 
 const baseConfig = {
   resourceName: 'Widget',

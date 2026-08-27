@@ -38,12 +38,14 @@ const mockGetLotteries = jest.fn(async () => ({
 const mockGeneratePdfAvatar = jest.fn();
 let mockSearchParams: Record<string, string | undefined> = { lottery: '3' };
 
-jest.mock('expo-router', () => ({
+jest.mock('expo-router', () =>
+  require('@/testing/expoRouterMock').createExpoRouterMock({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
   usePathname: () => '/editions/1/lottery/luckies',
   useLocalSearchParams: () => mockSearchParams,
   useGlobalSearchParams: () => mockSearchParams,
-}));
+})
+);
 
 jest.mock('@/services/api/editionLotteriesApi', () => ({
   EditionLotteriesApiService: jest.fn().mockImplementation(() => ({

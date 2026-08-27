@@ -19,10 +19,12 @@ jest.mock('@/components/pages/ResourceViewPage', () => ({
   }),
 }));
 
-jest.mock('expo-router', () => ({
+jest.mock('expo-router', () =>
+  require('@/testing/expoRouterMock').createExpoRouterMock({
   useRouter: () => ({ push: jest.fn(), back: jest.fn() }),
   useLocalSearchParams: () => ({ id: '36' }),
-}));
+})
+);
 
 jest.mock('@/components/chrome/PageChromeProvider', () => ({
   useRegisterPageActions: jest.fn(),

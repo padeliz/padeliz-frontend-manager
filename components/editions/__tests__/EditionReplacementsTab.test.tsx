@@ -1,13 +1,22 @@
 import React from 'react';
-import { fireEvent, render, waitFor, within } from '@testing-library/react-native';
+import {
+  act,
+  fireEvent,
+  render,
+  waitFor,
+  within,
+} from '@testing-library/react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import {
   createTestQueryClient,
+  disposeTestQueryClient,
 } from '@/testing/createTestQueryClient';
 import { PageChromeProvider } from '@/components/chrome/PageChromeProvider';
 import EditionReplacementsTab, {
   matchLabel,
 } from '@/components/editions/EditionReplacementsTab';
+import { PLAYER_PICKER_DEBOUNCE_MS } from '@/hooks/usePlayerPicker';
+import type { QueryClient } from '@tanstack/react-query';
 
 const mockGetSchedule = jest.fn();
 const mockList = jest.fn();
@@ -44,10 +53,12 @@ jest.mock('@/services/api/playersApi', () => ({
   })),
 }));
 
+let activeClient: QueryClient | null = null;
+
 function renderWithProviders(ui: React.ReactElement) {
-  const client = createTestQueryClient();
+  activeClient = createTestQueryClient();
   return render(
-    <QueryClientProvider client={client}>
+    <QueryClientProvider client={activeClient}>
       <PageChromeProvider>{ui}</PageChromeProvider>
     </QueryClientProvider>
   );
@@ -70,6 +81,18 @@ describe('matchLabel', () => {
 describe('EditionReplacementsTab', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  afterEach(async () => {
+    await act(async () => {
+      await new Promise<void>(resolve =>
+        setTimeout(resolve, PLAYER_PICKER_DEBOUNCE_MS)
+      );
+    });
+    if (activeClient) {
+      await disposeTestQueryClient(activeClient);
+      activeClient = null;
+    }
   });
 
   it('gates UI when allow_replacements is false', async () => {

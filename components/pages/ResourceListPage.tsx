@@ -31,6 +31,8 @@ export default function ResourceListPage<
     fetchData,
     bulkDelete,
     excludeFields = [],
+    staticColumns,
+    primaryKeyField: staticPrimaryKeyField,
     bulkActions = [],
     title,
     description,
@@ -112,6 +114,9 @@ export default function ResourceListPage<
     .join('|');
 
   const dynamicColumns = useMemo(() => {
+    if (staticColumns && staticColumns.length > 0) {
+      return staticColumns;
+    }
     if (metadata) {
       return generateColumnsFromMetadata(metadata, {
         excludeFields,
@@ -123,6 +128,7 @@ export default function ResourceListPage<
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     metadata,
+    staticColumns,
     excludeFields,
     onView,
     resourceName,
@@ -130,9 +136,12 @@ export default function ResourceListPage<
   ]);
 
   const primaryKeyField = useMemo(() => {
+    if (staticPrimaryKeyField) {
+      return staticPrimaryKeyField;
+    }
     if (!metadata) return null;
     return PrimaryKeyService.detectPrimaryKey(metadata);
-  }, [metadata]);
+  }, [metadata, staticPrimaryKeyField]);
 
   useBreadcrumbSegments(`resource-list-${resourceName}`, []);
 
@@ -295,7 +304,7 @@ export default function ResourceListPage<
   }
 
   if (!primaryKeyField) {
-    if (metadataLoading || !metadata) {
+    if (!staticColumns?.length && (metadataLoading || !metadata)) {
       return wrap(
         <View className="flex-1 justify-center items-center p-6">
           <Text className="text-gray-600 text-center">Loading...</Text>

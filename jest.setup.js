@@ -1,5 +1,9 @@
 /* global jest */
 
+jest.mock('expo-router', () =>
+  require('./testing/expoRouterMock').createExpoRouterMock()
+);
+
 jest.mock('@expo/vector-icons', () => ({
   Ionicons: () => null,
 }));

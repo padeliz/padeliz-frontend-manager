@@ -19,13 +19,13 @@ const mockOpen = jest.fn();
 jest.mock('expo-router', () => {
   const React = require('react');
   const { View } = require('react-native');
-  return {
+  return require('@/testing/expoRouterMock').createExpoRouterMock({
     Slot: () => <View testID="slot" />,
     useLocalSearchParams: () => mockParams,
     useGlobalSearchParams: () => mockParams,
     usePathname: () => '/editions/1/lottery/prizes',
     useRouter: () => ({ push: mockPush }),
-  };
+  });
 });
 
 let mockParams: { id: string; ed?: string; lottery?: string } = { id: '1' };

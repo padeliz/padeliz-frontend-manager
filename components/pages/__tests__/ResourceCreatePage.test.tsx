@@ -11,14 +11,16 @@ jest.mock('@expo/vector-icons', () => ({
 
 const mockReplace = jest.fn();
 let mockSearchParams: Record<string, string> = {};
-jest.mock('expo-router', () => ({
+jest.mock('expo-router', () =>
+  require('@/testing/expoRouterMock').createExpoRouterMock({
   useRouter: () => ({
     replace: mockReplace,
     back: jest.fn(),
     push: jest.fn(),
   }),
   useLocalSearchParams: () => mockSearchParams,
-}));
+})
+);
 
 jest.mock('@/hooks/useResourceMetadata', () => ({
   useResourceMetadata: () => ({

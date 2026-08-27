@@ -20,7 +20,7 @@ type Props = {
 export default function AppContentScroll({
   children,
   className = 'flex-1 min-h-0',
-  contentClassName = 'p-6',
+  contentClassName = 'px-6 pt-6 pb-5',
   testID = 'app-content-scroll',
 }: Props) {
   return (

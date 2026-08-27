@@ -21,14 +21,16 @@ jest.mock('@/services/api/editionDivisionsApi', () => ({
   })),
 }));
 
-jest.mock('expo-router', () => ({
+jest.mock('expo-router', () =>
+  require('@/testing/expoRouterMock').createExpoRouterMock({
   Slot: () => null,
   useLocalSearchParams: () => ({ id: '1' }),
   useGlobalSearchParams: () => ({ id: '1' }),
   usePathname: () => '/editions/1/schedule/knobs',
   useRouter: () => ({ push: jest.fn() }),
   Link: ({ children }: any) => children,
-}));
+})
+);
 
 function SubTabChrome() {
   return <View testID="subtab-chrome">{useSubTabBarTrail()}</View>;

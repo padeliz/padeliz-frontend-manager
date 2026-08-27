@@ -96,9 +96,11 @@ jest.mock('@/components/ui/AdvancedSearchFilters', () => {
   };
 });
 
-jest.mock('expo-router', () => ({
+jest.mock('expo-router', () =>
+  require('@/testing/expoRouterMock').createExpoRouterMock({
   useRouter: () => ({ back: jest.fn(), push: jest.fn() }),
-}));
+})
+);
 
 describe('ResourceListPage schema guard', () => {
   it('shows an inline error when metadata loads without swagger_schema', () => {

@@ -43,14 +43,16 @@ jest.mock('@/services/api/editionDivisionsApi', () => ({
 
 let mockPathname = '/editions/1/details';
 
-jest.mock('expo-router', () => ({
+jest.mock('expo-router', () =>
+  require('@/testing/expoRouterMock').createExpoRouterMock({
   useRouter: () => ({ replace: jest.fn(), back: jest.fn() }),
   usePathname: () => mockPathname,
   useLocalSearchParams: () => ({ id: '1' }),
   useGlobalSearchParams: () => ({ id: '1' }),
   Slot: () => null,
   Redirect: () => null,
-}));
+})
+);
 
 jest.mock('@/components/layout/AppLayout', () => {
   const React = require('react');

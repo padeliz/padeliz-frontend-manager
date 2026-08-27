@@ -40,6 +40,8 @@ export interface SingleSelectDropdownProps {
   loading?: boolean;
   /** When true, a clear control calls onSelectionChange(null). Default false. */
   clearable?: boolean;
+  /** Notified when the floating menu opens or closes. */
+  onOpenChange?: (open: boolean) => void;
 }
 
 export interface MultiSelectDropdownProps {

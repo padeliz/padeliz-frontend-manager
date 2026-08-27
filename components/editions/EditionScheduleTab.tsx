@@ -1,4 +1,5 @@
 import { useRegisterPageActions } from '@/components/chrome/PageChromeProvider';
+import AppTextInput from '@/components/ui/AppTextInput';
 import MultiSelectDropdown from '@/components/ui/MultiSelectDropdown';
 import { queryKeys } from '@/lib/queryClient';
 import { courtsApi } from '@/services/api/courtsApi';
@@ -24,7 +25,6 @@ import {
   Alert,
   Pressable,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import EditionScheduleGeneralView from './EditionScheduleGeneralView';
@@ -437,7 +437,7 @@ export default function EditionScheduleTab({
             ).map(([key, label]) => (
               <View key={key}>
                 <Text className="text-xs text-gray-500 mb-1">{label}</Text>
-                <TextInput
+                <AppTextInput
                   editable={!finalized}
                   className="border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
                   value={

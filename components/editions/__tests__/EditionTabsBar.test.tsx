@@ -4,10 +4,12 @@ import React from 'react';
 
 const mockPathname = { value: '/editions/1/lottery/prizes' };
 
-jest.mock('expo-router', () => ({
+jest.mock('expo-router', () =>
+  require('@/testing/expoRouterMock').createExpoRouterMock({
   usePathname: () => mockPathname.value,
   useRouter: () => ({ push: jest.fn() }),
-}));
+})
+);
 
 describe('EditionTabsBar', () => {
   it('highlights nested lottery tab when match is a single segment', () => {

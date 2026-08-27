@@ -17,7 +17,8 @@ jest.mock('@/components/layout/BreadcrumbProvider', () => ({
   useBreadcrumbSegments: jest.fn(),
 }));
 
-jest.mock('expo-router', () => ({
+jest.mock('expo-router', () =>
+  require('@/testing/expoRouterMock').createExpoRouterMock({
   usePathname: () => '/players/import-players',
   Slot: () => {
     const { View, Text } = require('react-native');
@@ -28,7 +29,8 @@ jest.mock('expo-router', () => ({
     );
   },
   useRouter: () => ({ push: jest.fn() }),
-}));
+})
+);
 
 jest.mock('@/components/editions/EditionTabsBar', () => {
   const { View, Text } = require('react-native');

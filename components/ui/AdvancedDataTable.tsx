@@ -8,35 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import LoadingSpinner from './LoadingSpinner';
-import SingleSelectDropdown from './SingleSelectDropdown';
-
-// Cross-platform dropdown component
-function PerPageDropdown({
-  currentValue,
-  onValueChange,
-}: {
-  currentValue: number;
-  onValueChange: (value: number) => void;
-}) {
-  const options = [
-    { label: '10', value: 10 },
-    { label: '25', value: 25 },
-    { label: '50', value: 50 },
-    { label: '100', value: 100 },
-  ];
-
-  return (
-    <SingleSelectDropdown
-      options={options}
-      selectedValue={currentValue}
-      onSelectionChange={value => onValueChange(value as number)}
-      placeholder="Select items per page"
-      title="Items per page"
-      minWidth={120}
-      defaultValue={10}
-    />
-  );
-}
+import TablePagination from './TablePagination';
 
 export default function AdvancedDataTable<T extends { [key: string]: any }>({
   data,
@@ -328,106 +300,16 @@ export default function AdvancedDataTable<T extends { [key: string]: any }>({
 
       {/* Pagination */}
       {pagination && (
-        <View className="p-4 border-t border-gray-200 bg-gray-50">
-          <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center">
-              {loading && (
-                <View className="flex-row items-center mr-4">
-                  <View className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2" />
-                  <Text className="text-sm text-gray-600">Loading...</Text>
-                </View>
-              )}
-              <Text className="text-gray-600 mr-4 text-sm">
-                Showing {(pagination.currentPage - 1) * pagination.perPage + 1}{' '}
-                to{' '}
-                {Math.min(
-                  pagination.currentPage * pagination.perPage,
-                  pagination.totalItems
-                )}{' '}
-                of {pagination.totalItems} results
-              </Text>
-              <View className="flex-row items-center">
-                <Text className="text-gray-600 mr-2 text-sm">Show:</Text>
-                <PerPageDropdown
-                  currentValue={pagination.perPage}
-                  onValueChange={pagination.onPerPageChange}
-                />
-              </View>
-            </View>
-
-            <View className="flex-row items-center space-x-2">
-              <Pressable
-                onPress={() =>
-                  pagination.onPageChange(pagination.currentPage - 1)
-                }
-                disabled={pagination.currentPage === 1}
-                className={`
-                  px-3 py-1 rounded flex-row items-center
-                  ${
-                    pagination.currentPage === 1
-                      ? 'bg-gray-200'
-                      : 'bg-white border border-gray-300'
-                  }
-                `}
-              >
-                <Ionicons
-                  name="chevron-back"
-                  size={16}
-                  className={
-                    pagination.currentPage === 1
-                      ? 'text-gray-400'
-                      : 'text-gray-600'
-                  }
-                />
-                <Text
-                  className={`
-                  ml-1 text-sm
-                  ${pagination.currentPage === 1 ? 'text-gray-400' : 'text-gray-700'}
-                `}
-                >
-                  Previous
-                </Text>
-              </Pressable>
-
-              <Text className="text-gray-600 text-sm px-2">
-                Page {pagination.currentPage} of {pagination.totalPages}
-              </Text>
-
-              <Pressable
-                onPress={() =>
-                  pagination.onPageChange(pagination.currentPage + 1)
-                }
-                disabled={pagination.currentPage === pagination.totalPages}
-                className={`
-                  px-3 py-1 rounded flex-row items-center
-                  ${
-                    pagination.currentPage === pagination.totalPages
-                      ? 'bg-gray-200'
-                      : 'bg-white border border-gray-300'
-                  }
-                `}
-              >
-                <Text
-                  className={`
-                  mr-1 text-sm
-                  ${pagination.currentPage === pagination.totalPages ? 'text-gray-400' : 'text-gray-700'}
-                `}
-                >
-                  Next
-                </Text>
-                <Ionicons
-                  name="chevron-forward"
-                  size={16}
-                  className={
-                    pagination.currentPage === pagination.totalPages
-                      ? 'text-gray-400'
-                      : 'text-gray-600'
-                  }
-                />
-              </Pressable>
-            </View>
-          </View>
-        </View>
+        <TablePagination
+          currentPage={pagination.currentPage}
+          totalPages={pagination.totalPages}
+          totalItems={pagination.totalItems}
+          perPage={pagination.perPage}
+          onPageChange={pagination.onPageChange}
+          onPerPageChange={pagination.onPerPageChange}
+          pageSizeOptions={[10, 25, 50, 100]}
+          loading={loading}
+        />
       )}
     </View>
   );

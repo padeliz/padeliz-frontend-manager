@@ -53,9 +53,11 @@ jest.mock('@/services/api/playerCustomFieldsApi', () => ({
   })),
 }));
 
-jest.mock('expo-router', () => ({
+jest.mock('expo-router', () =>
+  require('@/testing/expoRouterMock').createExpoRouterMock({
   useLocalSearchParams: () => ({ id: '12' }),
-}));
+})
+);
 
 jest.mock('react-native-gesture-handler', () => {
   const React = require('react');

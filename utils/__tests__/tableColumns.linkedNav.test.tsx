@@ -6,9 +6,11 @@ import { fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 
 const mockPush = jest.fn();
-jest.mock('expo-router', () => ({
+jest.mock('expo-router', () =>
+  require('@/testing/expoRouterMock').createExpoRouterMock({
   useRouter: () => ({ push: mockPush }),
-}));
+})
+);
 
 describe('linked FK cell navigation', () => {
   beforeEach(() => {

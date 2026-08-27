@@ -26,9 +26,11 @@ jest.mock('@/services/api/editionDivisionsApi', () => ({
   })),
 }));
 
-jest.mock('expo-router', () => ({
+jest.mock('expo-router', () =>
+  require('@/testing/expoRouterMock').createExpoRouterMock({
   useRouter: () => ({ push: (...args: unknown[]) => mockPush(...args) }),
-}));
+})
+);
 
 jest.mock('@/components/ui/SingleSelectDropdown', () => {
   const { Pressable, Text, View } = require('react-native');

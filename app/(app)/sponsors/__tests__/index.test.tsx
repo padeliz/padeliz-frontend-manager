@@ -5,9 +5,11 @@ import SponsorsPage from '@/app/(app)/sponsors/index';
 import { render, screen } from '@testing-library/react-native';
 import React from 'react';
 
-jest.mock('expo-router', () => ({
+jest.mock('expo-router', () =>
+  require('@/testing/expoRouterMock').createExpoRouterMock({
   useRouter: () => ({ push: jest.fn(), back: jest.fn() }),
-}));
+})
+);
 
 jest.mock('@/components/pages/ResourceListPage', () => {
   const React = require('react');

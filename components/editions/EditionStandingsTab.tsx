@@ -1,3 +1,4 @@
+import AppTextInput from '@/components/ui/AppTextInput';
 import { useRegisterPageActions } from '@/components/chrome/PageChromeProvider';
 import { EditionGeneralEditHint } from '@/components/editions/editionGeneralHint';
 import { queryKeys } from '@/lib/queryClient';
@@ -12,7 +13,6 @@ import {
   Alert,
   Pressable,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 
@@ -339,7 +339,7 @@ export default function EditionStandingsTab({
               {(['rank', 'wins', 'points_total'] as const).map(field => (
                 <View key={field} className="mr-2">
                   <Text className="text-xs text-gray-500">{field}</Text>
-                  <TextInput
+                  <AppTextInput
                     editable={!finalized}
                     className="border border-gray-300 rounded px-2 py-1 w-20"
                     keyboardType="numeric"

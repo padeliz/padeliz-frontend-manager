@@ -16,11 +16,13 @@ jest.mock('@/context/managerAuth', () => ({
   }),
 }));
 
-jest.mock('expo-router', () => ({
+jest.mock('expo-router', () =>
+  require('@/testing/expoRouterMock').createExpoRouterMock({
   usePathname: () => '/clubs/1',
   Link: ({ children }: any) => children,
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
-}));
+})
+);
 
 jest.mock('@/components/layout/TopNavigation', () => {
   const { View } = require('react-native');

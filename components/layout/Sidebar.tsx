@@ -59,6 +59,12 @@ export const managerNavigationItems: NavigationItem[] = [
     description: 'Player management',
   },
   {
+    label: 'Challenges',
+    href: '/challenges',
+    icon: 'flash',
+    description: 'King of the Court & Smash Contest',
+  },
+  {
     label: 'Custom fields',
     href: '/player-custom-fields',
     icon: 'options',

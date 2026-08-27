@@ -21,11 +21,13 @@ jest.mock('@/context/managerAuth', () => ({
   }),
 }));
 
-jest.mock('expo-router', () => ({
+jest.mock('expo-router', () =>
+  require('@/testing/expoRouterMock').createExpoRouterMock({
   usePathname: () => '/editions/1',
   Link: ({ children }: any) => children,
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
-}));
+})
+);
 
 jest.mock('@/components/layout/TopNavigation', () => {
   const { View } = require('react-native');
@@ -140,6 +142,7 @@ describe('AppContentScroll', () => {
     expect(src).not.toMatch(
       /import\s*\{[^}]*ScrollView[^}]*\}\s*from\s*['"]react-native['"]/
     );
+    expect(src).toMatch(/contentClassName = 'px-6 pt-6 pb-5'/);
     const { getByTestId, getByText } = render(
       <AppContentScroll>
         <Text>Scroll body</Text>

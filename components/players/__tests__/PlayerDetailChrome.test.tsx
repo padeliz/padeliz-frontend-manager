@@ -5,13 +5,14 @@ import {
   disposeTestQueryClient,
 } from '@/testing/createTestQueryClient';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { render, waitFor } from '@testing-library/react-native';
+import { act, cleanup, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 import { Text } from 'react-native';
 
 const mockPathname = { value: '/players/42/profile-images' };
 
-jest.mock('expo-router', () => ({
+jest.mock('expo-router', () =>
+  require('@/testing/expoRouterMock').createExpoRouterMock({
   Redirect: ({ href }: { href: string }) => {
     const { Text } = require('react-native');
     return <Text testID="redirect">{href}</Text>;
@@ -22,7 +23,8 @@ jest.mock('expo-router', () => ({
   },
   usePathname: () => mockPathname.value,
   useLocalSearchParams: () => ({ id: '42' }),
-}));
+})
+);
 
 jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
 
@@ -88,6 +90,7 @@ describe('PlayerDetailChrome', () => {
   });
 
   afterEach(async () => {
+    cleanup();
     if (activeClient) {
       await disposeTestQueryClient(activeClient);
       activeClient = null;
@@ -115,6 +118,9 @@ describe('PlayerDetailChrome', () => {
         'Player: Ace Player'
       );
     });
+    await act(async () => {
+      await new Promise<void>(resolve => setTimeout(resolve, 0));
+    });
   });
 
   it('keeps player name on non-details tabs via layout fetch', async () => {
@@ -124,6 +130,9 @@ describe('PlayerDetailChrome', () => {
       expect(getByTestId('app-layout-title')).toHaveTextContent(
         'Player: Ace Player'
       );
+    });
+    await act(async () => {
+      await new Promise<void>(resolve => setTimeout(resolve, 0));
     });
   });
 });
