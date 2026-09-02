@@ -2,11 +2,11 @@ import { act, renderHook } from '@testing-library/react-native';
 import { useLocalPagination } from '@/hooks/useLocalPagination';
 
 describe('useLocalPagination', () => {
-  it('defaults to 15 and slices pages', () => {
+  it('defaults to 10 and slices pages', () => {
     const items = Array.from({ length: 20 }, (_, i) => i);
     const { result } = renderHook(() => useLocalPagination(items));
-    expect(result.current.pagination.perPage).toBe(15);
-    expect(result.current.pageItems).toHaveLength(15);
+    expect(result.current.pagination.perPage).toBe(10);
+    expect(result.current.pageItems).toHaveLength(10);
     expect(result.current.pagination.totalPages).toBe(2);
   });
 

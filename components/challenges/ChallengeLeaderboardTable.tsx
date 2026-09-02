@@ -2,9 +2,16 @@ import IconActionButton from '@/components/ui/IconActionButton';
 import TablePagination from '@/components/ui/TablePagination';
 import {
   CHALLENGE_ICONS,
-  CHALLENGE_LB_STAR_SIZE,
   CHALLENGE_ROW_ICON_SIZE,
 } from '@/constants/challengeIcons';
+import {
+  LEADERBOARD_BODY_FONT_SIZE,
+  LEADERBOARD_BODY_TEXT_STYLE,
+  LEADERBOARD_HEADER_HEIGHT,
+  LEADERBOARD_HEADER_TEXT_STYLE,
+  LEADERBOARD_PAGE_SIZE,
+  LEADERBOARD_ROW_HEIGHT,
+} from '@/constants/challengeLeaderboard';
 import { useLocalPagination } from '@/hooks/useLocalPagination';
 import { formatRecordHoldCell } from '@/utils/challengeUtils';
 import { Ionicons } from '@expo/vector-icons';
@@ -65,8 +72,8 @@ export function ChallengeLeaderboardTable<T extends { [key: string]: unknown }>(
   rowKey,
   emptyMessage = 'No entries yet',
   testID,
-  defaultPerPage = 15,
-  pageSizeOptions = [15, 25, 50, 100],
+  defaultPerPage = LEADERBOARD_PAGE_SIZE,
+  pageSizeOptions = [10, 25, 50, 100],
   renderRowActions,
 }: Props<T>) {
   const { pageItems, pagination } = useLocalPagination(rows, {
@@ -90,16 +97,20 @@ export function ChallengeLeaderboardTable<T extends { [key: string]: unknown }>(
     <View testID={testID}>
       <View className="border border-gray-200 rounded-lg overflow-hidden bg-white">
         <View
-          className="flex-row bg-gray-100 border-b border-gray-200"
+          className="flex-row bg-gray-100 border-b border-gray-200 box-border"
+          style={{ height: LEADERBOARD_HEADER_HEIGHT }}
           testID={`${testID}-header`}
         >
           {allColumns.map(col => (
             <View
               key={col.key}
-              className="px-3 py-2"
+              className="px-3 justify-center"
               style={{ flex: col.flex ?? 1 }}
             >
-              <Text className="text-sm font-semibold text-gray-600">
+              <Text
+                className="font-semibold text-gray-600"
+                style={LEADERBOARD_HEADER_TEXT_STYLE}
+              >
                 {col.label}
               </Text>
             </View>
@@ -112,9 +123,10 @@ export function ChallengeLeaderboardTable<T extends { [key: string]: unknown }>(
             <Animated.View
               key={rowKey(row)}
               layout={LinearTransition}
-              className={`group flex-row border-b border-gray-100${
+              className={`group flex-row border-b border-gray-100 box-border${
                 index % 2 === 0 ? ' bg-gray-50' : ''
               }`}
+              style={{ height: LEADERBOARD_ROW_HEIGHT }}
               testID={`${testID}-row-${rowKey(row)}`}
             >
               {allColumns.map(col => {
@@ -122,12 +134,17 @@ export function ChallengeLeaderboardTable<T extends { [key: string]: unknown }>(
                 return (
                   <View
                     key={col.key}
-                    className="px-3 py-2 justify-center"
+                    className="px-3 justify-center"
                     style={{ flex: col.flex ?? 1 }}
                   >
                     {typeof cell === 'string' || typeof cell === 'number' ? (
                       cell === '' ? null : (
-                        <Text className="text-base text-gray-800">{cell}</Text>
+                        <Text
+                          className="text-gray-800"
+                          style={LEADERBOARD_BODY_TEXT_STYLE}
+                        >
+                          {cell}
+                        </Text>
                       )
                     ) : (
                       cell
@@ -194,12 +211,16 @@ export function KotcLeaderboardTable({
               <View testID={`kotc-leaderboard-star-${r.team_id}`}>
                 <Ionicons
                   name={CHALLENGE_ICONS.star.name}
-                  size={CHALLENGE_LB_STAR_SIZE}
+                  size={LEADERBOARD_BODY_FONT_SIZE}
                   color={CHALLENGE_ICONS.star.color}
                 />
               </View>
             ) : null}
-            <Text className="text-base text-gray-800 flex-1" numberOfLines={1}>
+            <Text
+              className="text-gray-800 flex-1"
+              style={LEADERBOARD_BODY_TEXT_STYLE}
+              numberOfLines={1}
+            >
               {r.team_name}
             </Text>
           </View>
@@ -301,12 +322,16 @@ export function SmashLeaderboardTable({
               <View testID={`smash-leaderboard-star-${r.player_id}`}>
                 <Ionicons
                   name={CHALLENGE_ICONS.star.name}
-                  size={CHALLENGE_LB_STAR_SIZE}
+                  size={LEADERBOARD_BODY_FONT_SIZE}
                   color={CHALLENGE_ICONS.star.color}
                 />
               </View>
             ) : null}
-            <Text className="text-base text-gray-800 flex-1" numberOfLines={1}>
+            <Text
+              className="text-gray-800 flex-1"
+              style={LEADERBOARD_BODY_TEXT_STYLE}
+              numberOfLines={1}
+            >
               {r.player_name}
             </Text>
           </View>

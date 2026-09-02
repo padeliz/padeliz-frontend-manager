@@ -321,8 +321,11 @@ export default function SmashLivePanel({ sessionId, onFooterReady }: Props) {
         )}
       </View>
 
-      <View className="flex-1 flex-col lg:flex-row gap-4" testID="smash-live-columns">
-        <View className="flex-1 gap-4">
+      <View
+        className="flex-1 flex-col lg:flex-row gap-4"
+        testID="smash-live-columns"
+      >
+        <View className="flex-1 lg:flex-[2] gap-4" testID="smash-live-col-left">
           <View
             className={`group bg-white border rounded-lg p-4 ${
               courtFlashing ? 'border-red-500 bg-red-50' : 'border-gray-200'
@@ -570,7 +573,7 @@ export default function SmashLivePanel({ sessionId, onFooterReady }: Props) {
           />
         </View>
 
-        <View className="flex-1 gap-4">
+        <View className="flex-1 lg:flex-[3] gap-4" testID="smash-live-col-right">
           <ChallengeBrandingSection
             title="Prize Partners"
             rows={CHALLENGE_PRIZE_PARTNER_ROWS}

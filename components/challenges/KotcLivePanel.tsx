@@ -293,8 +293,11 @@ export default function KotcLivePanel({ sessionId, onFooterReady }: Props) {
         )}
       </View>
 
-      <View className="flex-1 flex-col lg:flex-row gap-4">
-        <View className="flex-1 gap-4">
+      <View
+        className="flex-1 flex-col lg:flex-row gap-4"
+        testID="kotc-live-columns"
+      >
+        <View className="flex-1 lg:flex-[2] gap-4" testID="kotc-live-col-left">
           <View className="bg-white border border-gray-200 rounded-lg p-4">
             <Text className="font-semibold mb-2">In the Court</Text>
             <View className="flex-row gap-4">
@@ -515,7 +518,7 @@ export default function KotcLivePanel({ sessionId, onFooterReady }: Props) {
           />
         </View>
 
-        <View className="flex-1 gap-4">
+        <View className="flex-1 lg:flex-[3] gap-4" testID="kotc-live-col-right">
           <ChallengeBrandingSection
             title="Prize Partners"
             rows={CHALLENGE_PRIZE_PARTNER_ROWS}

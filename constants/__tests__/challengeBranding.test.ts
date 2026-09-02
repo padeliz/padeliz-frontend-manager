@@ -23,11 +23,23 @@ describe('challengeBranding', () => {
     expect(CHALLENGE_COORDINATOR_LOGO_MAX_HEIGHT).toBe(95);
   });
 
-  it('exports two coordinator logos and two prize-partner rows of four', () => {
+  it('exports two coordinator logos and prize-partner rows of five then four', () => {
     expect(CHALLENGE_COORDINATOR_LOGOS).toHaveLength(2);
     expect(CHALLENGE_PRIZE_PARTNER_ROWS).toHaveLength(2);
-    expect(CHALLENGE_PRIZE_PARTNER_ROWS[0]).toHaveLength(4);
+    expect(CHALLENGE_PRIZE_PARTNER_ROWS[0]).toHaveLength(5);
     expect(CHALLENGE_PRIZE_PARTNER_ROWS[1]).toHaveLength(4);
+    expect(CHALLENGE_PRIZE_PARTNER_ROWS[0][1]).toContain(
+      'prize-sponsors/vitavea.png'
+    );
+    expect(CHALLENGE_PRIZE_PARTNER_ROWS[0][2]).toContain(
+      'prize-sponsors/rom-autentic.png'
+    );
+    expect(CHALLENGE_PRIZE_PARTNER_ROWS[1][0]).toContain(
+      'prize-sponsors/vitamin-aqua.png'
+    );
+    expect(CHALLENGE_PRIZE_PARTNER_ROWS[1][3]).toContain(
+      'prize-sponsors/none-health.png'
+    );
     expect(CHALLENGE_COORDINATOR_LOGOS[0]).toContain(
       'coordinators/sense4fit-summit-2026.png'
     );

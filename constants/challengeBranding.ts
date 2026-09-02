@@ -38,15 +38,16 @@ const COORDINATOR_PATHS = [
 const PRIZE_PARTNER_ROW_PATHS = [
   [
     'prize-sponsors/cupio.png',
-    'prize-sponsors/forge-g.png',
+    'prize-sponsors/vitavea.png',
+    'prize-sponsors/rom-autentic.png',
     'prize-sponsors/frispy-fruits.png',
     'prize-sponsors/mogyi.png',
   ],
   [
-    'prize-sponsors/none-health.png',
+    'prize-sponsors/vitamin-aqua.png',
     'prize-sponsors/oshee.png',
     'prize-sponsors/padelxp.png',
-    'prize-sponsors/vitamin-aqua.png',
+    'prize-sponsors/none-health.png',
   ],
 ] as const;
 

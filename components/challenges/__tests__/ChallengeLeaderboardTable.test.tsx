@@ -2,8 +2,16 @@ import {
   KotcLeaderboardTable,
   SmashLeaderboardTable,
 } from '@/components/challenges/ChallengeLeaderboardTable';
+import {
+  LEADERBOARD_BODY_FONT_SIZE,
+  LEADERBOARD_HEADER_FONT_SIZE,
+  LEADERBOARD_HEADER_HEIGHT,
+  LEADERBOARD_PAGE_SIZE,
+  LEADERBOARD_ROW_HEIGHT,
+} from '@/constants/challengeLeaderboard';
 import { fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
+import { StyleSheet } from 'react-native';
 
 function kotcRow(
   overrides: Partial<{
@@ -57,8 +65,12 @@ describe('ChallengeLeaderboardTable', () => {
       /bg-gray-100/
     );
     expect(queryByText('Other Streak')).toBeNull();
-    expect(getByText('Best Streak').props.className).toMatch(/text-sm/);
-    expect(getByText('Alpha').props.className).toMatch(/text-base/);
+    expect(StyleSheet.flatten(getByText('Best Streak').props.style)).toEqual(
+      expect.objectContaining({ fontSize: LEADERBOARD_HEADER_FONT_SIZE })
+    );
+    expect(StyleSheet.flatten(getByText('Alpha').props.style)).toEqual(
+      expect.objectContaining({ fontSize: LEADERBOARD_BODY_FONT_SIZE })
+    );
   });
 
   it('stripes odd body rows with bg-gray-50', () => {
@@ -118,7 +130,7 @@ describe('ChallengeLeaderboardTable', () => {
     );
     expect(queryByTestId('pagination-previous')).toBeNull();
 
-    const manyRows = Array.from({ length: 16 }, (_, i) =>
+    const manyRows = Array.from({ length: LEADERBOARD_PAGE_SIZE + 1 }, (_, i) =>
       kotcRow({
         position: i + 1,
         team_id: String(i + 1),
@@ -131,12 +143,21 @@ describe('ChallengeLeaderboardTable', () => {
     expect(multi.getByTestId('pagination-next')).toBeTruthy();
     expect(multi.queryByText(/Showing/)).toBeNull();
     expect(multi.getByTestId('kotc-leaderboard-table-row-1')).toBeTruthy();
-    expect(() => multi.getByTestId('kotc-leaderboard-table-row-16')).toThrow();
+    expect(multi.getByTestId('kotc-leaderboard-table-row-10')).toBeTruthy();
+    expect(() => multi.getByTestId('kotc-leaderboard-table-row-11')).toThrow();
+    expect(
+      StyleSheet.flatten(multi.getByTestId('kotc-leaderboard-table-header').props.style)
+    ).toEqual(expect.objectContaining({ height: LEADERBOARD_HEADER_HEIGHT }));
+    expect(
+      StyleSheet.flatten(
+        multi.getByTestId('kotc-leaderboard-table-row-1').props.style
+      )
+    ).toEqual(expect.objectContaining({ height: LEADERBOARD_ROW_HEIGHT }));
 
     fireEvent.press(multi.getByTestId('pagination-next'));
     expect(() => multi.getByTestId('kotc-leaderboard-table-row-1')).toThrow();
-    expect(multi.getByTestId('kotc-leaderboard-table-row-16')).toBeTruthy();
-    expect(multi.getByTestId('kotc-leaderboard-table-row-16').props.className).toMatch(
+    expect(multi.getByTestId('kotc-leaderboard-table-row-11')).toBeTruthy();
+    expect(multi.getByTestId('kotc-leaderboard-table-row-11').props.className).toMatch(
       /bg-gray-50/
     );
     expect(multi.getByText(/Page 2 of/)).toBeTruthy();
@@ -164,6 +185,9 @@ describe('ChallengeLeaderboardTable', () => {
       />
     );
     expect(getByTestId('kotc-leaderboard-star-1')).toBeTruthy();
+    expect(getByTestId('kotc-leaderboard-star-1').props.children.props.size).toBe(
+      LEADERBOARD_BODY_FONT_SIZE
+    );
     expect(queryByTestId('kotc-leaderboard-star-2')).toBeNull();
   });
 
@@ -182,6 +206,9 @@ describe('ChallengeLeaderboardTable', () => {
       />
     );
     expect(getByTestId('smash-leaderboard-star-p1')).toBeTruthy();
+    expect(
+      getByTestId('smash-leaderboard-star-p1').props.children.props.size
+    ).toBe(LEADERBOARD_BODY_FONT_SIZE);
     expect(queryByTestId('smash-leaderboard-star-p2')).toBeNull();
   });
 

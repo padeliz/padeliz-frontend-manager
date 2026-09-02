@@ -269,6 +269,12 @@ describe('SmashLivePanel', () => {
     expect(queryByText('🗑️')).toBeNull();
     expect(getByTestId('smash-drag-20')).toBeTruthy();
     expect(getByTestId('smash-leaderboard-table')).toBeTruthy();
+    expect(getByTestId('smash-live-col-left').props.className).toMatch(
+      /lg:flex-\[2\]/
+    );
+    expect(getByTestId('smash-live-col-right').props.className).toMatch(
+      /lg:flex-\[3\]/
+    );
     expect(getByTestId('smash-leaderboard-section').props.className).not.toMatch(
       /flex-1/
     );

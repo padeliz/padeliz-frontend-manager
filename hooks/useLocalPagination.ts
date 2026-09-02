@@ -13,7 +13,7 @@ export function useLocalPagination<T>(
   items: T[],
   options?: { defaultPerPage?: number }
 ): { pageItems: T[]; pagination: LocalPaginationState } {
-  const defaultPerPage = options?.defaultPerPage ?? 15;
+  const defaultPerPage = options?.defaultPerPage ?? 10;
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(defaultPerPage);
 

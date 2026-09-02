@@ -209,6 +209,12 @@ describe('KotcLivePanel', () => {
     expect(getByTestId('kotc-remove-10')).toBeTruthy();
     expect(getByTestId('kotc-drag-10')).toBeTruthy();
     expect(getByTestId('kotc-leaderboard-table')).toBeTruthy();
+    expect(getByTestId('kotc-live-col-left').props.className).toMatch(
+      /lg:flex-\[2\]/
+    );
+    expect(getByTestId('kotc-live-col-right').props.className).toMatch(
+      /lg:flex-\[3\]/
+    );
     expect(getByTestId('kotc-leaderboard-section').props.className).not.toMatch(
       /flex-1/
     );

@@ -10,7 +10,6 @@ export const CHALLENGE_ICON_COLORS = {
 
 export const CHALLENGE_HEADER_ICON_SIZE = 18;
 export const CHALLENGE_ROW_ICON_SIZE = 20;
-export const CHALLENGE_LB_STAR_SIZE = 14;
 
 export const CHALLENGE_ICONS = {
   undo: {
