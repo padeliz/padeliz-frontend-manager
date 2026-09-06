@@ -3,15 +3,17 @@
  * Handles switching between view and edit modes
  */
 
-import { Ionicons } from '@expo/vector-icons';
+import ActionButton from '@/components/ui/ActionButton';
+import { useActionButtonStatus } from '@/hooks/useActionButtonStatus';
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { View } from 'react-native';
 
 export interface EditModeToggleProps {
   isEditing: boolean;
   onEdit: () => void;
-  onSave: () => void;
+  onSave: () => Promise<void>;
   onCancel: () => void;
+  /** Disables Cancel while parent reports saving; Save status comes from the hook. */
   loading?: boolean;
   disabled?: boolean;
   /** When false, hide Save (parent chrome owns it). Default true. */
@@ -27,58 +29,53 @@ export default function EditModeToggle({
   disabled = false,
   showSave = true,
 }: EditModeToggleProps) {
+  const saveStatus = useActionButtonStatus({
+    successHoldMs: 4000,
+    auditoryFeedback: true,
+  });
+  const saveBusy = saveStatus.status === 'pending';
+  const cancelDisabled = loading || disabled || saveBusy;
+
   if (isEditing) {
     return (
-      <View className="flex-row space-x-2">
-        <Pressable
+      <View className="flex-row items-center gap-2">
+        <ActionButton
+          label="Cancel"
+          variant="secondary"
+          size="sm"
+          disabled={cancelDisabled}
           onPress={onCancel}
-          disabled={loading || disabled}
-          className={`px-4 py-2 rounded-lg border ${
-            loading || disabled
-              ? 'bg-gray-100 border-gray-300'
-              : 'bg-white border-gray-300'
-          }`}
-        >
-          <Text
-            className={`text-sm font-medium ${
-              loading || disabled ? 'text-gray-400' : 'text-gray-700'
-            }`}
-          >
-            Cancel
-          </Text>
-        </Pressable>
+          testID="edit-mode-cancel"
+        />
 
-        {showSave && (
-          <Pressable
-            onPress={onSave}
-            disabled={loading || disabled}
-            className={`px-4 py-2 rounded-lg ${
-              loading || disabled ? 'bg-gray-300' : 'bg-blue-600'
-            } flex-row items-center`}
-          >
-            {loading && (
-              <View className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-            )}
-            <Ionicons name="checkmark" size={16} className="text-white mr-1" />
-            <Text className="text-white text-sm font-medium">
-              {loading ? 'Saving...' : 'Save'}
-            </Text>
-          </Pressable>
-        )}
+        {showSave ? (
+          <ActionButton
+            label="Save"
+            variant="primary"
+            size="sm"
+            startIcon="checkmark"
+            status={saveStatus.status}
+            errorMessage={saveStatus.errorMessage ?? undefined}
+            disabled={disabled}
+            onPress={() => {
+              void saveStatus.run(() => onSave());
+            }}
+            testID="edit-mode-save"
+          />
+        ) : null}
       </View>
     );
   }
 
   return (
-    <Pressable
-      onPress={onEdit}
+    <ActionButton
+      label="Edit"
+      variant="primary"
+      size="sm"
+      startIcon="create-outline"
       disabled={disabled}
-      className={`px-4 py-2 rounded-lg ${
-        disabled ? 'bg-gray-300' : 'bg-blue-600'
-      } flex-row items-center`}
-    >
-      <Ionicons name="create-outline" size={16} className="text-white mr-1" />
-      <Text className="text-white text-sm font-medium">Edit</Text>
-    </Pressable>
+      onPress={onEdit}
+      testID="edit-mode-edit"
+    />
   );
 }

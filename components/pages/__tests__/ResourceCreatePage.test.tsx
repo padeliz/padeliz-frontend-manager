@@ -2,7 +2,13 @@
  * @jest-environment jsdom
  */
 import ResourceCreatePage from '@/components/pages/ResourceCreatePage';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react-native';
 import React from 'react';
 
 jest.mock('@expo/vector-icons', () => ({
@@ -10,6 +16,7 @@ jest.mock('@expo/vector-icons', () => ({
 }));
 
 const mockReplace = jest.fn();
+const mockValidate: jest.Mock = jest.fn(() => ({ isValid: true, errors: [] }));
 let mockSearchParams: Record<string, string> = {};
 jest.mock('expo-router', () =>
   require('@/testing/expoRouterMock').createExpoRouterMock({
@@ -74,15 +81,20 @@ jest.mock('@/components/layout/AppLayout', () => {
 });
 
 jest.mock('@/utils/validationRules', () => ({
-  validateFormWithSubmission: () => ({ isValid: true, errors: [] }),
+  validateFormWithSubmission: (...args: unknown[]) => mockValidate(...args),
 }));
 
 jest.mock('@/components/pages/ResourceFieldEdit', () => {
   const React = require('react');
-  const { Text } = require('react-native');
+  const { Text, View } = require('react-native');
   return {
     __esModule: true,
-    default: ({ fieldKey }: any) => <Text>{`field:${fieldKey}`}</Text>,
+    default: ({ fieldKey, error }: any) => (
+      <View>
+        <Text>{`field:${fieldKey}`}</Text>
+        {error ? <Text>{error}</Text> : null}
+      </View>
+    ),
   };
 });
 
@@ -103,15 +115,22 @@ jest.mock('@/components/ui/ManagerFileUpload', () => {
 describe('ResourceCreatePage', () => {
   beforeEach(() => {
     mockReplace.mockClear();
+    mockValidate.mockReturnValue({ isValid: true, errors: [] });
     mockSearchParams = {};
   });
 
   it(
     'Save in Page Header, no New heading, navigates after create-then-attach',
     async () => {
-      const createResource = jest.fn(async () => ({
-        data: { id_prize: 42, name: 'Racket' },
-      }));
+      let resolveCreate!: (value: {
+        data: { id_prize: number; name: string };
+      }) => void;
+      const createResource = jest.fn(
+        () =>
+          new Promise(resolve => {
+            resolveCreate = resolve;
+          })
+      );
 
       render(
         <ResourceCreatePage
@@ -133,9 +152,43 @@ describe('ResourceCreatePage', () => {
 
       await waitFor(() => {
         expect(createResource).toHaveBeenCalled();
+        expect(screen.getByTestId('resource-create-save-pending')).toBeTruthy();
+      });
+      await act(async () => {
+        resolveCreate({ data: { id_prize: 42, name: 'Racket' } });
+      });
+      await waitFor(() => {
         expect(mockReplace).toHaveBeenCalledWith('/prizes/42');
+        expect(screen.getByTestId('resource-create-save-success')).toBeTruthy();
       });
     },
     15000
   );
+
+  it('rejects Save after publishing validation errors', async () => {
+    mockValidate.mockReturnValue({
+      isValid: false,
+      errors: [{ field: 'name', message: 'Name is required' }],
+    });
+    const createResource = jest.fn();
+
+    render(
+      <ResourceCreatePage
+        config={{
+          resourceName: 'Prize',
+          resourceDisplayName: 'Prize',
+          createResource,
+          title: 'Add Prize',
+        }}
+      />
+    );
+
+    expect(screen.getByTestId('resource-create-save')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('resource-create-save'));
+    expect(createResource).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(screen.getByText('Name is required')).toBeTruthy();
+      expect(screen.getByTestId('resource-create-save-error')).toBeTruthy();
+    });
+  });
 });

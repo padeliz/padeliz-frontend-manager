@@ -1,10 +1,9 @@
 import { EditionChrome } from '@/components/editions/EditionDetailChrome';
 import { PageChromeProvider } from '@/components/chrome/PageChromeProvider';
 import { QueryClientProvider } from '@tanstack/react-query';
-import {
-  createTestQueryClient,
-} from '@/testing/createTestQueryClient';
+import { createTestQueryClient } from '@/testing/createTestQueryClient';
 import React from 'react';
+import { Alert } from 'react-native';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 const mockFinalizeEdition = jest.fn(async () => ({ data: {} }));
@@ -27,15 +26,20 @@ jest.mock('@/services/api/editionDivisionsApi', () => ({
   })),
 }));
 
+jest.mock('@/lib/actionButtonFeedback', () => ({
+  playSuccess: jest.fn(async () => undefined),
+  playError: jest.fn(async () => undefined),
+}));
+
 jest.mock('expo-router', () =>
   require('@/testing/expoRouterMock').createExpoRouterMock({
-  useRouter: () => ({ replace: jest.fn(), back: jest.fn() }),
-  usePathname: () => '/editions/1/details',
-  useLocalSearchParams: () => ({ id: '1' }),
-  useGlobalSearchParams: () => ({ id: '1' }),
-  Slot: () => null,
-  Redirect: () => null,
-})
+    useRouter: () => ({ replace: jest.fn(), back: jest.fn() }),
+    usePathname: () => '/editions/1/details',
+    useLocalSearchParams: () => ({ id: '1' }),
+    useGlobalSearchParams: () => ({ id: '1' }),
+    Slot: () => null,
+    Redirect: () => null,
+  })
 );
 
 jest.mock('@/components/layout/AppLayout', () => {
@@ -64,6 +68,7 @@ describe('EditionChrome finalize', () => {
     (window as any).confirm = jest.fn(() => true);
     (window as any).addEventListener = jest.fn();
     (window as any).removeEventListener = jest.fn();
+    jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
   });
 
   function renderChrome() {
@@ -89,11 +94,24 @@ describe('EditionChrome finalize', () => {
 
   it('does not call finalizeEdition when window.confirm returns false', async () => {
     (window as any).confirm = jest.fn(() => false);
-    const { findByText } = renderChrome();
+    const { findByText, queryByTestId } = renderChrome();
     fireEvent.press(await findByText('Finalize'));
     await waitFor(() => {
       expect((window as any).confirm).toHaveBeenCalled();
     });
     expect(mockFinalizeEdition).not.toHaveBeenCalled();
+    expect(queryByTestId('edition-chrome-finalize-success')).toBeNull();
+  });
+
+  it('API reject shows error without Finalize failed Alert', async () => {
+    mockFinalizeEdition.mockRejectedValueOnce(new Error('boom'));
+    (window as any).confirm = jest.fn(() => true);
+    const { findByText, findByTestId } = renderChrome();
+    fireEvent.press(await findByText('Finalize'));
+    await findByTestId('edition-chrome-finalize-error');
+    expect(Alert.alert).not.toHaveBeenCalledWith(
+      'Finalize failed',
+      expect.anything()
+    );
   });
 });

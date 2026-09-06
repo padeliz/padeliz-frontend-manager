@@ -1,6 +1,8 @@
 import { useRegisterPageActions } from '@/components/chrome/PageChromeProvider';
+import ActionButton from '@/components/ui/ActionButton';
 import AppTextInput from '@/components/ui/AppTextInput';
 import MultiSelectDropdown from '@/components/ui/MultiSelectDropdown';
+import { useActionButtonStatus } from '@/hooks/useActionButtonStatus';
 import { queryKeys } from '@/lib/queryClient';
 import { courtsApi } from '@/services/api/courtsApi';
 import { scheduleApi } from '@/services/api/scheduleApi';
@@ -16,13 +18,12 @@ import {
   generateBlockedReason,
   isGenerateBlocked,
 } from '@/utils/edition/schedulePreview';
-import { actionPillClass } from '@/utils/ui/actionButtonClass';
+import { confirmAction } from '@/utils/confirmAction';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   Text,
   View,
@@ -97,21 +98,6 @@ export function formFromSchedule(data: ScheduleState): ScheduleFormPayload {
   };
 }
 
-function confirmAction(
-  title: string,
-  message: string,
-  onConfirm: () => void
-) {
-  if (typeof window !== 'undefined' && window.confirm) {
-    if (window.confirm(message)) onConfirm();
-  } else {
-    Alert.alert(title, message, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'OK', onPress: onConfirm },
-    ]);
-  }
-}
-
 export default function EditionScheduleTab({
   editionDivisionId,
   locationId,
@@ -120,10 +106,12 @@ export default function EditionScheduleTab({
 }: Props) {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<ScheduleFormPayload>({});
   const [baseline, setBaseline] = useState<string>('');
   const [preview, setPreview] = useState<SchedulePreview | null>(null);
+  const previewStatus = useActionButtonStatus();
+  const generateStatus = useActionButtonStatus({ auditoryFeedback: true });
+  const deleteStatus = useActionButtonStatus({ auditoryFeedback: true });
 
   const scheduleQuery = useQuery({
     queryKey:
@@ -182,8 +170,10 @@ export default function EditionScheduleTab({
   const selectedCourtIds = form.court_ids || [];
 
   const reload = useCallback(async () => {
-    await scheduleQuery.refetch();
-    if (locationId != null) await courtsQuery.refetch();
+    await scheduleQuery.refetch({ throwOnError: true });
+    if (locationId != null) {
+      await courtsQuery.refetch({ throwOnError: true });
+    }
   }, [courtsQuery, locationId, scheduleQuery]);
 
   const toggleCourtSelection = (values: (string | number | boolean)[]) => {
@@ -216,7 +206,6 @@ export default function EditionScheduleTab({
   const saveForm = useCallback(async () => {
     if (!editionDivisionId || finalized) return;
     setSaving(true);
-    setError(null);
     try {
       await scheduleApi.updateForm(
         editionDivisionId,
@@ -225,8 +214,6 @@ export default function EditionScheduleTab({
       await queryClient.invalidateQueries({
         queryKey: queryKeys.schedule(editionDivisionId),
       });
-    } catch (e: any) {
-      setError(e?.message || 'Failed to save form');
     } finally {
       setSaving(false);
     }
@@ -249,11 +236,9 @@ export default function EditionScheduleTab({
       : null
   );
 
-  const runPreview = async () => {
+  const runPreview = () => {
     if (!editionDivisionId) return;
-    setSaving(true);
-    setError(null);
-    try {
+    void previewStatus.run(async () => {
       // Persist knobs only when not finalized; preview itself stays allowed after finalize
       if (!finalized) {
         await scheduleApi.updateForm(
@@ -271,68 +256,54 @@ export default function EditionScheduleTab({
           queryKey: queryKeys.schedule(editionDivisionId),
         });
       }
-    } catch (e: any) {
-      setError(e?.message || 'Preview failed');
-    } finally {
-      setSaving(false);
-    }
+    });
   };
 
   const runGenerate = () => {
     if (!editionDivisionId || generateBlocked) return;
-    const doGenerate = async () => {
-      setSaving(true);
-      setError(null);
-      try {
-        await scheduleApi.generate(editionDivisionId, {
-          ...knobsFormPayload(form),
-          adjust: adjust || undefined,
-          confirm_replace: canReplace || undefined,
-        });
-        setPreview(null);
-        await queryClient.invalidateQueries({
-          queryKey: queryKeys.schedule(editionDivisionId),
-        });
-      } catch (e: any) {
-        setError(e?.message || 'Generate failed');
-      } finally {
-        setSaving(false);
-      }
-    };
-
     confirmAction(
       'Generate schedule',
       canReplace
         ? 'Replace existing REGULAR matches?'
         : 'Generate schedule matches?',
-      () => void doGenerate()
+      () => {
+        void generateStatus.run(async () => {
+          await scheduleApi.generate(editionDivisionId, {
+            ...knobsFormPayload(form),
+            adjust: adjust || undefined,
+            confirm_replace: canReplace || undefined,
+          });
+          setPreview(null);
+          await queryClient.invalidateQueries({
+            queryKey: queryKeys.schedule(editionDivisionId),
+          });
+        });
+      }
     );
   };
 
   const runDelete = () => {
     if (!editionDivisionId || generateBlocked) return;
-    const doDelete = async () => {
-      setSaving(true);
-      setError(null);
-      try {
-        await scheduleApi.destroySchedule(editionDivisionId);
-        setPreview(null);
-        await queryClient.invalidateQueries({
-          queryKey: queryKeys.schedule(editionDivisionId),
-        });
-      } catch (e: any) {
-        setError(e?.message || 'Delete schedule failed');
-      } finally {
-        setSaving(false);
-      }
-    };
-
     confirmAction(
       'Delete schedule',
       'Delete all schedule matches for this edition division?',
-      () => void doDelete()
+      () => {
+        void deleteStatus.run(async () => {
+          await scheduleApi.destroySchedule(editionDivisionId);
+          setPreview(null);
+          await queryClient.invalidateQueries({
+            queryKey: queryKeys.schedule(editionDivisionId),
+          });
+        });
+      }
     );
   };
+
+  const actionsBusy =
+    saving ||
+    previewStatus.status === 'pending' ||
+    generateStatus.status === 'pending' ||
+    deleteStatus.status === 'pending';
 
   if (!editionDivisionId) {
     return (
@@ -346,12 +317,6 @@ export default function EditionScheduleTab({
 
   return (
     <View className="gap-4">
-      {error && (
-        <View className="bg-red-50 border border-red-200 rounded-lg p-3">
-          <Text className="text-red-700 text-sm">{error}</Text>
-        </View>
-      )}
-
       {section === 'knobs' && (
         <>
           <View className="bg-white border border-gray-200 rounded-lg p-4">
@@ -365,31 +330,36 @@ export default function EditionScheduleTab({
           </View>
 
           <View className="flex-row flex-wrap gap-2">
-            <Pressable
-              onPress={() => void runPreview()}
-              disabled={saving}
-              className={actionPillClass(!saving, 'blue') + ' px-4'}
-            >
-              <Text className="text-white text-sm">Preview</Text>
-            </Pressable>
-            <Pressable
+            <ActionButton
+              testID="schedule-preview"
+              label="Preview"
+              variant="primary"
+              size="sm"
+              status={previewStatus.status}
+              errorMessage={previewStatus.errorMessage ?? undefined}
+              disabled={actionsBusy}
+              onPress={runPreview}
+            />
+            <ActionButton
+              testID="schedule-generate"
+              label="Generate"
+              variant="positive"
+              size="sm"
+              status={generateStatus.status}
+              errorMessage={generateStatus.errorMessage ?? undefined}
+              disabled={actionsBusy || generateBlocked}
               onPress={runGenerate}
-              disabled={saving || generateBlocked}
-              className={
-                actionPillClass(!(saving || generateBlocked), 'green') + ' px-4'
-              }
-            >
-              <Text className="text-white text-sm">Generate</Text>
-            </Pressable>
-            <Pressable
+            />
+            <ActionButton
+              testID="schedule-delete"
+              label="Delete schedule"
+              variant="danger"
+              size="sm"
+              status={deleteStatus.status}
+              errorMessage={deleteStatus.errorMessage ?? undefined}
+              disabled={actionsBusy || generateBlocked}
               onPress={runDelete}
-              disabled={saving || generateBlocked}
-              className={
-                actionPillClass(!(saving || generateBlocked), 'red') + ' px-4'
-              }
-            >
-              <Text className="text-white text-sm">Delete schedule</Text>
-            </Pressable>
+            />
           </View>
           {generateBlockReason ? (
             <Text

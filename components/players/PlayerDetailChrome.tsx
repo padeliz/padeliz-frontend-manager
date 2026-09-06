@@ -9,7 +9,8 @@ import EditionTabsBar, {
 import AppLayout from '@/components/layout/AppLayout';
 import { useBreadcrumbSegments } from '@/components/layout/BreadcrumbProvider';
 import EditModeToggle from '@/components/pages/EditModeToggle';
-import HeaderActionButton from '@/components/ui/HeaderActionButton';
+import ActionButton from '@/components/ui/ActionButton';
+import { useActionButtonStatus } from '@/hooks/useActionButtonStatus';
 import { useResourceMetadata } from '@/hooks/useResourceMetadata';
 import { queryKeys } from '@/lib/queryClient';
 import { PlayersApiService } from '@/services/api/playersApi';
@@ -25,7 +26,7 @@ import {
   useLocalSearchParams,
   usePathname,
 } from 'expo-router';
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View } from 'react-native';
 
 const playersApi = new PlayersApiService();
@@ -36,6 +37,10 @@ export function PlayerDetailChrome() {
   const playerId = params.id;
   const numericPlayerId = playerId ? Number(playerId) : NaN;
   const { actions } = usePageChrome();
+  const refreshStatus = useActionButtonStatus({
+    successHoldMs: 4000,
+    resetKey: pathname,
+  });
   const { getMetadata } = useResourceMetadata(['Player']);
   const metadata = getMetadata('Player');
 
@@ -94,15 +99,26 @@ export function PlayerDetailChrome() {
   ]);
 
   const title = formatResourceHeaderTitle('Player', displayTitle);
+  const onRefresh = useCallback(async (): Promise<void> => {
+    await actions?.refresh?.();
+  }, [actions]);
+  const onSave = useCallback(async (): Promise<void> => {
+    await actions?.save?.();
+  }, [actions]);
 
   const headerActions = (
     <>
       {actions?.headerActions}
       {actions?.refresh && !actions?.isEditing ? (
-        <HeaderActionButton
+        <ActionButton
           label="Refresh"
-          icon="refresh"
-          onPress={() => void actions.refresh?.()}
+          startIcon="refresh"
+          pendingAppearance="spinIcon"
+          status={refreshStatus.status}
+          errorMessage={refreshStatus.errorMessage ?? undefined}
+          onPress={() => {
+            void refreshStatus.run(onRefresh);
+          }}
           testID="player-detail-refresh"
         />
       ) : null}
@@ -110,7 +126,7 @@ export function PlayerDetailChrome() {
         <EditModeToggle
           isEditing={!!actions.isEditing}
           onEdit={actions.edit}
-          onSave={() => void actions.save?.()}
+          onSave={onSave}
           onCancel={actions.cancel ?? (() => {})}
           loading={!!actions.isSaving}
           disabled={!!actions.isSaving}

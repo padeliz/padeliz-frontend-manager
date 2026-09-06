@@ -6,8 +6,9 @@ import AppLayout from '@/components/layout/AppLayout';
 import { useBreadcrumbSegments } from '@/components/layout/BreadcrumbProvider';
 import AppTextInput from '@/components/ui/AppTextInput';
 import AdvancedDataTable from '@/components/ui/AdvancedDataTable';
-import HeaderActionButton from '@/components/ui/HeaderActionButton';
+import ActionButton from '@/components/ui/ActionButton';
 import SingleSelectDropdown from '@/components/ui/SingleSelectDropdown';
+import { useActionButtonStatus } from '@/hooks/useActionButtonStatus';
 import { queryKeys } from '@/lib/queryClient';
 import { ClubsApiService } from '@/services/api/clubsApi';
 import { DivisionsApiService } from '@/services/api/divisionsApi';
@@ -39,7 +40,19 @@ const clubsApi = new ClubsApiService();
 
 const NO_CLUB = 0;
 
+/** Downloads flash a checkmark and fall back to idle; other actions stay sticky. */
+const DOWNLOAD_SUCCESS_HOLD_MS = 4000;
+
 export default function ToolsTemplatesPage() {
+  const reloadStatus = useActionButtonStatus({ successHoldMs: 4000 });
+  const previewStatus = useActionButtonStatus();
+  const pdfMatchesStatus = useActionButtonStatus({
+    successHoldMs: DOWNLOAD_SUCCESS_HOLD_MS,
+  });
+  const pdfRankingStatus = useActionButtonStatus({
+    successHoldMs: DOWNLOAD_SUCCESS_HOLD_MS,
+  });
+  const demoStatus = useActionButtonStatus({ auditoryFeedback: true });
   const organizersQuery = useQuery({
     queryKey: queryKeys.organizers(),
     queryFn: async () => {
@@ -168,13 +181,14 @@ export default function ToolsTemplatesPage() {
       if (list[0]?.color) setColor(list[0].color);
     } catch (e: any) {
       setError(e?.message || 'Failed to load templates tools');
+      throw e;
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    void loadTools();
+    void loadTools().catch(() => {});
     void loadPlayersCache();
   }, [loadTools, loadPlayersCache]);
 
@@ -225,49 +239,35 @@ export default function ToolsTemplatesPage() {
   });
 
   const runPreview = async () => {
-    setError(null);
-    try {
-      const res = await scratchScheduleApi.preview(scratchPayload());
-      setPreview(res.data);
-    } catch (e: any) {
-      setError(e?.message || 'Scratch preview failed');
-    }
+    const res = await scratchScheduleApi.preview(scratchPayload());
+    setPreview(res.data);
   };
 
   const downloadPdf = async (kind: 'matches' | 'ranking') => {
     if (Platform.OS !== 'web') {
-      setError('PDF download is web-only.');
-      return;
+      throw new Error('PDF download is web-only.');
     }
-    try {
-      const base = {
-        ...scratchPayload(),
-        title: pdfTitle,
-      };
-      if (kind === 'matches') {
-        await scratchScheduleApi.downloadMatchesPdf(
-          { ...base, court_index: Number(courtIndex) || 0 },
-          'scratch-matches.pdf'
-        );
-      } else {
-        await scratchScheduleApi.downloadRankingPdf(base, 'scratch-ranking.pdf');
-      }
-    } catch (e: any) {
-      setError(e?.message || 'PDF download failed');
+    const base = {
+      ...scratchPayload(),
+      title: pdfTitle,
+    };
+    if (kind === 'matches') {
+      await scratchScheduleApi.downloadMatchesPdf(
+        { ...base, court_index: Number(courtIndex) || 0 },
+        'scratch-matches.pdf'
+      );
+    } else {
+      await scratchScheduleApi.downloadRankingPdf(base, 'scratch-ranking.pdf');
     }
   };
 
   const runDemo = async () => {
-    try {
-      const players = selectedPlayers.length || 8;
-      const partners = Number(opponents) || 3;
-      const rep = Number(repeat) || 1;
-      const courts = parseCourts().length || 2;
-      const res = await templatesToolsApi.demo(players, partners, rep, courts);
-      setDemo(res.data);
-    } catch (e: any) {
-      setError(e?.message || 'Demo failed');
-    }
+    const players = selectedPlayers.length || 8;
+    const partners = Number(opponents) || 3;
+    const rep = Number(repeat) || 1;
+    const courts = parseCourts().length || 2;
+    const res = await templatesToolsApi.demo(players, partners, rep, courts);
+    setDemo(res.data);
   };
 
   return (
@@ -275,11 +275,16 @@ export default function ToolsTemplatesPage() {
       title="Templates"
       description="Catalog, metrics, Mode B preview / PDF"
       headerActions={
-        <HeaderActionButton
+        <ActionButton
           label="Reload"
-          icon="refresh"
+          startIcon="refresh"
+          pendingAppearance="spinIcon"
           variant="secondary"
-          onPress={() => void loadTools()}
+          status={reloadStatus.status}
+          errorMessage={reloadStatus.errorMessage ?? undefined}
+          onPress={() => {
+            void reloadStatus.run(loadTools);
+          }}
         />
       }
     >
@@ -570,30 +575,48 @@ export default function ToolsTemplatesPage() {
               keyboardType="numeric"
             />
             <View className="flex-row flex-wrap gap-2">
-              <Pressable
-                onPress={() => void runPreview()}
-                className="bg-blue-600 px-3 py-2 rounded-lg"
-              >
-                <Text className="text-white text-sm">Preview</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => void downloadPdf('matches')}
-                className="bg-green-600 px-3 py-2 rounded-lg"
-              >
-                <Text className="text-white text-sm">PDF Matches</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => void downloadPdf('ranking')}
-                className="bg-green-700 px-3 py-2 rounded-lg"
-              >
-                <Text className="text-white text-sm">PDF Ranking</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => void runDemo()}
-                className="bg-gray-700 px-3 py-2 rounded-lg"
-              >
-                <Text className="text-white text-sm">Template demo</Text>
-              </Pressable>
+              <ActionButton
+                testID="tools-preview"
+                label="Preview"
+                variant="primary"
+                size="sm"
+                status={previewStatus.status}
+                errorMessage={previewStatus.errorMessage ?? undefined}
+                onPress={() => void previewStatus.run(runPreview)}
+              />
+              <ActionButton
+                testID="tools-pdf-matches"
+                label="PDF Matches"
+                startIcon="download"
+                variant="positive"
+                size="sm"
+                status={pdfMatchesStatus.status}
+                errorMessage={pdfMatchesStatus.errorMessage ?? undefined}
+                onPress={() =>
+                  void pdfMatchesStatus.run(() => downloadPdf('matches'))
+                }
+              />
+              <ActionButton
+                testID="tools-pdf-ranking"
+                label="PDF Ranking"
+                startIcon="download"
+                variant="positive"
+                size="sm"
+                status={pdfRankingStatus.status}
+                errorMessage={pdfRankingStatus.errorMessage ?? undefined}
+                onPress={() =>
+                  void pdfRankingStatus.run(() => downloadPdf('ranking'))
+                }
+              />
+              <ActionButton
+                testID="tools-demo"
+                label="Template demo"
+                variant="ghost"
+                size="sm"
+                status={demoStatus.status}
+                errorMessage={demoStatus.errorMessage ?? undefined}
+                onPress={() => void demoStatus.run(runDemo)}
+              />
             </View>
             {preview && (
               <View className="mt-2">

@@ -17,6 +17,7 @@ module.exports = {
   moduleNameMapper: {
     ...(expoPreset.moduleNameMapper || {}),
     '^@/(.*)$': '<rootDir>/$1',
+    '\\.(wav)$': '<rootDir>/testing/fileMock.js',
   },
   testMatch: ['**/__tests__/**/*.test.[jt]s?(x)', '**/?(*.)+(spec|test).[jt]s?(x)'],
   testPathIgnorePatterns: ['/node_modules/', '/android/', '/ios/'],

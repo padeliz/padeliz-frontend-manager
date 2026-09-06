@@ -1,12 +1,13 @@
-import { useToast } from '@/context/ToastContext';
+import ActionButton from '@/components/ui/ActionButton';
+import { confirmAction } from '@/components/editions/editionLotteryUtils';
+import { useActionButtonStatus } from '@/hooks/useActionButtonStatus';
 import {
   EditionParticipationMappingApiService,
   EditionParticipationMapPreview,
 } from '@/services/api/editionParticipationMappingApi';
-import { confirmAction } from '@/components/editions/editionLotteryUtils';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useCallback } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { View } from 'react-native';
 
 const mappingApi = new EditionParticipationMappingApiService();
 
@@ -26,8 +27,8 @@ export default function EditionParticipationMappingButton({
   editionId,
   mutationsDisabled,
 }: Props) {
-  const toast = useToast();
   const queryClient = useQueryClient();
+  const mapStatus = useActionButtonStatus({ auditoryFeedback: true });
   const previewQuery = useQuery({
     queryKey: ['editionParticipationMapPreview', editionId],
     queryFn: async () => {
@@ -38,43 +39,37 @@ export default function EditionParticipationMappingButton({
   });
 
   const preview = previewQuery.data;
-  const disabled =
-    mutationsDisabled ||
-    previewQuery.isLoading ||
-    previewQuery.isFetching ||
-    preview?.can_map === false;
+  const previewBusy = previewQuery.isLoading || previewQuery.isFetching;
+  const structurallyDisabled =
+    mutationsDisabled || preview?.can_map === false;
 
-  const hint = mutationsDisabled
-    ? 'Edition is finalized — participations cannot be remapped.'
+  const disabledReason = mutationsDisabled
+    ? DISABLED_HINTS.finalized
     : preview?.disabled_reason
-      ? DISABLED_HINTS[preview.disabled_reason] ?? 'Mapping is unavailable.'
-      : null;
+      ? (DISABLED_HINTS[preview.disabled_reason] ?? 'Mapping is unavailable.')
+      : undefined;
+
+  // Initial probe only — do not let background preview refetch override map success/error.
+  const status =
+    preview == null && previewBusy ? 'checking' : mapStatus.status;
 
   const runMap = useCallback(
     async (confirmOverwrite: boolean) => {
-      try {
-        const res = await mappingApi.map(editionId, {
-          confirm_overwrite: confirmOverwrite,
-        });
-        toast.showSuccess(
-          'Participations mapped',
-          `Mapped ${res.data?.created_count ?? 0} participations.`
-        );
-        await queryClient.invalidateQueries({
-          queryKey: ['editionParticipations', editionId],
-        });
-        await queryClient.invalidateQueries({
-          queryKey: ['editionParticipationMapPreview', editionId],
-        });
-      } catch (e: any) {
-        toast.showError('Mapping failed', e?.message || 'Unknown error');
-      }
+      await mappingApi.map(editionId, {
+        confirm_overwrite: confirmOverwrite,
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ['editionParticipations', editionId],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ['editionParticipationMapPreview', editionId],
+      });
     },
-    [editionId, queryClient, toast]
+    [editionId, queryClient]
   );
 
   const onPress = useCallback(() => {
-    if (disabled || !preview) return;
+    if (structurallyDisabled || previewBusy || !preview) return;
 
     const existing = preview.existing_participations_count ?? 0;
     if (existing > 0) {
@@ -84,40 +79,37 @@ export default function EditionParticipationMappingButton({
           ? 'This will remove all current participations. There are no registrations to map. Continue?'
           : 'This will overwrite all current participations for this edition. Continue?';
       confirmAction('Map players to divisions', message, () => {
-        void runMap(true);
+        void mapStatus.run(() => runMap(true));
       });
       return;
     }
 
-    void runMap(false);
-  }, [disabled, preview, runMap]);
+    void mapStatus.run(() => runMap(false));
+  }, [
+    structurallyDisabled,
+    previewBusy,
+    preview,
+    mapStatus,
+    runMap,
+  ]);
 
   return (
-    <View className="mb-3 gap-2">
-      <Pressable
+    <View className="mb-3 self-start">
+      <ActionButton
         testID="map-participations-button"
-        disabled={disabled}
+        label="Map players to divisions"
+        variant="primary"
+        size="sm"
+        status={status}
+        errorMessage={
+          status === 'error' ? (mapStatus.errorMessage ?? undefined) : undefined
+        }
+        disabled={structurallyDisabled && !previewBusy}
+        disabledReason={
+          structurallyDisabled && !previewBusy ? disabledReason : undefined
+        }
         onPress={onPress}
-        className={`self-start px-3 py-2 rounded-lg ${
-          disabled ? 'bg-gray-300' : 'bg-blue-600'
-        }`}
-      >
-        {previewQuery.isLoading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text className="text-white text-sm font-medium">
-            Map players to divisions
-          </Text>
-        )}
-      </Pressable>
-      {hint && (
-        <Text
-          testID="map-participations-hint"
-          className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2"
-        >
-          {hint}
-        </Text>
-      )}
+      />
     </View>
   );
 }

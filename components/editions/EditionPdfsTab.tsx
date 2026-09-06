@@ -4,16 +4,18 @@ import { scheduleApi } from '@/services/api/scheduleApi';
 import { PosterRow } from '@/types/api/edition';
 import { ApiEditionDivision } from '@/types/api/entities';
 import { EditionGeneralEditHint } from '@/components/editions/editionGeneralHint';
-import { actionPillClass } from '@/utils/ui/actionButtonClass';
-import { Ionicons } from '@expo/vector-icons';
+import ActionButton, { ActionButtonProps } from '@/components/ui/ActionButton';
+import { useActionButtonStatus } from '@/hooks/useActionButtonStatus';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Platform,
-  Pressable,
   Text,
   View,
 } from 'react-native';
+
+/** Downloads flash a checkmark and fall back to idle; label-only actions stay sticky. */
+const DOWNLOAD_SUCCESS_HOLD_MS = 4000;
 
 type Props = {
   editionId: number;
@@ -93,6 +95,58 @@ function matchesPoster(
   );
 }
 
+function requireWebForDownload(): void {
+  if (Platform.OS !== 'web') {
+    throw new Error('PDF download is web-only.');
+  }
+}
+
+/**
+ * One poster action. Each instance owns its own status hook so a press only
+ * reports pending / success / error on the button that was pressed.
+ */
+function PdfActionButton({
+  testID,
+  label,
+  onRun,
+  accessibilityLabel,
+  startIcon,
+  variant = 'primary',
+  disabled = false,
+  auditoryFeedback = false,
+  successHoldMs,
+}: {
+  testID: string;
+  label: string;
+  onRun: () => Promise<void>;
+  accessibilityLabel?: string;
+  startIcon?: ActionButtonProps['startIcon'];
+  variant?: ActionButtonProps['variant'];
+  disabled?: boolean;
+  auditoryFeedback?: boolean;
+  successHoldMs?: number;
+}) {
+  const { status, errorMessage, run } = useActionButtonStatus({
+    auditoryFeedback,
+    successHoldMs,
+  });
+
+  return (
+    <ActionButton
+      testID={testID}
+      accessibilityLabel={accessibilityLabel}
+      label={label}
+      startIcon={startIcon}
+      variant={variant}
+      size="sm"
+      status={status}
+      errorMessage={errorMessage ?? undefined}
+      disabled={disabled}
+      onPress={() => void run(onRun)}
+    />
+  );
+}
+
 function PosterActions({
   title,
   testPrefix,
@@ -101,7 +155,6 @@ function PosterActions({
   allowPreview = false,
   allowUpload,
   finalized,
-  busy,
   onGenerate,
   onPreview,
   onDownloadGenerated,
@@ -115,98 +168,68 @@ function PosterActions({
   allowPreview?: boolean;
   allowUpload: boolean;
   finalized: boolean;
-  busy: boolean;
-  onGenerate: () => void;
-  onPreview?: () => void;
-  onDownloadGenerated: () => void;
-  onDownloadPrinted: () => void;
-  onUploadPrinted: () => void;
+  onGenerate: () => Promise<void>;
+  onPreview?: () => Promise<void>;
+  onDownloadGenerated: () => Promise<void>;
+  onDownloadPrinted: () => Promise<void>;
+  onUploadPrinted: () => Promise<void>;
 }) {
-  const canPreview = allowPreview && !busy;
-  const canGenerate = allowGenerate && !finalized && !busy;
-  const canUpload = allowUpload && !finalized && poster != null && !busy;
-  const canDownloadGenerated = hasGenerated(poster) && !busy;
-  const canDownloadPrinted = hasPrinted(poster) && !busy;
-  const generateLabel = hasGenerated(poster)
-    ? 'Regenerate'
-    : 'Generate';
+  const canGenerate = allowGenerate && !finalized;
+  const canUpload = allowUpload && !finalized && poster != null;
+  const generateLabel = hasGenerated(poster) ? 'Regenerate' : 'Generate';
 
   return (
     <View className="border border-gray-100 rounded-lg p-2 gap-2">
       <Text className="text-sm font-semibold text-gray-800">{title}</Text>
       <View className="flex-row flex-wrap gap-2">
         {allowPreview && (
-          <Pressable
+          <PdfActionButton
             testID={`${testPrefix}-preview`}
-            onPress={() => {
-              if (!canPreview || !onPreview) return;
-              onPreview();
-            }}
-            disabled={!canPreview}
-            className={actionPillClass(canPreview, 'blue')}
-          >
-            <Text className="text-white text-sm">
-              {busy ? 'Loading…' : 'Preview'}
-            </Text>
-          </Pressable>
+            label="Preview"
+            onRun={onPreview ?? (async () => undefined)}
+          />
         )}
         {allowGenerate && (
-          <Pressable
+          <PdfActionButton
             testID={`${testPrefix}-generate`}
-            onPress={() => {
-              if (!canGenerate) return;
-              onGenerate();
-            }}
+            label={`${generateLabel} PDF`}
             disabled={!canGenerate}
-            className={actionPillClass(canGenerate, 'blue')}
-          >
-            <Text className="text-white text-sm">
-              {busy ? 'Generating…' : `${generateLabel} PDF`}
-            </Text>
-          </Pressable>
+            auditoryFeedback
+            onRun={onGenerate}
+          />
         )}
-        <Pressable
+        <PdfActionButton
           testID={`${testPrefix}-download`}
           accessibilityLabel="Download generated"
-          onPress={() => {
-            if (!canDownloadGenerated) return;
-            onDownloadGenerated();
-          }}
-          disabled={!canDownloadGenerated}
-          className={`${actionPillClass(canDownloadGenerated, 'green')} flex-row items-center gap-1`}
-        >
-          <Ionicons name="download" size={18} color="#ffffff" />
-          <Text className="text-white text-sm">generated</Text>
-        </Pressable>
-        <Pressable
+          label="generated"
+          startIcon="download"
+          variant="positive"
+          successHoldMs={DOWNLOAD_SUCCESS_HOLD_MS}
+          disabled={!hasGenerated(poster)}
+          onRun={onDownloadGenerated}
+        />
+        <PdfActionButton
           testID={`${testPrefix}-download-printed`}
           accessibilityLabel="Download printed"
-          onPress={() => {
-            if (!canDownloadPrinted) return;
-            onDownloadPrinted();
-          }}
-          disabled={!canDownloadPrinted}
-          className={`${actionPillClass(canDownloadPrinted, 'green')} flex-row items-center gap-1`}
-        >
-          <Ionicons name="download" size={18} color="#ffffff" />
-          <Text className="text-white text-sm">printed</Text>
-        </Pressable>
+          label="printed"
+          startIcon="download"
+          variant="positive"
+          successHoldMs={DOWNLOAD_SUCCESS_HOLD_MS}
+          disabled={!hasPrinted(poster)}
+          onRun={onDownloadPrinted}
+        />
         {allowUpload && (
-          <Pressable
+          <PdfActionButton
             testID={
               poster
                 ? `upload-printed-${poster.id_edition_division_poster}`
                 : `${testPrefix}-upload-printed`
             }
-            onPress={() => {
-              if (!canUpload) return;
-              onUploadPrinted();
-            }}
+            label="Upload printed"
             disabled={!canUpload}
-            className={actionPillClass(canUpload, 'blue')}
-          >
-            <Text className="text-white text-sm">Upload printed</Text>
-          </Pressable>
+            auditoryFeedback
+            onRun={onUploadPrinted}
+          />
         )}
       </View>
     </View>
@@ -231,8 +254,6 @@ function EdPdfSection({
   const [courts, setCourts] = useState<EdCourtOption[]>([]);
   const [posters, setPosters] = useState<PosterRow[]>([]);
   const [finalized, setFinalized] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [busyKey, setBusyKey] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -256,55 +277,31 @@ function EdPdfSection({
     void load();
   }, [load]);
 
-  const requireWeb = (): boolean => {
-    if (Platform.OS !== 'web') {
-      setMessage('PDF download is web-only.');
-      return false;
-    }
-    return true;
-  };
+  const pickPrintedFile = (): Promise<File | null> =>
+    new Promise(resolve => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = () => resolve(input.files?.[0] ?? null);
+      // Browsers that support it fire `cancel` when the picker is dismissed,
+      // so the button does not stay pending forever.
+      input.addEventListener('cancel', () => resolve(null));
+      input.click();
+    });
 
-  const run = async (key: string, fn: () => Promise<void>, ok: string) => {
-    setError(null);
-    setMessage(null);
-    setBusyKey(key);
-    try {
-      await fn();
-      setMessage(ok);
-      await load();
-    } catch (e: any) {
-      setError(e?.message || 'Request failed');
-    } finally {
-      setBusyKey(null);
-    }
-  };
-
-  const uploadPrinted = (posterId: number) => {
-    if (!allowUpload) return;
+  const uploadPrinted = async (posterId: number) => {
     if (typeof document === 'undefined') {
-      setMessage('Printed upload is easiest on web (file picker).');
-      return;
+      throw new Error('Printed upload is easiest on web (file picker).');
     }
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = async () => {
-      const file = input.files?.[0];
-      if (!file) return;
-      await run(
-        `upload-${posterId}`,
-        async () => {
-          await postersApi.uploadPrinted(
-            editionDivisionId,
-            posterId,
-            file,
-            file.name
-          );
-        },
-        'Printed image uploaded.'
-      );
-    };
-    input.click();
+    const file = await pickPrintedFile();
+    if (!file) return;
+    await postersApi.uploadPrinted(
+      editionDivisionId,
+      posterId,
+      file,
+      file.name
+    );
+    await load();
   };
 
   const ranking = rankingPoster(posters);
@@ -327,11 +324,6 @@ function EdPdfSection({
       {error && (
         <Text className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</Text>
       )}
-      {message && (
-        <Text className="text-sm text-blue-700 bg-blue-50 p-2 rounded">
-          {message}
-        </Text>
-      )}
 
       <PosterActions
         title="RANKING"
@@ -340,44 +332,28 @@ function EdPdfSection({
         allowGenerate={allowGenerate}
         allowUpload={allowUpload}
         finalized={finalized}
-        busy={busyKey === 'ranking'}
-        onGenerate={() =>
-          void run(
-            'ranking',
-            async () => {
-              await postersApi.generateRanking(editionDivisionId);
-            },
-            'RANKING PDF generated.'
-          )
-        }
-        onDownloadGenerated={() => {
-          if (!requireWeb() || !hasGenerated(ranking)) return;
-          void run(
-            'dl-ranking',
-            async () => {
-              await postersApi.downloadRankingPdf(
-                editionDivisionId,
-                `ed-${editionDivisionId}-ranking.pdf`
-              );
-            },
-            'RANKING PDF downloaded.'
+        onGenerate={async () => {
+          await postersApi.generateRanking(editionDivisionId);
+          await load();
+        }}
+        onDownloadGenerated={async () => {
+          requireWebForDownload();
+          await postersApi.downloadRankingPdf(
+            editionDivisionId,
+            `ed-${editionDivisionId}-ranking.pdf`
           );
         }}
-        onDownloadPrinted={() => {
-          if (!requireWeb() || ranking == null || !hasPrinted(ranking)) return;
-          void run(
-            'dl-ranking-printed',
-            async () => {
-              await postersApi.downloadPrinted(
-                editionDivisionId,
-                ranking.id_edition_division_poster
-              );
-            },
-            'Printed RANKING downloaded.'
+        onDownloadPrinted={async () => {
+          requireWebForDownload();
+          if (ranking == null) return;
+          await postersApi.downloadPrinted(
+            editionDivisionId,
+            ranking.id_edition_division_poster
           );
         }}
-        onUploadPrinted={() => {
-          if (ranking) uploadPrinted(ranking.id_edition_division_poster);
+        onUploadPrinted={async () => {
+          if (ranking == null) return;
+          await uploadPrinted(ranking.id_edition_division_poster);
         }}
       />
 
@@ -388,7 +364,6 @@ function EdPdfSection({
       ) : (
         courts.map(c => {
           const poster = matchesPoster(posters, c.id_edition_division_court);
-          const key = `matches-${c.id_edition_division_court}`;
           return (
             <PosterActions
               key={c.id_edition_division_court}
@@ -398,48 +373,31 @@ function EdPdfSection({
               allowGenerate={allowGenerate}
               allowUpload={allowUpload}
               finalized={finalized}
-              busy={busyKey === key}
-              onGenerate={() =>
-                void run(
-                  key,
-                  async () => {
-                    await postersApi.generateMatches(editionDivisionId, {
-                      court: c.id_edition_division_court,
-                    });
-                  },
-                  'MATCHES PDF generated.'
-                )
-              }
-              onDownloadGenerated={() => {
-                if (!requireWeb() || !hasGenerated(poster)) return;
-                void run(
-                  `dl-${key}`,
-                  async () => {
-                    await postersApi.downloadMatchesPdf(
-                      editionDivisionId,
-                      { court: c.id_edition_division_court },
-                      `ed-${editionDivisionId}-matches-${c.id_edition_division_court}.pdf`
-                    );
-                  },
-                  'MATCHES PDF downloaded.'
+              onGenerate={async () => {
+                await postersApi.generateMatches(editionDivisionId, {
+                  court: c.id_edition_division_court,
+                });
+                await load();
+              }}
+              onDownloadGenerated={async () => {
+                requireWebForDownload();
+                await postersApi.downloadMatchesPdf(
+                  editionDivisionId,
+                  { court: c.id_edition_division_court },
+                  `ed-${editionDivisionId}-matches-${c.id_edition_division_court}.pdf`
                 );
               }}
-              onDownloadPrinted={() => {
-                if (!requireWeb() || poster == null || !hasPrinted(poster))
-                  return;
-                void run(
-                  `dlp-${key}`,
-                  async () => {
-                    await postersApi.downloadPrinted(
-                      editionDivisionId,
-                      poster.id_edition_division_poster
-                    );
-                  },
-                  'Printed MATCHES downloaded.'
+              onDownloadPrinted={async () => {
+                requireWebForDownload();
+                if (poster == null) return;
+                await postersApi.downloadPrinted(
+                  editionDivisionId,
+                  poster.id_edition_division_poster
                 );
               }}
-              onUploadPrinted={() => {
-                if (poster) uploadPrinted(poster.id_edition_division_poster);
+              onUploadPrinted={async () => {
+                if (poster == null) return;
+                await uploadPrinted(poster.id_edition_division_poster);
               }}
             />
           );
@@ -466,9 +424,7 @@ function GeneralPdfsView({
 }) {
   const [editionPosters, setEditionPosters] = useState<PosterRow[]>([]);
   const [loadingEditionPosters, setLoadingEditionPosters] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [busyKey, setBusyKey] = useState<string | null>(null);
 
   const loadEditionPosters = useCallback(async () => {
     if (!Number.isFinite(editionId)) return;
@@ -487,34 +443,9 @@ function GeneralPdfsView({
     void loadEditionPosters();
   }, [loadEditionPosters]);
 
-  const requireWeb = (): boolean => {
+  const requireWebForPreview = (): void => {
     if (Platform.OS !== 'web') {
-      setMessage('PDF download is web-only.');
-      return false;
-    }
-    return true;
-  };
-
-  const requireWebForPreview = (): boolean => {
-    if (Platform.OS !== 'web') {
-      setMessage('Attendance preview is web-only.');
-      return false;
-    }
-    return true;
-  };
-
-  const run = async (key: string, fn: () => Promise<void>, ok: string) => {
-    setError(null);
-    setMessage(null);
-    setBusyKey(key);
-    try {
-      await fn();
-      setMessage(ok);
-      await loadEditionPosters();
-    } catch (e: any) {
-      setError(e?.message || 'Request failed');
-    } finally {
-      setBusyKey(null);
+      throw new Error('Attendance preview is web-only.');
     }
   };
 
@@ -525,25 +456,19 @@ function GeneralPdfsView({
       <EditionGeneralEditHint />
       <View className="bg-white border border-gray-200 rounded-lg p-3 gap-2">
         <Text className="font-semibold text-gray-900">All division posters</Text>
-        <Pressable
-          testID="download-all-pdfs"
-          onPress={() => {
-            if (!requireWeb()) return;
-            void run(
-              'download-all',
-              async () => {
-                await editionPostersApi.downloadMergedPostersPdf(editionId);
-              },
-              'Merged PDF downloaded.'
-            );
-          }}
-          disabled={busyKey === 'download-all'}
-          className={actionPillClass(busyKey !== 'download-all', 'green')}
-        >
-          <Text className="text-white text-sm font-medium">
-            {busyKey === 'download-all' ? 'Downloading…' : 'Download all PDFs'}
-          </Text>
-        </Pressable>
+        <View className="self-start">
+          <PdfActionButton
+            testID="download-all-pdfs"
+            label="Download all PDFs"
+            startIcon="download"
+            variant="positive"
+            successHoldMs={DOWNLOAD_SUCCESS_HOLD_MS}
+            onRun={async () => {
+              requireWebForDownload();
+              await editionPostersApi.downloadMergedPostersPdf(editionId);
+            }}
+          />
+        </View>
       </View>
 
       <View
@@ -562,49 +487,26 @@ function GeneralPdfsView({
             allowPreview
             allowUpload={false}
             finalized={editionFinalized}
-            busy={busyKey === 'attendance-preview' || busyKey === 'attendance'}
-            onPreview={() => {
-              if (!requireWebForPreview()) return;
-              void run(
-                'attendance-preview',
-                async () => {
-                  await editionPostersApi.openAttendancePreview(editionId);
-                },
-                'Attendance preview opened.'
-              );
+            onPreview={async () => {
+              requireWebForPreview();
+              await editionPostersApi.openAttendancePreview(editionId);
             }}
-            onGenerate={() =>
-              void run(
-                'attendance',
-                async () => {
-                  await editionPostersApi.generateAttendance(editionId);
-                },
-                'Attendance PDF generated.'
-              )
-            }
-            onDownloadGenerated={() => {
-              if (!requireWeb() || !hasGenerated(attendance)) return;
-              void run(
-                'dl-attendance',
-                async () => {
-                  await editionPostersApi.downloadAttendancePdf(editionId);
-                },
-                'Attendance PDF downloaded.'
-              );
+            onGenerate={async () => {
+              await editionPostersApi.generateAttendance(editionId);
+              await loadEditionPosters();
             }}
-            onDownloadPrinted={() => undefined}
-            onUploadPrinted={() => undefined}
+            onDownloadGenerated={async () => {
+              requireWebForDownload();
+              await editionPostersApi.downloadAttendancePdf(editionId);
+            }}
+            onDownloadPrinted={async () => undefined}
+            onUploadPrinted={async () => undefined}
           />
         )}
       </View>
 
       {error && (
         <Text className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</Text>
-      )}
-      {message && (
-        <Text className="text-sm text-blue-700 bg-blue-50 p-2 rounded">
-          {message}
-        </Text>
       )}
 
       {divisions.map(d => (

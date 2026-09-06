@@ -9,8 +9,9 @@ import {
 } from '@/components/chrome/PageChromeProvider';
 import AppLayout from '@/components/layout/AppLayout';
 import { useBreadcrumbSegments } from '@/components/layout/BreadcrumbProvider';
-import HeaderActionButton from '@/components/ui/HeaderActionButton';
+import ActionButton from '@/components/ui/ActionButton';
 import ManagerFileUpload from '@/components/ui/ManagerFileUpload';
+import { useActionButtonStatus } from '@/hooks/useActionButtonStatus';
 import { useResourceMetadata } from '@/hooks/useResourceMetadata';
 import { ResourceViewPageProps } from '@/types/ui/pages';
 import { formatField } from '@/utils/fieldFormatter';
@@ -22,7 +23,7 @@ import { getUploadConfig } from '@/utils/uploadMetadata';
 import { validateFormWithSubmission } from '@/utils/validationRules';
 import { useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import EditModeToggle from './EditModeToggle';
 import LinkedEntitySection from './LinkedEntitySection';
@@ -75,6 +76,11 @@ export default function ResourceViewPage<
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [linkedEntities, setLinkedEntities] = useState<any[]>([]);
+  const {
+    status: refreshButtonStatus,
+    errorMessage: refreshErrorMessage,
+    run: runRefresh,
+  } = useActionButtonStatus({ successHoldMs: 4000 });
   const excludedLinkedKeys = useMemo(
     () => new Set(resolvedExcludeLinked),
     [resolvedExcludeLinked]
@@ -121,7 +127,7 @@ export default function ResourceViewPage<
     embedded ? [] : breadcrumbItems
   );
 
-  const loadResource = useCallback(async () => {
+  const loadResource = useCallback(async (): Promise<void> => {
     if (!resourceId) return;
     try {
       setLoading(true);
@@ -130,13 +136,14 @@ export default function ResourceViewPage<
       setResource(response.data);
     } catch (err: any) {
       setError(err.message || 'Failed to load resource');
+      throw err;
     } finally {
       setLoading(false);
     }
   }, [fetchResource, resourceId]);
 
   useEffect(() => {
-    if (resourceId) loadResource();
+    if (resourceId) void loadResource().catch(() => {});
   }, [resourceId, loadResource]);
 
   useEffect(() => {
@@ -182,8 +189,8 @@ export default function ResourceViewPage<
     excludedLinkedKeys,
   ]);
 
-  const handleRefresh = useCallback(() => {
-    void loadResource();
+  const handleRefresh = useCallback(async (): Promise<void> => {
+    await loadResource();
   }, [loadResource]);
 
   const handleEdit = useCallback(() => {
@@ -200,10 +207,11 @@ export default function ResourceViewPage<
     setIsEditing(false);
   }, []);
 
-  const handleSave = useCallback(async () => {
+  const handleSave = useCallback(async (): Promise<void> => {
     if (!resourceId || !updateResource) {
-      setError('Update functionality not available');
-      return;
+      const unavailableError = new Error('Update functionality not available');
+      setError(unavailableError.message);
+      throw unavailableError;
     }
     try {
       setSaving(true);
@@ -232,7 +240,7 @@ export default function ResourceViewPage<
           fieldErrors[err.field] = err.message;
         });
         setEditErrors(fieldErrors);
-        return;
+        throw new Error('Validation failed');
       }
       const response = await updateResource(
         resourceId,
@@ -247,6 +255,7 @@ export default function ResourceViewPage<
       } else {
         setError(err.message || 'Failed to update resource');
       }
+      throw err;
     } finally {
       setSaving(false);
     }
@@ -275,7 +284,7 @@ export default function ResourceViewPage<
     onChromeStateChange({
       save: handleSave,
       refresh: handleRefresh,
-      ...(updateResource
+      ...(updateResource && resource
         ? { edit: handleEdit, cancel: handleCancel }
         : {}),
       isEditing: !!updateResource && isEditing,
@@ -289,6 +298,7 @@ export default function ResourceViewPage<
     isEditing,
     saving,
     updateResource,
+    resource,
     isDirty,
     displayLabel,
     handleSave,
@@ -311,10 +321,15 @@ export default function ResourceViewPage<
   const standaloneHeaderActions = (
     <>
       {!isEditing ? (
-        <HeaderActionButton
+        <ActionButton
           label="Refresh"
-          icon="refresh"
-          onPress={handleRefresh}
+          startIcon="refresh"
+          pendingAppearance="spinIcon"
+          status={refreshButtonStatus}
+          errorMessage={refreshErrorMessage ?? undefined}
+          onPress={() => {
+            void runRefresh(handleRefresh);
+          }}
           testID="resource-view-refresh"
         />
       ) : null}
@@ -327,17 +342,31 @@ export default function ResourceViewPage<
       updateResource && !externalChrome ? (
         <>
           {!isEditing ? (
-            <HeaderActionButton
+            <ActionButton
               label="Refresh"
-              icon="refresh"
-              onPress={handleRefresh}
+              startIcon="refresh"
+              pendingAppearance="spinIcon"
+              status={refreshButtonStatus}
+              errorMessage={refreshErrorMessage ?? undefined}
+              onPress={() => {
+                void runRefresh(handleRefresh);
+              }}
               testID="resource-view-refresh"
             />
           ) : null}
           {editModeToggle}
         </>
       ) : null,
-    [editModeToggle, externalChrome, handleRefresh, isEditing, updateResource]
+    [
+      editModeToggle,
+      externalChrome,
+      handleRefresh,
+      isEditing,
+      refreshButtonStatus,
+      refreshErrorMessage,
+      runRefresh,
+      updateResource,
+    ]
   );
 
   const embeddedHeaderActionsKey = `${isEditing ? 1 : 0}-${saving ? 1 : 0}`;
@@ -349,8 +378,8 @@ export default function ResourceViewPage<
         : hasPageChrome
           ? {
               refresh: handleRefresh,
-              edit: updateResource ? handleEdit : undefined,
-              cancel: updateResource ? handleCancel : undefined,
+              edit: updateResource && resource ? handleEdit : undefined,
+              cancel: updateResource && resource ? handleCancel : undefined,
               save: updateResource ? handleSave : undefined,
               isEditing: !!updateResource && isEditing,
               isSaving: saving,
@@ -399,12 +428,20 @@ export default function ResourceViewPage<
           <Text className="text-red-800 text-center mb-4">
             {error || metadataError}
           </Text>
-          <Pressable
-            onPress={handleRefresh}
-            className="bg-red-600 rounded-lg px-4 py-2"
-          >
-            <Text className="text-white font-semibold text-center">Retry</Text>
-          </Pressable>
+          <View className="items-center">
+            <ActionButton
+              label="Retry"
+              startIcon="refresh"
+              pendingAppearance="spinIcon"
+              variant="danger"
+              status={refreshButtonStatus}
+              errorMessage={refreshErrorMessage ?? undefined}
+              onPress={() => {
+                void runRefresh(handleRefresh);
+              }}
+              testID="resource-view-retry"
+            />
+          </View>
         </View>
       </View>
     );

@@ -109,7 +109,7 @@ export default function EditionRegistrationImportPanel({
   );
 
   const runPreview = useCallback(
-    async (nextFile: File) => {
+    async (nextFile: File, throwOnError = false): Promise<void> => {
       if (finalized) return;
       setLoading(true);
       try {
@@ -118,6 +118,7 @@ export default function EditionRegistrationImportPanel({
         applyPreview(response.data.rows);
       } catch (err: any) {
         showError('Preview failed', err?.message || 'Could not preview CSV');
+        if (throwOnError) throw err;
       } finally {
         setLoading(false);
       }
@@ -188,7 +189,7 @@ export default function EditionRegistrationImportPanel({
         queryKey: queryKeys.edition(editionId),
       });
       if (file) {
-        await runPreview(file);
+        await runPreview(file, true);
       }
     } catch (err: any) {
       if (err instanceof ApiError && err.errors) {
@@ -200,6 +201,7 @@ export default function EditionRegistrationImportPanel({
         );
       }
       showError('Import failed', err?.message || 'Could not save import');
+      throw err;
     } finally {
       setSaving(false);
     }
@@ -221,7 +223,7 @@ export default function EditionRegistrationImportPanel({
       const ok = await confirmDiscardDirty();
       if (!ok) return;
     }
-    await runPreview(file);
+    await runPreview(file, true);
   }, [dirty, file, finalized, runPreview]);
 
   const eligibleIncluded = rows.filter(

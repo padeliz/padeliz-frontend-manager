@@ -211,13 +211,29 @@ describe('EditionDivisionsTab', () => {
     expect(queryByTestId('dropdown-Division-option-3')).toBeNull();
   });
 
-  it('deletes after confirmation', async () => {
-    const { getByTestId, onRefresh } = renderTab();
+  it('deletes after confirmation and holds the success state on the icon button', async () => {
+    const { getByTestId, findByTestId, onRefresh } = renderTab();
     fireEvent.press(getByTestId('division-delete-10'));
     await waitFor(() => {
       expect(mockDelete).toHaveBeenCalledWith(10);
     });
     expect(onRefresh).toHaveBeenCalled();
+    expect(await findByTestId('division-delete-10-success')).toBeTruthy();
+  });
+
+  it('skips the delete request when the confirm is cancelled', () => {
+    (window as any).confirm = jest.fn(() => false);
+    const { getByTestId, queryByTestId } = renderTab();
+    fireEvent.press(getByTestId('division-delete-10'));
+    expect(mockDelete).not.toHaveBeenCalled();
+    expect(queryByTestId('division-delete-10-pending')).toBeNull();
+  });
+
+  it('surfaces delete failures on the icon button', async () => {
+    mockDelete.mockRejectedValueOnce(new Error('division in use'));
+    const { getByTestId, findByTestId } = renderTab();
+    fireEvent.press(getByTestId('division-delete-10'));
+    expect(await findByTestId('division-delete-10-error')).toBeTruthy();
   });
 
   it('reorders with arrows and saves skill_order via PATCH reorder', async () => {
@@ -265,13 +281,41 @@ describe('EditionDivisionsTab', () => {
     expect(getByTestId('division-edit-9')).toBeTruthy();
   });
 
-  it('surfaces API failures', async () => {
+  it('surfaces API failures on the Add button instead of an error banner', async () => {
     mockCreate.mockRejectedValueOnce(new Error('duplicate division'));
-    const { getByTestId, findByTestId } = renderTab();
+    const { getByTestId, findByTestId, queryByTestId } = renderTab();
     fireEvent.press(getByTestId('dropdown-Division-option-4'));
     fireEvent.press(getByTestId('divisions-add-button'));
-    expect(await findByTestId('divisions-error')).toHaveTextContent(
-      'duplicate division'
+    expect(await findByTestId('divisions-add-button-error')).toBeTruthy();
+    expect(queryByTestId('divisions-error')).toBeNull();
+  });
+
+  it('fails validation inside run when no catalog division is picked', async () => {
+    const { getByTestId, findByTestId } = renderTab();
+    fireEvent.press(getByTestId('divisions-add-button'));
+    expect(await findByTestId('divisions-add-button-error')).toBeTruthy();
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it('wires mutations through ActionButton without press-tied error state', () => {
+    const fs = require('fs') as typeof import('fs');
+    const path = require('path') as typeof import('path');
+    const src = fs.readFileSync(
+      path.join(__dirname, '..', 'EditionDivisionsTab.tsx'),
+      'utf8'
     );
+    expect(src).toContain(
+      "import { useActionButtonStatus } from '@/hooks/useActionButtonStatus'"
+    );
+    expect(src).toContain(
+      "import { confirmAction } from '@/utils/confirmAction'"
+    );
+    expect(src).toContain('auditoryFeedback: true');
+    expect(src).toContain('successHoldMs: 4000');
+    expect(src).toContain('iconOnly');
+    expect(src).toContain('confirmAction(');
+    expect(src).not.toContain('divisions-error');
+    expect(src).not.toContain('setError');
+    expect(src).not.toContain('Alert.alert');
   });
 });

@@ -1,13 +1,15 @@
 import { useRegisterPageActions } from '@/components/chrome/PageChromeProvider';
 import { EditionGeneralEditHint } from '@/components/editions/editionGeneralHint';
+import ActionButton from '@/components/ui/ActionButton';
 import SingleSelectDropdown from '@/components/ui/SingleSelectDropdown';
+import { useActionButtonStatus } from '@/hooks/useActionButtonStatus';
 import { usePlayerPicker } from '@/hooks/usePlayerPicker';
 import { queryKeys } from '@/lib/queryClient';
 import { replacementsApi } from '@/services/api/replacementsApi';
 import { scheduleApi } from '@/services/api/scheduleApi';
 import { GameMatch, ReplacementRow } from '@/types/api/edition';
+import { confirmAction } from '@/utils/confirmAction';
 import { clockHi } from '@/utils/edition/clockHi';
-import { actionPillClass } from '@/utils/ui/actionButtonClass';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
@@ -62,6 +64,39 @@ function edLabel(r: ReplacementRow): string {
   );
 }
 
+/** Own status hook per row so pending / error stays on the pressed Delete. */
+function DeleteReplacementButton({
+  replacementId,
+  onDelete,
+}: {
+  replacementId: number;
+  onDelete: (id: number) => Promise<void>;
+}) {
+  const { status, errorMessage, run } = useActionButtonStatus({
+    auditoryFeedback: true,
+  });
+
+  return (
+    <ActionButton
+      testID={`replacements-delete-${replacementId}`}
+      label="Delete"
+      variant="danger"
+      size="sm"
+      status={status}
+      errorMessage={errorMessage ?? undefined}
+      onPress={() => {
+        confirmAction(
+          'Delete replacement',
+          `Delete replacement #${replacementId}?`,
+          () => {
+            void run(() => onDelete(replacementId));
+          }
+        );
+      }}
+    />
+  );
+}
+
 export default function EditionReplacementsTab({
   editionId,
   editionDivisionId,
@@ -71,7 +106,9 @@ export default function EditionReplacementsTab({
   const [substituteKey, setSubstituteKey] = useState<string>(NONE_SUBSTITUTE);
   const [matchId, setMatchId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
+
+  const createStatus = useActionButtonStatus({ auditoryFeedback: true });
+  const saveStatus = useActionButtonStatus({ auditoryFeedback: true });
 
   const isGeneral = editionDivisionId == null;
 
@@ -186,7 +223,6 @@ export default function EditionReplacementsTab({
     setSubstituteKey(NONE_SUBSTITUTE);
     setMatchId(null);
     setEditingId(null);
-    setActionError(null);
   };
 
   const substitutePayload = () => {
@@ -230,9 +266,6 @@ export default function EditionReplacementsTab({
       resetForm();
       await refresh();
     },
-    onError: (e: Error) => {
-      setActionError(e.message || 'Create failed');
-    },
   });
 
   const patchMutation = useMutation({
@@ -253,17 +286,11 @@ export default function EditionReplacementsTab({
       resetForm();
       await refresh();
     },
-    onError: (e: Error) => {
-      setActionError(e.message || 'Update failed');
-    },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => replacementsApi.destroy(id),
     onSuccess: () => refresh(),
-    onError: (e: Error) => {
-      setActionError(e.message || 'Delete failed');
-    },
   });
 
   const nameForParticipationId = (
@@ -317,11 +344,9 @@ export default function EditionReplacementsTab({
 
   return (
     <View className="gap-3">
-      {(actionError || queryError) && (
+      {queryError && (
         <Text className="text-sm text-red-600 bg-red-50 p-2 rounded">
-          {actionError ||
-            (queryError as Error)?.message ||
-            'Failed to load replacements'}
+          {(queryError as Error)?.message || 'Failed to load replacements'}
         </Text>
       )}
       {!isGeneral && finalized && (
@@ -394,19 +419,20 @@ export default function EditionReplacementsTab({
 
             {editingId != null ? (
               <>
-                <Pressable
+                <ActionButton
                   testID="replacements-save"
-                  disabled={
-                    finalized || originalId == null || patchMutation.isPending
+                  label="Save"
+                  variant="primary"
+                  size="sm"
+                  status={saveStatus.status}
+                  errorMessage={saveStatus.errorMessage ?? undefined}
+                  disabled={finalized || originalId == null}
+                  onPress={() =>
+                    void saveStatus.run(async () => {
+                      await patchMutation.mutateAsync();
+                    })
                   }
-                  onPress={() => patchMutation.mutate()}
-                  className={`${actionPillClass(
-                    !(finalized || originalId == null || patchMutation.isPending),
-                    'blue'
-                  )}`}
-                >
-                  <Text className="text-white text-sm">Save</Text>
-                </Pressable>
+                />
                 <Pressable
                   testID="replacements-cancel-edit"
                   disabled={finalized || patchMutation.isPending}
@@ -417,19 +443,20 @@ export default function EditionReplacementsTab({
                 </Pressable>
               </>
             ) : (
-              <Pressable
+              <ActionButton
                 testID="replacements-create"
-                disabled={
-                  finalized || originalId == null || createMutation.isPending
+                label="Create"
+                variant="primary"
+                size="sm"
+                status={createStatus.status}
+                errorMessage={createStatus.errorMessage ?? undefined}
+                disabled={finalized || originalId == null}
+                onPress={() =>
+                  void createStatus.run(async () => {
+                    await createMutation.mutateAsync();
+                  })
                 }
-                onPress={() => createMutation.mutate()}
-                className={`${actionPillClass(
-                  !(finalized || originalId == null || createMutation.isPending),
-                  'blue'
-                )}`}
-              >
-                <Text className="text-white text-sm">Create</Text>
-              </Pressable>
+              />
             )}
           </View>
         </View>
@@ -477,19 +504,17 @@ export default function EditionReplacementsTab({
                       setSubstituteKey(NONE_SUBSTITUTE);
                     }
                     setMatchId(r.match_id ?? null);
-                    setActionError(null);
                   }}
-                  className={actionPillClass(!patchMutation.isPending, 'blue')}
+                  className="rounded-lg px-3 py-2 bg-blue-600"
                 >
                   <Text className="text-white text-sm">Edit</Text>
                 </Pressable>
-                <Pressable
-                  disabled={deleteMutation.isPending}
-                  onPress={() => deleteMutation.mutate(r.id_replacement)}
-                  className={actionPillClass(!deleteMutation.isPending, 'red')}
-                >
-                  <Text className="text-white text-sm">Delete</Text>
-                </Pressable>
+                <DeleteReplacementButton
+                  replacementId={r.id_replacement}
+                  onDelete={async id => {
+                    await deleteMutation.mutateAsync(id);
+                  }}
+                />
               </View>
             )}
           </View>

@@ -2,10 +2,13 @@
  * Options management for select-type player custom fields.
  */
 
+import ActionButton from '@/components/ui/ActionButton';
 import AppTextInput from '@/components/ui/AppTextInput';
 import { useToast } from '@/context/ToastContext';
+import { useActionButtonStatus } from '@/hooks/useActionButtonStatus';
 import { PlayerCustomFieldsApiService } from '@/services/api/playerCustomFieldsApi';
 import { ApiPlayerCustomFieldOption } from '@/types/api/entities';
+import { confirmAction } from '@/utils/confirmAction';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -21,6 +24,66 @@ type Props = {
   fieldId: number;
 };
 
+/**
+ * Per-row mutations own their status hook so a press only reports pending /
+ * success / error on the row that was pressed.
+ */
+function SaveOptionButton({
+  option,
+  onSave,
+}: {
+  option: ApiPlayerCustomFieldOption;
+  onSave: (option: ApiPlayerCustomFieldOption) => Promise<void>;
+}) {
+  const { status, errorMessage, run } = useActionButtonStatus({
+    auditoryFeedback: true,
+  });
+
+  return (
+    <ActionButton
+      testID={`custom-field-option-save-${option.id_player_custom_field_option}`}
+      label="Save"
+      variant="primary"
+      size="sm"
+      status={status}
+      errorMessage={errorMessage ?? undefined}
+      onPress={() => void run(() => onSave(option))}
+    />
+  );
+}
+
+function DeleteOptionButton({
+  option,
+  onDelete,
+}: {
+  option: ApiPlayerCustomFieldOption;
+  onDelete: (option: ApiPlayerCustomFieldOption) => Promise<void>;
+}) {
+  const { status, errorMessage, run } = useActionButtonStatus({
+    auditoryFeedback: true,
+  });
+
+  return (
+    <ActionButton
+      testID={`custom-field-option-delete-${option.id_player_custom_field_option}`}
+      label="Delete"
+      variant="danger"
+      size="sm"
+      status={status}
+      errorMessage={errorMessage ?? undefined}
+      onPress={() => {
+        confirmAction(
+          'Delete option',
+          `Delete option "${option.label}"?`,
+          () => {
+            void run(() => onDelete(option));
+          }
+        );
+      }}
+    />
+  );
+}
+
 export default function PlayerCustomFieldOptionsPanel({ fieldId }: Props) {
   const { showSuccess, showError } = useToast();
   const [options, setOptions] = useState<ApiPlayerCustomFieldOption[]>([]);
@@ -29,6 +92,7 @@ export default function PlayerCustomFieldOptionsPanel({ fieldId }: Props) {
   const [newLabel, setNewLabel] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editLabel, setEditLabel] = useState('');
+  const addStatus = useActionButtonStatus({ auditoryFeedback: true });
 
   const loadOptions = useCallback(async () => {
     setLoading(true);
@@ -48,38 +112,38 @@ export default function PlayerCustomFieldOptionsPanel({ fieldId }: Props) {
 
   const onAdd = async () => {
     const label = newLabel.trim();
-    if (!label) return;
-    setBusy(true);
+    if (!label) {
+      throw new Error('Enter an option label first.');
+    }
     try {
       await api.createOption(fieldId, { label });
-      setNewLabel('');
-      showSuccess('Option added', 'Custom field option created');
-      await loadOptions();
     } catch (err: any) {
       showError('Add failed', err?.message || 'Could not add option');
-    } finally {
-      setBusy(false);
+      throw err;
     }
+    setNewLabel('');
+    showSuccess('Option added', 'Custom field option created');
+    await loadOptions();
   };
 
   const onSaveLabel = async (option: ApiPlayerCustomFieldOption) => {
     const label = editLabel.trim();
-    if (!label) return;
-    setBusy(true);
+    if (!label) {
+      throw new Error('Enter an option label first.');
+    }
     try {
       await api.updateOption(fieldId, option.id_player_custom_field_option, {
         label,
         sort_order: option.sort_order,
         is_active: option.is_active,
       });
-      setEditingId(null);
-      showSuccess('Updated', 'Option label saved');
-      await loadOptions();
     } catch (err: any) {
       showError('Update failed', err?.message || 'Could not update option');
-    } finally {
-      setBusy(false);
+      throw err;
     }
+    setEditingId(null);
+    showSuccess('Updated', 'Option label saved');
+    await loadOptions();
   };
 
   const onToggleActive = async (option: ApiPlayerCustomFieldOption) => {
@@ -99,16 +163,14 @@ export default function PlayerCustomFieldOptionsPanel({ fieldId }: Props) {
   };
 
   const onDelete = async (option: ApiPlayerCustomFieldOption) => {
-    setBusy(true);
     try {
       await api.deleteOption(fieldId, option.id_player_custom_field_option);
-      showSuccess('Deleted', 'Option removed');
-      await loadOptions();
     } catch (err: any) {
       showError('Delete failed', err?.message || 'Could not delete option');
-    } finally {
-      setBusy(false);
+      throw err;
     }
+    showSuccess('Deleted', 'Option removed');
+    await loadOptions();
   };
 
   if (loading) {
@@ -135,16 +197,16 @@ export default function PlayerCustomFieldOptionsPanel({ fieldId }: Props) {
           className="flex-1 border border-gray-300 rounded-lg px-3 py-2 bg-white"
           editable={!busy}
         />
-        <Pressable
+        <ActionButton
           testID="custom-field-option-add"
-          disabled={busy || !newLabel.trim()}
-          onPress={() => void onAdd()}
-          className={`rounded-lg px-3 py-2 ${
-            busy || !newLabel.trim() ? 'bg-gray-300' : 'bg-blue-600'
-          }`}
-        >
-          <Text className="text-white text-sm font-medium">Add</Text>
-        </Pressable>
+          label="Add"
+          variant="primary"
+          disabled={!newLabel.trim()}
+          disabledReason="Enter an option label first."
+          status={addStatus.status}
+          errorMessage={addStatus.errorMessage ?? undefined}
+          onPress={() => void addStatus.run(onAdd)}
+        />
       </View>
 
       {options.length === 0 ? (
@@ -165,14 +227,7 @@ export default function PlayerCustomFieldOptionsPanel({ fieldId }: Props) {
                     onChangeText={setEditLabel}
                     className="flex-1 border border-gray-300 rounded-lg px-2 py-1 min-w-[160px]"
                   />
-                  <Pressable
-                    testID={`custom-field-option-save-${option.id_player_custom_field_option}`}
-                    disabled={busy}
-                    onPress={() => void onSaveLabel(option)}
-                    className="bg-blue-600 rounded px-2 py-1"
-                  >
-                    <Text className="text-white text-xs">Save</Text>
-                  </Pressable>
+                  <SaveOptionButton option={option} onSave={onSaveLabel} />
                   <Pressable
                     testID={`custom-field-option-cancel-${option.id_player_custom_field_option}`}
                     onPress={() => setEditingId(null)}
@@ -211,14 +266,7 @@ export default function PlayerCustomFieldOptionsPanel({ fieldId }: Props) {
                 />
               </View>
 
-              <Pressable
-                testID={`custom-field-option-delete-${option.id_player_custom_field_option}`}
-                disabled={busy}
-                onPress={() => void onDelete(option)}
-                className="bg-red-50 rounded px-2 py-1"
-              >
-                <Text className="text-red-700 text-xs">Delete</Text>
-              </Pressable>
+              <DeleteOptionButton option={option} onDelete={onDelete} />
             </View>
           </View>
         ))

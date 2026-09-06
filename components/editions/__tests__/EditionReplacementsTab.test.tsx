@@ -27,6 +27,8 @@ const mockDestroy = jest.fn();
 const mockGetPlayers = jest.fn(async () => ({
   data: [{ id_player: 5, name: 'Guest Eve' }],
 }));
+const mockPlaySuccess = jest.fn(async () => undefined);
+const mockPlayError = jest.fn(async () => undefined);
 
 jest.mock('@/services/api/scheduleApi', () => ({
   scheduleApi: {
@@ -53,6 +55,16 @@ jest.mock('@/services/api/playersApi', () => ({
   })),
 }));
 
+jest.mock('@/lib/actionButtonFeedback', () => ({
+  playSuccess: (...args: unknown[]) => mockPlaySuccess(...args),
+  playError: (...args: unknown[]) => mockPlayError(...args),
+}));
+
+// Keep Tooltip on its native branch so error text is readable via a11y hint.
+jest.mock('@/utils/isWebPlatform', () => ({
+  isWebPlatform: () => false,
+}));
+
 let activeClient: QueryClient | null = null;
 
 function renderWithProviders(ui: React.ReactElement) {
@@ -62,6 +74,20 @@ function renderWithProviders(ui: React.ReactElement) {
       <PageChromeProvider>{ui}</PageChromeProvider>
     </QueryClientProvider>
   );
+}
+
+function scheduleWithOnePair() {
+  return {
+    data: {
+      is_finalized: false,
+      schedule: { allow_replacements: true },
+      participations: [
+        { id_participation: 1, player: { name: 'Original Alice' } },
+        { id_participation: 2, player: { name: 'Sub Bob' } },
+      ],
+      matches: [],
+    },
+  };
 }
 
 describe('matchLabel', () => {
@@ -81,9 +107,11 @@ describe('matchLabel', () => {
 describe('EditionReplacementsTab', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (window as any).confirm = jest.fn(() => true);
   });
 
   afterEach(async () => {
+    jest.useRealTimers();
     await act(async () => {
       await new Promise<void>(resolve =>
         setTimeout(resolve, PLAYER_PICKER_DEBOUNCE_MS)
@@ -156,6 +184,29 @@ describe('EditionReplacementsTab', () => {
     ).toContain('flex-wrap');
   });
 
+  it('renders Create and Delete as ActionButtons with mapped variants', async () => {
+    mockGetSchedule.mockResolvedValue(scheduleWithOnePair());
+    mockList.mockResolvedValue({
+      data: [
+        {
+          id_replacement: 8,
+          original_participation_id: 1,
+          substitute_participation_id: 2,
+          match_id: null,
+        },
+      ],
+    });
+    const { findByTestId, getByTestId } = renderWithProviders(
+      <EditionReplacementsTab editionId={36} editionDivisionId={9} />
+    );
+    const create = await findByTestId('replacements-create');
+    // Disabled until an original participation is picked.
+    expect(create.props.accessibilityState.disabled).toBe(true);
+    expect(getByTestId('replacements-delete-8').props.className).toMatch(
+      /bg-red-600/
+    );
+  });
+
   it('lists edition-wide replacements in General and hides create', async () => {
     mockListForEdition.mockResolvedValue({
       data: [
@@ -219,7 +270,7 @@ describe('EditionReplacementsTab', () => {
     });
     mockList.mockResolvedValue({ data: [] });
     mockCreate.mockResolvedValue({ data: { id_replacement: 9 } });
-    const { findByText, getByText } = renderWithProviders(
+    const { findByText, findByTestId, getByText } = renderWithProviders(
       <EditionReplacementsTab editionId={36} editionDivisionId={9} />
     );
     fireEvent.press(await findByText('Select original participation'));
@@ -230,6 +281,36 @@ describe('EditionReplacementsTab', () => {
     expect(payload.original_participation_id).toBe(1);
     expect(payload).not.toHaveProperty('substitute_participation_id');
     expect(payload).not.toHaveProperty('substitute_player_id');
+    expect(await findByTestId('replacements-create-success')).toBeTruthy();
+    expect(mockPlaySuccess).toHaveBeenCalled();
+  });
+
+  it('create failure reports on the button without an action banner', async () => {
+    mockGetSchedule.mockResolvedValue({
+      data: {
+        is_finalized: false,
+        schedule: { allow_replacements: true },
+        participations: [
+          { id_participation: 1, player: { name: 'Original Alice' } },
+        ],
+        matches: [],
+      },
+    });
+    mockList.mockResolvedValue({ data: [] });
+    mockCreate.mockRejectedValue(new Error('Create exploded'));
+    const { findByText, findByTestId, getByTestId, getByText, queryByText } =
+      renderWithProviders(
+        <EditionReplacementsTab editionId={36} editionDivisionId={9} />
+      );
+    fireEvent.press(await findByText('Select original participation'));
+    fireEvent.press(getByText('Original Alice'));
+    fireEvent.press(getByText('Create'));
+    expect(await findByTestId('replacements-create-error')).toBeTruthy();
+    expect(
+      getByTestId('replacements-create-tooltip').props.accessibilityHint
+    ).toBe('Create exploded');
+    expect(mockPlayError).toHaveBeenCalled();
+    expect(queryByText('Create exploded')).toBeNull();
   });
 
   it('edit existing row calls patch including cleared substitute and match', async () => {
@@ -274,6 +355,96 @@ describe('EditionReplacementsTab', () => {
         substitute_player_id: null,
       })
     );
+    expect(mockPlaySuccess).toHaveBeenCalled();
+  });
+
+  it('Delete confirms before deleting and skips the call when declined', async () => {
+    mockGetSchedule.mockResolvedValue(scheduleWithOnePair());
+    mockList.mockResolvedValue({
+      data: [
+        {
+          id_replacement: 8,
+          original_participation_id: 1,
+          substitute_participation_id: 2,
+          match_id: null,
+        },
+      ],
+    });
+    (window as any).confirm = jest.fn(() => false);
+    const { findByTestId } = renderWithProviders(
+      <EditionReplacementsTab editionId={36} editionDivisionId={9} />
+    );
+    fireEvent.press(await findByTestId('replacements-delete-8'));
+    await waitFor(() => expect((window as any).confirm).toHaveBeenCalled());
+    expect(mockDestroy).not.toHaveBeenCalled();
+  });
+
+  it('Delete runs after confirmation and reports success on its own button', async () => {
+    mockGetSchedule.mockResolvedValue(scheduleWithOnePair());
+    mockList.mockResolvedValue({
+      data: [
+        {
+          id_replacement: 8,
+          original_participation_id: 1,
+          substitute_participation_id: 2,
+          match_id: null,
+        },
+        {
+          id_replacement: 9,
+          original_participation_id: 2,
+          substitute_participation_id: 1,
+          match_id: null,
+        },
+      ],
+    });
+    mockDestroy.mockResolvedValue({ data: null });
+    (window as any).confirm = jest.fn(() => true);
+    const { findByTestId, getByTestId, queryByTestId } = renderWithProviders(
+      <EditionReplacementsTab editionId={36} editionDivisionId={9} />
+    );
+    fireEvent.press(await findByTestId('replacements-delete-8'));
+    await waitFor(() => expect(mockDestroy).toHaveBeenCalledWith(8));
+    expect(await findByTestId('replacements-delete-8-success')).toBeTruthy();
+    // Per-button status: the sibling row is untouched.
+    expect(queryByTestId('replacements-delete-9-success')).toBeNull();
+    expect(
+      getByTestId('replacements-delete-9').props.accessibilityState.disabled
+    ).toBe(false);
+    expect(mockPlaySuccess).toHaveBeenCalled();
+  });
+
+  it('Delete failure reports on the button without an action banner', async () => {
+    mockGetSchedule.mockResolvedValue(scheduleWithOnePair());
+    mockList.mockResolvedValue({
+      data: [
+        {
+          id_replacement: 8,
+          original_participation_id: 1,
+          substitute_participation_id: 2,
+          match_id: null,
+        },
+      ],
+    });
+    mockDestroy.mockRejectedValue(new Error('Delete refused'));
+    const { findByTestId, getByTestId, queryByText } = renderWithProviders(
+      <EditionReplacementsTab editionId={36} editionDivisionId={9} />
+    );
+    fireEvent.press(await findByTestId('replacements-delete-8'));
+    expect(await findByTestId('replacements-delete-8-error')).toBeTruthy();
+    expect(
+      getByTestId('replacements-delete-8-tooltip').props.accessibilityHint
+    ).toBe('Delete refused');
+    expect(queryByText('Delete refused')).toBeNull();
+    expect(mockPlayError).toHaveBeenCalled();
+  });
+
+  it('keeps the query load error banner', async () => {
+    mockGetSchedule.mockResolvedValue(scheduleWithOnePair());
+    mockList.mockRejectedValue(new Error('Replacements list failed'));
+    const { findByText } = renderWithProviders(
+      <EditionReplacementsTab editionId={36} editionDivisionId={9} />
+    );
+    expect(await findByText('Replacements list failed')).toBeTruthy();
   });
 
   it('hides create edit and delete when finalized', async () => {
@@ -306,6 +477,7 @@ describe('EditionReplacementsTab', () => {
     expect(queryByText('Edit')).toBeNull();
     expect(queryByText('Delete')).toBeNull();
     expect(queryByTestId('replacements-edit-8')).toBeNull();
+    expect(queryByTestId('replacements-delete-8')).toBeNull();
   });
 
   it('hides edit and delete in General', async () => {
@@ -328,13 +500,14 @@ describe('EditionReplacementsTab', () => {
         },
       ],
     });
-    const { findByText, queryByText } = renderWithProviders(
+    const { findByText, queryByText, queryByTestId } = renderWithProviders(
       <EditionReplacementsTab editionId={36} editionDivisionId={null} />
     );
     expect(await findByText(/Alice Original/)).toBeTruthy();
     expect(queryByText('Edit')).toBeNull();
     expect(queryByText('Delete')).toBeNull();
     expect(queryByText('Create replacement')).toBeNull();
+    expect(queryByTestId('replacements-delete-1')).toBeNull();
   });
 
   it('substitute picker uses the shared searchable player picker', async () => {
@@ -359,5 +532,19 @@ describe('EditionReplacementsTab', () => {
     for (const call of mockGetPlayers.mock.calls) {
       expect(call[0].per_page).toBeLessThanOrEqual(100);
     }
+  });
+
+  it('has no press-tied action error state and confirms deletes', () => {
+    const fs = require('fs') as typeof import('fs');
+    const path = require('path') as typeof import('path');
+    const src = fs.readFileSync(
+      path.join(__dirname, '..', 'EditionReplacementsTab.tsx'),
+      'utf8'
+    );
+    expect(src).not.toContain('setActionError');
+    expect(src).not.toContain('actionError');
+    expect(src).toContain("import { confirmAction } from '@/utils/confirmAction'");
+    expect(src).toContain('useActionButtonStatus');
+    expect(src).toContain('confirmAction(');
   });
 });

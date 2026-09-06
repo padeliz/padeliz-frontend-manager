@@ -167,8 +167,6 @@ export default function EditionScoresTab({
   divisions = [],
 }: Props) {
   const queryClient = useQueryClient();
-  const [error, setError] = useState<string | null>(null);
-  const [hint, setHint] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [drafts, setDrafts] = useState<
     Record<number, { left: string; right: string }>
@@ -215,13 +213,12 @@ export default function EditionScoresTab({
   );
 
   const reload = useCallback(async () => {
-    await scheduleQuery.refetch();
+    await scheduleQuery.refetch({ throwOnError: true });
   }, [scheduleQuery]);
 
   const saveAll = useCallback(async () => {
     if (!editionDivisionId || finalized) return;
     setSaving(true);
-    setError(null);
     try {
       const changed = Object.entries(drafts).filter(([id, d]) => {
         const base = JSON.parse(baseline || '{}')[id];
@@ -233,14 +230,9 @@ export default function EditionScoresTab({
           right_score: Number(draft.right || 0),
         });
       }
-      setHint(
-        'Scores saved. Run Recalculate on the Standings tab if rankings need updating.'
-      );
       await queryClient.invalidateQueries({
         queryKey: queryKeys.schedule(editionDivisionId),
       });
-    } catch (e: any) {
-      setError(e?.message || 'Failed to save scores');
     } finally {
       setSaving(false);
     }
@@ -364,12 +356,6 @@ export default function EditionScoresTab({
 
   return (
     <View className="gap-3" testID="scores-ed-view">
-      {error && (
-        <Text className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</Text>
-      )}
-      {hint && (
-        <Text className="text-sm text-blue-700 bg-blue-50 p-2 rounded">{hint}</Text>
-      )}
       {finalized && (
         <Text className="text-sm text-amber-700 bg-amber-50 p-2 rounded">
           Schedule is finalized — scores are read-only.

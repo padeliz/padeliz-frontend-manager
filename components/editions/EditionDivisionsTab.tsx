@@ -4,18 +4,19 @@
  */
 
 import { useRegisterPageActions } from '@/components/chrome/PageChromeProvider';
+import ActionButton from '@/components/ui/ActionButton';
+import AppTextInput from '@/components/ui/AppTextInput';
 import SingleSelectDropdown from '@/components/ui/SingleSelectDropdown';
+import { useActionButtonStatus } from '@/hooks/useActionButtonStatus';
 import { EditionDivisionsApiService } from '@/services/api/editionDivisionsApi';
 import { ApiDivision, ApiEditionDivision } from '@/types/api/entities';
+import { confirmAction } from '@/utils/confirmAction';
 import { sortBySkillOrder } from '@/utils/edition/editionDivisionOrder';
 import { openInNewWindow } from '@/utils/openInNewWindow';
-import { actionPillClass } from '@/utils/ui/actionButtonClass';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import AppTextInput from '@/components/ui/AppTextInput';
 import { Pressable, Text, View } from 'react-native';
-import { confirmAction } from './editionLotteryUtils';
 import SortableRow, {
   moveInList,
   reorderList,
@@ -57,6 +58,48 @@ export function divisionLabel(ed: ApiEditionDivision): string {
   );
 }
 
+function DeleteDivisionButton({
+  ed,
+  onDeleted,
+}: {
+  ed: ApiEditionDivision;
+  onDeleted: () => Promise<void>;
+}) {
+  const { status, errorMessage, run } = useActionButtonStatus({
+    auditoryFeedback: true,
+    successHoldMs: 4000,
+  });
+
+  return (
+    <ActionButton
+      testID={`division-delete-${ed.id_edition_division}`}
+      iconOnly
+      startIcon="trash-outline"
+      accessibilityLabel={`Delete ${divisionLabel(ed)}`}
+      variant="ghost"
+      iconColor="#dc2626"
+      size="sm"
+      status={status}
+      errorMessage={errorMessage ?? undefined}
+      className="p-2 bg-transparent border-transparent"
+      onPress={() => {
+        confirmAction(
+          'Delete edition division',
+          `Delete ${divisionLabel(ed)}? Participations and schedule for it are removed too.`,
+          () => {
+            void run(async () => {
+              await editionDivisionsApi.deleteEditionDivision(
+                ed.id_edition_division
+              );
+              await onDeleted();
+            });
+          }
+        );
+      }}
+    />
+  );
+}
+
 export default function EditionDivisionsTab({
   editionId,
   editionFinalized,
@@ -69,9 +112,8 @@ export default function EditionDivisionsTab({
     sortBySkillOrder(divisions)
   );
   const [draft, setDraft] = useState<NewDivisionDraft>(EMPTY_DRAFT);
-  const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const createStatus = useActionButtonStatus({ auditoryFeedback: true });
 
   useEffect(() => {
     setLocal(sortBySkillOrder(divisions));
@@ -114,7 +156,6 @@ export default function EditionDivisionsTab({
   const saveOrder = useCallback(async () => {
     if (editionFinalized || !orderDirty) return;
     setSaving(true);
-    setError(null);
     try {
       await editionDivisionsApi.reorderEditionDivisions(
         editionId,
@@ -124,8 +165,6 @@ export default function EditionDivisionsTab({
         }))
       );
       await onRefresh();
-    } catch (e: any) {
-      setError(e?.message || 'Failed to save division order');
     } finally {
       setSaving(false);
     }
@@ -139,20 +178,16 @@ export default function EditionDivisionsTab({
     isSaving: saving,
   });
 
-  const create = async () => {
+  const create = () => {
     if (editionFinalized) return;
-    if (draft.division_id == null) {
-      setError('Select a division from the catalog.');
-      return;
-    }
-    const playersLimit = Number(draft.players_limit);
-    if (!Number.isFinite(playersLimit) || playersLimit < 1) {
-      setError('Players limit must be a positive number.');
-      return;
-    }
-    setCreating(true);
-    setError(null);
-    try {
+    void createStatus.run(async () => {
+      if (draft.division_id == null) {
+        throw new Error('Select a division from the catalog.');
+      }
+      const playersLimit = Number(draft.players_limit);
+      if (!Number.isFinite(playersLimit) || playersLimit < 1) {
+        throw new Error('Players limit must be a positive number.');
+      }
       await editionDivisionsApi.createEditionDivision({
         edition_id: editionId,
         division_id: draft.division_id,
@@ -163,32 +198,7 @@ export default function EditionDivisionsTab({
       });
       setDraft(EMPTY_DRAFT);
       await onRefresh();
-    } catch (e: any) {
-      setError(e?.message || 'Failed to create edition division');
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  const remove = (ed: ApiEditionDivision) => {
-    if (editionFinalized) return;
-    confirmAction(
-      'Delete edition division',
-      `Delete ${divisionLabel(ed)}? Participations and schedule for it are removed too.`,
-      () => {
-        void (async () => {
-          setError(null);
-          try {
-            await editionDivisionsApi.deleteEditionDivision(
-              ed.id_edition_division
-            );
-            await onRefresh();
-          } catch (e: any) {
-            setError(e?.message || 'Failed to delete edition division');
-          }
-        })();
-      }
-    );
+    });
   };
 
   const openEdit = (ed: ApiEditionDivision) => {
@@ -199,15 +209,6 @@ export default function EditionDivisionsTab({
   return (
     <View testID="edition-divisions-tab">
       <Text className="text-lg font-semibold text-gray-900 mb-3">Divisions</Text>
-
-      {error && (
-        <Text
-          testID="divisions-error"
-          className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-2 mb-3"
-        >
-          {error}
-        </Text>
-      )}
 
       {editionFinalized && (
         <Text
@@ -286,16 +287,15 @@ export default function EditionDivisionsTab({
                 }
               />
             </View>
-            <Pressable
+            <ActionButton
               testID="divisions-add-button"
-              disabled={creating}
-              onPress={() => void create()}
-              className={actionPillClass(!creating, 'blue')}
-            >
-              <Text className="text-white text-sm font-medium">
-                {creating ? 'Adding…' : 'Add'}
-              </Text>
-            </Pressable>
+              label="Add"
+              variant="primary"
+              size="sm"
+              status={createStatus.status}
+              errorMessage={createStatus.errorMessage ?? undefined}
+              onPress={create}
+            />
           </View>
         </View>
       )}
@@ -364,13 +364,7 @@ export default function EditionDivisionsTab({
                   <Ionicons name="open-outline" size={18} color="#2563eb" />
                 </Pressable>
                 {!editionFinalized && (
-                  <Pressable
-                    testID={`division-delete-${ed.id_edition_division}`}
-                    onPress={() => remove(ed)}
-                    className="p-2"
-                  >
-                    <Ionicons name="trash-outline" size={18} color="#dc2626" />
-                  </Pressable>
+                  <DeleteDivisionButton ed={ed} onDeleted={onRefresh} />
                 )}
               </View>
             </View>

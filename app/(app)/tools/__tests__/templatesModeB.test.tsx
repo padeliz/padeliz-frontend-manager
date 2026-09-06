@@ -1,5 +1,6 @@
 import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 
 jest.mock('@expo/vector-icons', () => ({
   Ionicons: 'Ionicons',
@@ -30,11 +31,17 @@ jest.mock('@/components/layout/BreadcrumbProvider', () => ({
   useBreadcrumbSegments: jest.fn(),
 }));
 
-jest.mock('@/components/ui/HeaderActionButton', () => {
+jest.mock('@/components/ui/ActionButton', () => {
   const { Pressable, Text } = require('react-native');
-  return ({ label, onPress }: any) => (
-    <Pressable onPress={onPress}>
+  return ({ label, onPress, testID, status, startIcon }: any) => (
+    <Pressable testID={testID} onPress={onPress}>
       <Text>{label}</Text>
+      {testID ? (
+        <>
+          <Text testID={`${testID}-status`}>{status ?? 'idle'}</Text>
+          <Text testID={`${testID}-start-icon`}>{startIcon ?? 'none'}</Text>
+        </>
+      ) : null}
     </Pressable>
   );
 });
@@ -86,19 +93,29 @@ const mockGetPlayers = jest.fn(async () => ({
   meta: { last_page: 1, current_page: 1 },
 }));
 
+const mockDemo = jest.fn(async (..._args: unknown[]) => ({
+  data: { players: 8, matches_count: 12 },
+}));
+const mockDownloadMatchesPdf = jest.fn(
+  async (..._args: unknown[]) => undefined
+);
+const mockDownloadRankingPdf = jest.fn(
+  async (..._args: unknown[]) => undefined
+);
+
 jest.mock('@/services/api/templatesToolsApi', () => ({
   templatesToolsApi: {
     catalog: (...args: unknown[]) => mockCatalog(...args),
     metrics: (...args: unknown[]) => mockMetrics(...args),
-    demo: jest.fn(),
+    demo: (...args: unknown[]) => mockDemo(...args),
   },
 }));
 
 jest.mock('@/services/api/scratchScheduleApi', () => ({
   scratchScheduleApi: {
     preview: (...args: unknown[]) => mockPreview(...args),
-    downloadMatchesPdf: jest.fn(),
-    downloadRankingPdf: jest.fn(),
+    downloadMatchesPdf: (...args: unknown[]) => mockDownloadMatchesPdf(...args),
+    downloadRankingPdf: (...args: unknown[]) => mockDownloadRankingPdf(...args),
   },
 }));
 
@@ -155,8 +172,21 @@ function renderPage() {
 }
 
 describe('Tools templates Mode B', () => {
+  const originalOs = Platform.OS;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    Object.defineProperty(Platform, 'OS', {
+      configurable: true,
+      get: () => 'web',
+    });
+  });
+
+  afterEach(() => {
+    Object.defineProperty(Platform, 'OS', {
+      configurable: true,
+      get: () => originalOs,
+    });
   });
 
   it(
@@ -230,6 +260,97 @@ describe('Tools templates Mode B', () => {
       expect(getByText('1. ARSH Padel MiniTour')).toBeTruthy();
       expect(getByText('4. Padel Club Host')).toBeTruthy();
       expect(getByText('No club host')).toBeTruthy();
+    },
+    15000
+  );
+
+  it(
+    'downloads matches and ranking PDFs through download-icon ActionButtons',
+    async () => {
+      const { getByTestId } = renderPage();
+
+      await waitFor(() => expect(mockCatalog).toHaveBeenCalled());
+      fireEvent.press(getByTestId('tools-tab-mode-b'));
+
+      expect(getByTestId('tools-pdf-matches-start-icon')).toHaveTextContent(
+        'download'
+      );
+      expect(getByTestId('tools-pdf-ranking-start-icon')).toHaveTextContent(
+        'download'
+      );
+
+      fireEvent.press(getByTestId('tools-pdf-matches'));
+      await waitFor(() =>
+        expect(mockDownloadMatchesPdf).toHaveBeenCalledWith(
+          expect.objectContaining({
+            title: 'Scratch MiniTour',
+            court_index: 0,
+          }),
+          'scratch-matches.pdf'
+        )
+      );
+
+      fireEvent.press(getByTestId('tools-pdf-ranking'));
+      await waitFor(() =>
+        expect(mockDownloadRankingPdf).toHaveBeenCalledWith(
+          expect.objectContaining({ title: 'Scratch MiniTour' }),
+          'scratch-ranking.pdf'
+        )
+      );
+
+      await waitFor(() =>
+        expect(getByTestId('tools-pdf-ranking-status')).toHaveTextContent(
+          'success'
+        )
+      );
+    },
+    15000
+  );
+
+  it(
+    'reports download and preview failures on the button, not a banner',
+    async () => {
+      Object.defineProperty(Platform, 'OS', {
+        configurable: true,
+        get: () => 'ios',
+      });
+      mockPreview.mockRejectedValueOnce(new Error('Scratch preview exploded'));
+
+      const { getByTestId, queryByText } = renderPage();
+
+      await waitFor(() => expect(mockCatalog).toHaveBeenCalled());
+      fireEvent.press(getByTestId('tools-tab-mode-b'));
+
+      fireEvent.press(getByTestId('tools-pdf-matches'));
+      await waitFor(() =>
+        expect(getByTestId('tools-pdf-matches-status')).toHaveTextContent(
+          'error'
+        )
+      );
+      expect(mockDownloadMatchesPdf).not.toHaveBeenCalled();
+      expect(queryByText('PDF download is web-only.')).toBeNull();
+
+      fireEvent.press(getByTestId('tools-preview'));
+      await waitFor(() =>
+        expect(getByTestId('tools-preview-status')).toHaveTextContent('error')
+      );
+      expect(queryByText('Scratch preview exploded')).toBeNull();
+    },
+    15000
+  );
+
+  it(
+    'runs the template demo through an ActionButton',
+    async () => {
+      const { findByText, getByTestId } = renderPage();
+
+      await waitFor(() => expect(mockCatalog).toHaveBeenCalled());
+      fireEvent.press(getByTestId('tools-tab-mode-b'));
+
+      fireEvent.press(getByTestId('tools-demo'));
+      await waitFor(() => expect(mockDemo).toHaveBeenCalledWith(8, 3, 1, 2));
+      expect(await findByText(/Demo loaded/)).toBeTruthy();
+      expect(getByTestId('tools-demo-status')).toHaveTextContent('success');
     },
     15000
   );

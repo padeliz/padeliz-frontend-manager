@@ -14,12 +14,13 @@ import React, {
 } from 'react';
 
 export type PageChromeActions = {
-  save?: () => void | Promise<void>;
-  refresh?: () => void | Promise<void>;
+  save?: () => Promise<void>;
+  refresh?: () => Promise<void>;
   edit?: () => void;
   cancel?: () => void;
   isEditing?: boolean;
   isSaving?: boolean;
+  isRefreshing?: boolean;
   canSave?: boolean;
   isDirty?: boolean;
   /** Child-owned Page Header action cluster (list Add/Export, etc.). */
@@ -55,6 +56,7 @@ export function PageChromeProvider({
       if (
         prev.isEditing === next.isEditing &&
         prev.isSaving === next.isSaving &&
+        prev.isRefreshing === next.isRefreshing &&
         prev.canSave === next.canSave &&
         prev.isDirty === next.isDirty &&
         prev.save === next.save &&
@@ -124,6 +126,7 @@ export function useRegisterPageActions(actions: PageChromeActions | null) {
 
   const isEditing = actions?.isEditing;
   const isSaving = actions?.isSaving;
+  const isRefreshing = actions?.isRefreshing;
   const canSave = actions?.canSave;
   const isDirty = actions?.isDirty;
   const displayTitle = actions?.displayTitle;
@@ -142,6 +145,7 @@ export function useRegisterPageActions(actions: PageChromeActions | null) {
       cancel,
       isEditing,
       isSaving,
+      isRefreshing,
       canSave,
       isDirty,
       displayTitle,
@@ -155,6 +159,7 @@ export function useRegisterPageActions(actions: PageChromeActions | null) {
     hasActions,
     isEditing,
     isSaving,
+    isRefreshing,
     canSave,
     isDirty,
     save,

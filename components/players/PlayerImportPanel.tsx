@@ -104,7 +104,7 @@ export default function PlayerImportPanel() {
   }, []);
 
   const runPreview = useCallback(
-    async (nextFile: File) => {
+    async (nextFile: File, throwOnError = false): Promise<void> => {
       setLoading(true);
       try {
         const response = await api.preview(nextFile);
@@ -112,6 +112,7 @@ export default function PlayerImportPanel() {
         applyPreview(response.data.rows);
       } catch (err: any) {
         showError('Preview failed', err?.message || 'Could not preview CSV');
+        if (throwOnError) throw err;
       } finally {
         setLoading(false);
       }
@@ -159,7 +160,7 @@ export default function PlayerImportPanel() {
     const blocked = nextRows.some(row => row.included && row.errors.length > 0);
     if (blocked) {
       setRows(nextRows);
-      return;
+      throw new Error('Import validation failed');
     }
 
     const payloadRows: PlayerImportSaveRow[] = included.map(row => ({
@@ -224,6 +225,7 @@ export default function PlayerImportPanel() {
         );
       }
       showError('Import failed', err?.message || 'Could not save import');
+      throw err;
     } finally {
       setSaving(false);
     }
@@ -235,7 +237,7 @@ export default function PlayerImportPanel() {
       const ok = await confirmDiscardDirty();
       if (!ok) return;
     }
-    await runPreview(file);
+    await runPreview(file, true);
   }, [dirty, file, runPreview]);
 
   const includedOnly = rows.filter(row => row.included);

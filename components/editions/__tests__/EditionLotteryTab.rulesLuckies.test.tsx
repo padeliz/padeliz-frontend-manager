@@ -29,6 +29,7 @@ import {
 import { Platform } from 'react-native';
 
 const mockGetRules = jest.fn();
+const mockDeleteRule = jest.fn(async (..._args: unknown[]) => undefined);
 const mockGetLotteryPrizes = jest.fn();
 const mockAccept = jest.fn();
 const mockReject = jest.fn();
@@ -63,7 +64,7 @@ jest.mock('@/services/api/editionLotteryPrizesApi', () => ({
 jest.mock('@/services/api/editionLotteryRulesApi', () => ({
   EditionLotteryRulesApiService: jest.fn().mockImplementation(() => ({
     getRules: (...args: unknown[]) => mockGetRules(...args),
-    deleteRule: jest.fn(),
+    deleteRule: (...args: unknown[]) => mockDeleteRule(...args),
   })),
 }));
 
@@ -365,6 +366,69 @@ describe('EditionLotteryTab rules/luckies', () => {
     expect(await findByTestId('lottery-edit-rule-7')).toBeTruthy();
     expect(await findByTestId('lottery-delete-rule-7')).toBeTruthy();
     expect(String(row.props.className)).toContain('flex-row');
+  });
+
+  it('deletes one rule per row and only that row reports success', async () => {
+    const { findByTestId, getByTestId, queryByTestId } = renderWithClient(
+      <EditionLotteryTab
+        editionId={1}
+        editionDivisionId={2}
+        mode="rules"
+        divisions={
+          [{ id_edition_division: 2, division_title: 'Learners' }] as any
+        }
+      />
+    );
+    await findByTestId('lottery-delete-rule-7');
+    fireEvent.press(getByTestId('lottery-delete-rule-7'));
+    await waitFor(() => expect(mockDeleteRule).toHaveBeenCalledWith(7));
+    expect(await findByTestId('lottery-delete-rule-7-success')).toBeTruthy();
+    expect(queryByTestId('lottery-delete-rule-8-success')).toBeNull();
+  });
+
+  it('skips the rule delete request when the confirm is cancelled', async () => {
+    (window as any).confirm = jest.fn(() => false);
+    const { findByTestId, getByTestId, queryByTestId } = renderWithClient(
+      <EditionLotteryTab
+        editionId={1}
+        editionDivisionId={2}
+        mode="rules"
+        divisions={[] as any}
+      />
+    );
+    await findByTestId('lottery-delete-rule-7');
+    fireEvent.press(getByTestId('lottery-delete-rule-7'));
+    expect(mockDeleteRule).not.toHaveBeenCalled();
+    expect(queryByTestId('lottery-delete-rule-7-pending')).toBeNull();
+  });
+
+  it('surfaces rule delete failure on the row button, not a tab banner', async () => {
+    mockDeleteRule.mockRejectedValueOnce(new Error('rule already drawn'));
+    const { findByTestId, getByTestId, queryByText } = renderWithClient(
+      <EditionLotteryTab
+        editionId={1}
+        editionDivisionId={2}
+        mode="rules"
+        divisions={[] as any}
+      />
+    );
+    await findByTestId('lottery-delete-rule-7');
+    fireEvent.press(getByTestId('lottery-delete-rule-7'));
+    expect(await findByTestId('lottery-delete-rule-7-error')).toBeTruthy();
+    expect(queryByText('rule already drawn')).toBeNull();
+  });
+
+  it('keeps the rules load error surface when the rules query fails', async () => {
+    mockGetRules.mockRejectedValue(new Error('rules unavailable'));
+    const { findByText } = renderWithClient(
+      <EditionLotteryTab
+        editionId={1}
+        editionDivisionId={2}
+        mode="rules"
+        divisions={[] as any}
+      />
+    );
+    expect(await findByText('rules unavailable')).toBeTruthy();
   });
 
   it('luckies board hides manage chrome edit delete and shows phones accept', async () => {
@@ -740,7 +804,7 @@ describe('EditionLotteryTab rules/luckies', () => {
 
   it('confirm cancel leaves Accept/Reject labels and skips mutation', async () => {
     (window as any).confirm = jest.fn(() => false);
-    const { findByTestId, getByTestId } = renderWithClient(
+    const { findByTestId, getByTestId, queryByTestId } = renderWithClient(
       <EditionLotteryTab editionId={1} mode="luckies" divisions={[] as any} />
     );
     await findByTestId('lottery-accept-lucky-51');
@@ -748,9 +812,10 @@ describe('EditionLotteryTab rules/luckies', () => {
     expect(mockAccept).not.toHaveBeenCalled();
     expect(getByTestId('lottery-accept-lucky-51')).toHaveTextContent('Accept');
     expect(getByTestId('lottery-reject-lucky-51')).toHaveTextContent('Reject');
+    expect(queryByTestId('lottery-accept-lucky-51-pending')).toBeNull();
   });
 
-  it('confirm accept shows Accept... and grays both until resolve', async () => {
+  it('accept pending locks only Accept and leaves Reject pressable', async () => {
     let resolveAccept: (v: unknown) => void = () => {};
     mockAccept.mockImplementation(
       () =>
@@ -763,34 +828,26 @@ describe('EditionLotteryTab rules/luckies', () => {
     );
     await findByTestId('lottery-accept-lucky-51');
     fireEvent.press(getByTestId('lottery-accept-lucky-51'));
-    await waitFor(() =>
-      expect(getByTestId('lottery-accept-lucky-51')).toHaveTextContent(
-        'Accept...'
-      )
-    );
-    expect(getByTestId('lottery-reject-lucky-51')).toHaveTextContent('Reject');
+    expect(await findByTestId('lottery-accept-lucky-51-pending')).toBeTruthy();
+    expect(getByTestId('lottery-accept-lucky-51')).toHaveTextContent('Accept');
     expect(
       String(getByTestId('lottery-accept-lucky-51').props.className)
-    ).toContain('bg-gray-300');
-    expect(
-      String(getByTestId('lottery-reject-lucky-51').props.className)
     ).toContain('bg-gray-300');
     expect(
       getByTestId('lottery-accept-lucky-51').props.accessibilityState?.disabled
     ).toBe(true);
     expect(
       getByTestId('lottery-reject-lucky-51').props.accessibilityState?.disabled
-    ).toBe(true);
+    ).toBe(false);
 
     await act(async () => {
       resolveAccept({});
     });
-    await waitFor(() =>
-      expect(getByTestId('lottery-accept-lucky-51')).toHaveTextContent('Accept')
-    );
+    expect(await findByTestId('lottery-accept-lucky-51-success')).toBeTruthy();
+    expect(getByTestId('lottery-accept-lucky-51')).toHaveTextContent('Accept');
   });
 
-  it('confirm reject shows Reject... and grays both until resolve', async () => {
+  it('reject pending locks only Reject and leaves Accept pressable', async () => {
     let resolveReject: (v: unknown) => void = () => {};
     mockReject.mockImplementation(
       () =>
@@ -803,20 +860,29 @@ describe('EditionLotteryTab rules/luckies', () => {
     );
     await findByTestId('lottery-reject-lucky-51');
     fireEvent.press(getByTestId('lottery-reject-lucky-51'));
-    await waitFor(() =>
-      expect(getByTestId('lottery-reject-lucky-51')).toHaveTextContent(
-        'Reject...'
-      )
-    );
+    expect(await findByTestId('lottery-reject-lucky-51-pending')).toBeTruthy();
     expect(
-      String(getByTestId('lottery-accept-lucky-51').props.className)
-    ).toContain('bg-gray-300');
+      getByTestId('lottery-accept-lucky-51').props.accessibilityState?.disabled
+    ).toBe(false);
+
     await act(async () => {
       resolveReject({});
     });
-    await waitFor(() =>
-      expect(getByTestId('lottery-reject-lucky-51')).toHaveTextContent('Reject')
-    );
+    expect(await findByTestId('lottery-reject-lucky-51-success')).toBeTruthy();
+    expect(getByTestId('lottery-reject-lucky-51')).toHaveTextContent('Reject');
+  });
+
+  it('accept failure lands on the pressed button without a board banner', async () => {
+    mockAccept.mockRejectedValue(new Error('lucky already resolved'));
+    const { findByTestId, getByTestId, queryByText, queryByTestId } =
+      renderWithClient(
+        <EditionLotteryTab editionId={1} mode="luckies" divisions={[] as any} />
+      );
+    await findByTestId('lottery-accept-lucky-51');
+    fireEvent.press(getByTestId('lottery-accept-lucky-51'));
+    expect(await findByTestId('lottery-accept-lucky-51-error')).toBeTruthy();
+    expect(queryByText('lucky already resolved')).toBeNull();
+    expect(queryByTestId('lottery-reject-lucky-51-error')).toBeNull();
   });
 
   it('finalized Accept/Reject are gray disabled without ellipsis', async () => {

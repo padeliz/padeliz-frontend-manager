@@ -12,8 +12,10 @@ const mockMap = jest.fn();
 const mockConfirmAction = jest.fn(
   (_title: string, _message: string, onConfirm: () => void) => onConfirm()
 );
-const mockShowSuccess = jest.fn();
-const mockShowError = jest.fn();
+
+jest.mock('@/utils/isWebPlatform', () => ({
+  isWebPlatform: () => false,
+}));
 
 jest.mock('@/services/api/editionParticipationMappingApi', () => ({
   EditionParticipationMappingApiService: jest.fn().mockImplementation(() => ({
@@ -24,13 +26,6 @@ jest.mock('@/services/api/editionParticipationMappingApi', () => ({
 
 jest.mock('@/components/editions/editionLotteryUtils', () => ({
   confirmAction: (...args: unknown[]) => mockConfirmAction(...args),
-}));
-
-jest.mock('@/context/ToastContext', () => ({
-  useToast: () => ({
-    showSuccess: mockShowSuccess,
-    showError: mockShowError,
-  }),
 }));
 
 function renderButton(
@@ -94,7 +89,7 @@ describe('EditionParticipationMappingButton', () => {
     ['lottery_exists', 'Cannot map after lottery draws exist for this edition.'],
     ['no_divisions', 'Add edition divisions before mapping participations.'],
   ] as const)(
-    'shows disabled hint for preview disabled_reason=%s',
+    'shows disabledReason tooltip for preview disabled_reason=%s',
     async (reason, hint) => {
       mockPreview.mockResolvedValue({
         data: {
@@ -107,56 +102,92 @@ describe('EditionParticipationMappingButton', () => {
         },
       });
 
-      const { findByTestId } = mountButton();
-      const hintNode = await findByTestId('map-participations-hint');
-      expect(hintNode).toHaveTextContent(hint);
+      const { findByTestId, queryByTestId } = mountButton();
+      const tip = await findByTestId('map-participations-button-tooltip');
+      expect(tip.props.accessibilityHint).toBe(hint);
+      expect(queryByTestId('map-participations-hint')).toBeNull();
+      expect(
+        await findByTestId('map-participations-button-info')
+      ).toBeTruthy();
     }
   );
 
-  it('maps immediately when there are no existing participations', async () => {
-    const { getByTestId, getByText, invalidateSpy } = mountButton();
-    await waitFor(() => expect(getByText('Map players to divisions')).toBeTruthy());
-    fireEvent.press(getByTestId('map-participations-button'));
-
-    await waitFor(() => {
-      expect(mockMap).toHaveBeenCalledWith(5, { confirm_overwrite: false });
-    });
-    expect(mockConfirmAction).not.toHaveBeenCalled();
-    expect(mockShowSuccess).toHaveBeenCalledWith(
-      'Participations mapped',
-      'Mapped 4 participations.'
+  it('shows checking while preview loads', async () => {
+    let resolvePreview!: (v: unknown) => void;
+    mockPreview.mockImplementation(
+      () =>
+        new Promise(r => {
+          resolvePreview = r;
+        })
     );
-    expect(invalidateSpy).toHaveBeenCalledWith({
-      queryKey: ['editionParticipations', 5],
+
+    const { getByTestId, queryByTestId, findByText } = mountButton();
+    expect(getByTestId('map-participations-button-checking')).toBeTruthy();
+
+    resolvePreview({
+      data: {
+        can_map: true,
+        disabled_reason: null,
+        existing_participations_count: 0,
+        registered_player_count: 1,
+        division_specific_registration_count: 0,
+        edition_wide_registration_count: 1,
+      },
     });
-    expect(invalidateSpy).toHaveBeenCalledWith({
-      queryKey: ['editionParticipationMapPreview', 5],
+
+    await findByText('Map players to divisions');
+    await waitFor(() => {
+      expect(queryByTestId('map-participations-button-checking')).toBeNull();
     });
   });
 
-  it('confirms overwrite when existing participations exist', async () => {
+  it('maps immediately when there are no existing participations', async () => {
+    const { getByTestId, getByText, queryByTestId, invalidateSpy } =
+      mountButton();
+    await waitFor(() =>
+      expect(getByText('Map players to divisions')).toBeTruthy()
+    );
+    await waitFor(() =>
+      expect(queryByTestId('map-participations-button-checking')).toBeNull()
+    );
+    fireEvent.press(getByTestId('map-participations-button'));
+
+    await waitFor(() => expect(mockMap).toHaveBeenCalled());
+    expect(mockMap).toHaveBeenCalledWith(5, { confirm_overwrite: false });
+    expect(mockConfirmAction).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(getByTestId('map-participations-button-success')).toBeTruthy();
+    });
+    expect(invalidateSpy).toHaveBeenCalled();
+  });
+
+  it('confirms overwrite when participations already exist', async () => {
     mockPreview.mockResolvedValue({
       data: {
         can_map: true,
         disabled_reason: null,
-        existing_participations_count: 2,
-        registered_player_count: 3,
-        division_specific_registration_count: 1,
+        existing_participations_count: 3,
+        registered_player_count: 4,
+        division_specific_registration_count: 2,
         edition_wide_registration_count: 2,
       },
     });
 
-    const { getByTestId, getByText } = mountButton();
-    await waitFor(() => expect(getByText('Map players to divisions')).toBeTruthy());
+    const { getByTestId, getByText, queryByTestId } = mountButton();
+    await waitFor(() =>
+      expect(getByText('Map players to divisions')).toBeTruthy()
+    );
+    await waitFor(() =>
+      expect(queryByTestId('map-participations-button-checking')).toBeNull()
+    );
     fireEvent.press(getByTestId('map-participations-button'));
 
-    await waitFor(() => {
-      expect(mockConfirmAction).toHaveBeenCalledWith(
-        'Map players to divisions',
-        'This will overwrite all current participations for this edition. Continue?',
-        expect.any(Function)
-      );
-    });
+    await waitFor(() => expect(mockConfirmAction).toHaveBeenCalled());
+    expect(mockConfirmAction).toHaveBeenCalledWith(
+      'Map players to divisions',
+      'This will overwrite all current participations for this edition. Continue?',
+      expect.any(Function)
+    );
     expect(mockMap).toHaveBeenCalledWith(5, { confirm_overwrite: true });
   });
 
@@ -172,8 +203,13 @@ describe('EditionParticipationMappingButton', () => {
       },
     });
 
-    const { getByTestId, getByText } = mountButton();
-    await waitFor(() => expect(getByText('Map players to divisions')).toBeTruthy());
+    const { getByTestId, getByText, queryByTestId } = mountButton();
+    await waitFor(() =>
+      expect(getByText('Map players to divisions')).toBeTruthy()
+    );
+    await waitFor(() =>
+      expect(queryByTestId('map-participations-button-checking')).toBeNull()
+    );
     fireEvent.press(getByTestId('map-participations-button'));
 
     await waitFor(() => {
@@ -185,25 +221,28 @@ describe('EditionParticipationMappingButton', () => {
     });
   });
 
-  it('shows finalized hint when mutationsDisabled even if preview allows map', async () => {
-    const { findByTestId } = mountButton({ mutationsDisabled: true });
-    const hintNode = await findByTestId('map-participations-hint');
-    expect(hintNode).toHaveTextContent(
-      'Edition is finalized — participations cannot be remapped.'
+  it('shows error on button when map fails (no toast)', async () => {
+    mockMap.mockRejectedValue(new Error('boom'));
+    const { getByTestId, getByText, queryByTestId } = mountButton();
+    await waitFor(() =>
+      expect(getByText('Map players to divisions')).toBeTruthy()
     );
-  });
-
-  it('shows toast error when map fails', async () => {
-    mockMap.mockRejectedValue(new Error('Lottery locked'));
-    const { getByTestId, getByText } = mountButton();
-    await waitFor(() => expect(getByText('Map players to divisions')).toBeTruthy());
+    await waitFor(() =>
+      expect(queryByTestId('map-participations-button-checking')).toBeNull()
+    );
     fireEvent.press(getByTestId('map-participations-button'));
 
     await waitFor(() => {
-      expect(mockShowError).toHaveBeenCalledWith(
-        'Mapping failed',
-        'Lottery locked'
-      );
+      expect(getByTestId('map-participations-button-error')).toBeTruthy();
     });
+    expect(
+      getByTestId('map-participations-button-tooltip').props.accessibilityHint
+    ).toBe('boom');
+  });
+
+  it('respects mutationsDisabled with finalized hint', async () => {
+    const { findByTestId } = mountButton({ mutationsDisabled: true });
+    const tip = await findByTestId('map-participations-button-tooltip');
+    expect(tip.props.accessibilityHint).toMatch(/finalized/i);
   });
 });

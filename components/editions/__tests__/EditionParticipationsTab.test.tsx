@@ -5,7 +5,7 @@ import {
   createTestQueryClient,
 } from '@/testing/createTestQueryClient';
 import React from 'react';
-import { Pressable, Text, Platform } from 'react-native';
+import { Alert, Pressable, Text, Platform } from 'react-native';
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 const mockCreate = jest.fn();
@@ -700,5 +700,153 @@ describe('EditionParticipationsTab custom fields', () => {
     fireEvent.press(getByText('Shirt size'));
     fireEvent.press(getByText('Apply'));
     expect(onChange).toHaveBeenCalledWith([11, 10]);
+  });
+});
+
+describe('EditionParticipationsTab add player', () => {
+  beforeEach(() => {
+    mockCreate.mockResolvedValue({ data: {} });
+  });
+
+  afterEach(() => {
+    cleanup();
+    jest.clearAllMocks();
+  });
+
+  it('adds the picked player and marks the Add button successful', async () => {
+    const { getByTestId, getByText, findByTestId } = renderTab({
+      editionFinalized: false,
+      selectedDivisionId: 10,
+    });
+    fireEvent.press(getByText('Select player'));
+    await waitFor(() => expect(getByText('Alice')).toBeTruthy());
+    fireEvent.press(getByText('Alice'));
+    fireEvent.press(getByTestId('participations-add-button'));
+    await waitFor(() =>
+      expect(mockCreate).toHaveBeenCalledWith({
+        edition_id: 1,
+        edition_division_id: 10,
+        player_id: 1,
+      })
+    );
+    expect(await findByTestId('participations-add-button-success')).toBeTruthy();
+  });
+
+  it('runs validation inside run and throws without calling the API', async () => {
+    const { getByTestId, findByTestId } = renderTab({
+      editionFinalized: false,
+      selectedDivisionId: 9,
+    });
+    fireEvent.press(getByTestId('participations-add-button'));
+    expect(await findByTestId('participations-add-button-error')).toBeTruthy();
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it('surfaces create failures on the Add button, not an inline banner', async () => {
+    mockCreate.mockRejectedValueOnce(new Error('already participating'));
+    const { getByTestId, getByText, findByTestId, queryByText } = renderTab({
+      editionFinalized: false,
+      selectedDivisionId: 10,
+    });
+    fireEvent.press(getByText('Select player'));
+    await waitFor(() => expect(getByText('Alice')).toBeTruthy());
+    fireEvent.press(getByText('Alice'));
+    fireEvent.press(getByTestId('participations-add-button'));
+    expect(await findByTestId('participations-add-button-error')).toBeTruthy();
+    expect(queryByText('already participating')).toBeNull();
+  });
+});
+
+describe('EditionParticipationsTab exclude player', () => {
+  afterEach(() => {
+    cleanup();
+    jest.clearAllMocks();
+  });
+
+  it('confirms then excludes and holds the success state', async () => {
+    (window as any).confirm = jest.fn(() => true);
+    mockDelete.mockResolvedValue(undefined);
+    const { getByTestId, findByTestId } = renderTab({
+      editionFinalized: false,
+      selectedDivisionId: 9,
+    });
+    fireEvent.press(getByTestId('exclude-participation-100'));
+    await waitFor(() => expect(mockDelete).toHaveBeenCalledWith(100));
+    expect(
+      await findByTestId('exclude-participation-100-success')
+    ).toBeTruthy();
+  });
+
+  it('skips the exclude request when the confirm is cancelled', () => {
+    (window as any).confirm = jest.fn(() => false);
+    const { getByTestId, queryByTestId } = renderTab({
+      editionFinalized: false,
+      selectedDivisionId: 9,
+    });
+    fireEvent.press(getByTestId('exclude-participation-100'));
+    expect(mockDelete).not.toHaveBeenCalled();
+    expect(queryByTestId('exclude-participation-100-pending')).toBeNull();
+  });
+
+  it('reports exclude failure on the button instead of an Alert', async () => {
+    (window as any).confirm = jest.fn(() => true);
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    mockDelete.mockRejectedValueOnce(new Error('lottery draw exists'));
+    const { getByTestId, findByTestId } = renderTab({
+      editionFinalized: false,
+      selectedDivisionId: 9,
+    });
+    fireEvent.press(getByTestId('exclude-participation-100'));
+    expect(await findByTestId('exclude-participation-100-error')).toBeTruthy();
+    expect(alertSpy).not.toHaveBeenCalled();
+    alertSpy.mockRestore();
+  });
+
+  it('keeps a per-row status so one exclude does not mark the others', async () => {
+    (window as any).confirm = jest.fn(() => true);
+    mockDelete.mockResolvedValue(undefined);
+    const { getByTestId, findByTestId, queryByTestId } = renderTab({
+      editionFinalized: false,
+      selectedDivisionId: null,
+    });
+    fireEvent.press(getByTestId('exclude-participation-100'));
+    expect(
+      await findByTestId('exclude-participation-100-success')
+    ).toBeTruthy();
+    expect(queryByTestId('exclude-participation-101-success')).toBeNull();
+  });
+});
+
+describe('EditionParticipationsTab ActionButton wiring', () => {
+  it('routes add/exclude through ActionButton with confirm and no press-tied banners', () => {
+    const fs = require('fs') as typeof import('fs');
+    const path = require('path') as typeof import('path');
+    const src = fs.readFileSync(
+      path.join(__dirname, '..', 'EditionParticipationsTab.tsx'),
+      'utf8'
+    );
+    expect(src).toContain(
+      "import { useActionButtonStatus } from '@/hooks/useActionButtonStatus'"
+    );
+    expect(src).toContain(
+      "import { confirmAction } from '@/utils/confirmAction'"
+    );
+    expect(src).toContain('useActionButtonStatus({ auditoryFeedback: true })');
+    expect(src).toContain('auditoryFeedback: true');
+    expect(src).toContain('successHoldMs: 4000');
+    expect(src).toContain('variant="primary"');
+    expect(src).toContain('startIcon="remove-circle-outline"');
+    expect(src).toContain('label="Exclude"');
+    expect(src).toContain('iconColor="#dc2626"');
+    expect(src).toContain(
+      "throw new Error('Select a player and edition division.')"
+    );
+    expect(src).toContain('confirmAction(');
+    expect(src).not.toContain('addError');
+    expect(src).not.toContain('setAdding');
+    expect(src).not.toContain('Alert.alert');
+    expect(src).not.toContain('Alert,');
+    // confirmAction wraps run(), never the other way round.
+    expect(src).not.toMatch(/void run\(async[\s\S]{0,400}?confirmAction\(/);
   });
 });

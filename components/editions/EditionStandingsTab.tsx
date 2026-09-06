@@ -1,20 +1,17 @@
+import ActionButton from '@/components/ui/ActionButton';
 import AppTextInput from '@/components/ui/AppTextInput';
 import { useRegisterPageActions } from '@/components/chrome/PageChromeProvider';
 import { EditionGeneralEditHint } from '@/components/editions/editionGeneralHint';
+import { useActionButtonStatus } from '@/hooks/useActionButtonStatus';
 import { queryKeys } from '@/lib/queryClient';
 import { scheduleApi } from '@/services/api/scheduleApi';
 import { standingsApi } from '@/services/api/standingsApi';
 import { ApiEditionDivision } from '@/types/api/entities';
 import { StandingRow } from '@/types/api/edition';
+import { confirmAction } from '@/utils/confirmAction';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
 
 type Props = {
   editionDivisionId: number | null;
@@ -37,21 +34,6 @@ function playerLabel(participation: any): string {
 
 function divisionTitle(d: ApiEditionDivision): string {
   return d.division_title || `ED #${d.id_edition_division}`;
-}
-
-function confirmAction(
-  title: string,
-  message: string,
-  onConfirm: () => void
-) {
-  if (typeof window !== 'undefined' && window.confirm) {
-    if (window.confirm(message)) onConfirm();
-  } else {
-    Alert.alert(title, message, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'OK', onPress: onConfirm },
-    ]);
-  }
 }
 
 function StandingsReadonly({ rows }: { rows: StandingRow[] }) {
@@ -151,11 +133,10 @@ export default function EditionStandingsTab({
   divisions = [],
 }: Props) {
   const queryClient = useQueryClient();
-  const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [busy, setBusy] = useState(false);
   const [drafts, setDrafts] = useState<Record<number, Draft>>({});
   const [baseline, setBaseline] = useState('');
+  const recalculateStatus = useActionButtonStatus({ auditoryFeedback: true });
 
   const scheduleQuery = useQuery({
     queryKey: queryKeys.schedule(editionDivisionId ?? 0),
@@ -217,13 +198,15 @@ export default function EditionStandingsTab({
   );
 
   const reload = useCallback(async () => {
-    await Promise.all([standingsQuery.refetch(), scheduleQuery.refetch()]);
+    await Promise.all([
+      standingsQuery.refetch({ throwOnError: true }),
+      scheduleQuery.refetch({ throwOnError: true }),
+    ]);
   }, [scheduleQuery, standingsQuery]);
 
   const saveAll = useCallback(async () => {
     if (!editionDivisionId || finalized) return;
     setSaving(true);
-    setError(null);
     try {
       const base = JSON.parse(baseline || '{}') as Record<number, Draft>;
       for (const [id, d] of Object.entries(drafts)) {
@@ -245,8 +228,6 @@ export default function EditionStandingsTab({
       await queryClient.invalidateQueries({
         queryKey: queryKeys.standings(editionDivisionId),
       });
-    } catch (e: any) {
-      setError(e?.message || 'Save failed');
     } finally {
       setSaving(false);
     }
@@ -270,23 +251,15 @@ export default function EditionStandingsTab({
       'Recalculate standings',
       'Recalculate standings from match scores?',
       () => {
-        void (async () => {
-          setBusy(true);
-          setError(null);
-          try {
-            await standingsApi.recalculate(editionDivisionId);
-            await queryClient.invalidateQueries({
-              queryKey: queryKeys.standings(editionDivisionId),
-            });
-            await queryClient.invalidateQueries({
-              queryKey: queryKeys.schedule(editionDivisionId),
-            });
-          } catch (e: any) {
-            setError(e?.message || 'Recalculate failed');
-          } finally {
-            setBusy(false);
-          }
-        })();
+        void recalculateStatus.run(async () => {
+          await standingsApi.recalculate(editionDivisionId);
+          await queryClient.invalidateQueries({
+            queryKey: queryKeys.standings(editionDivisionId),
+          });
+          await queryClient.invalidateQueries({
+            queryKey: queryKeys.schedule(editionDivisionId),
+          });
+        });
       }
     );
   };
@@ -304,26 +277,23 @@ export default function EditionStandingsTab({
 
   return (
     <View className="gap-3">
-      {error && (
-        <Text className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</Text>
-      )}
       {finalized && (
         <Text className="text-sm text-amber-700 bg-amber-50 p-2 rounded">
           Schedule is finalized — standings are read-only.
         </Text>
       )}
-      <Pressable
-        testID="standings-recalculate"
-        disabled={finalized || busy}
-        onPress={recalculate}
-        className={`self-start px-3 py-2 rounded-lg ${
-          finalized || busy ? 'bg-gray-300' : 'bg-blue-600'
-        }`}
-      >
-        <Text className="text-sm text-white">
-          {busy ? 'Recalculating…' : 'Recalculate'}
-        </Text>
-      </Pressable>
+      <View className="self-start">
+        <ActionButton
+          testID="standings-recalculate"
+          label="Recalculate"
+          variant="primary"
+          size="sm"
+          status={recalculateStatus.status}
+          errorMessage={recalculateStatus.errorMessage ?? undefined}
+          disabled={finalized || saving}
+          onPress={recalculate}
+        />
+      </View>
       {rows.length === 0 ? (
         <Text className="text-sm text-gray-500">No standings yet.</Text>
       ) : (

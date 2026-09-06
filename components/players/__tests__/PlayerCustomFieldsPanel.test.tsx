@@ -6,7 +6,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import {
   createTestQueryClient,
 } from '@/testing/createTestQueryClient';
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
 const mockGetValues = jest.fn();
@@ -35,10 +35,13 @@ jest.mock('@/services/api/editionsApi', () => ({
   })),
 }));
 
+const mockShowSuccess = jest.fn();
+const mockShowError = jest.fn();
+
 jest.mock('@/context/ToastContext', () => ({
   useToast: () => ({
-    showSuccess: jest.fn(),
-    showError: jest.fn(),
+    showSuccess: (...args: unknown[]) => mockShowSuccess(...args),
+    showError: (...args: unknown[]) => mockShowError(...args),
   }),
 }));
 
@@ -97,6 +100,22 @@ describe('PlayerCustomFieldsPanel', () => {
           is_required: false,
           inserted_at: 1,
         },
+        {
+          id_player_custom_field: 8,
+          code: 'diet',
+          label: 'Diet',
+          type: 'single_select',
+          sort_order: 1,
+          is_required: false,
+          inserted_at: 1,
+          options: [
+            {
+              id_player_custom_field_option: 21,
+              label: 'Vegan',
+              is_active: true,
+            },
+          ],
+        },
       ],
     });
     mockGetEditions.mockResolvedValue({ data: [] });
@@ -128,7 +147,7 @@ describe('PlayerCustomFieldsPanel', () => {
   });
 
   it('submits a text value', async () => {
-    const { getByTestId } = renderPanel();
+    const { getByTestId, findByTestId } = renderPanel();
 
     await waitFor(() =>
       expect(getByTestId('custom-field-select')).toBeTruthy()
@@ -145,5 +164,132 @@ describe('PlayerCustomFieldsPanel', () => {
         value: 'L',
       })
     );
+    expect(await findByTestId('custom-field-submit-success')).toBeTruthy();
+    expect(mockShowSuccess).toHaveBeenCalledWith(
+      'Submitted',
+      'Custom field value saved'
+    );
+  });
+
+  it('disables Submit with a reason until a field is picked', async () => {
+    const { getByTestId } = renderPanel();
+
+    await waitFor(() =>
+      expect(getByTestId('custom-field-select')).toBeTruthy()
+    );
+
+    expect(
+      getByTestId('custom-field-submit').props.accessibilityState?.disabled
+    ).toBe(true);
+    expect(getByTestId('custom-field-submit-info')).toBeTruthy();
+
+    fireEvent.press(getByTestId('dropdown-option-7'));
+    expect(
+      getByTestId('custom-field-submit').props.accessibilityState?.disabled
+    ).toBe(false);
+    expect(mockCreateValue).not.toHaveBeenCalled();
+  });
+
+  it('fails validation inside run and still toasts', async () => {
+    const { getByTestId, findByTestId } = renderPanel();
+
+    await waitFor(() =>
+      expect(getByTestId('custom-field-select')).toBeTruthy()
+    );
+
+    fireEvent.press(getByTestId('dropdown-option-8'));
+    await act(async () => {
+      fireEvent.press(getByTestId('custom-field-submit'));
+    });
+
+    expect(await findByTestId('custom-field-submit-error')).toBeTruthy();
+    expect(mockCreateValue).not.toHaveBeenCalled();
+    expect(mockShowError).toHaveBeenCalledWith(
+      'Validation',
+      'Complete the value for the selected field.'
+    );
+  });
+
+  it('reports a submit API failure on the button and toasts', async () => {
+    mockCreateValue.mockRejectedValueOnce(new Error('Boom'));
+    const { getByTestId, findByTestId } = renderPanel();
+
+    await waitFor(() =>
+      expect(getByTestId('custom-field-select')).toBeTruthy()
+    );
+
+    fireEvent.press(getByTestId('dropdown-option-7'));
+    fireEvent.changeText(getByTestId('custom-field-value-text'), 'L');
+    await act(async () => {
+      fireEvent.press(getByTestId('custom-field-submit'));
+    });
+
+    expect(await findByTestId('custom-field-submit-error')).toBeTruthy();
+    expect(mockShowError).toHaveBeenCalledWith('Submit failed', 'Boom');
+  });
+
+  it('invalidates a value through the Confirm ActionButton', async () => {
+    const { getByTestId, findByTestId } = renderPanel();
+
+    await waitFor(() =>
+      expect(getByTestId('custom-field-value-row-99')).toBeTruthy()
+    );
+
+    fireEvent.press(getByTestId('invalidate-btn-99'));
+    fireEvent.changeText(getByTestId('invalidate-reason-99'), 'wrong size');
+    const confirm = await findByTestId('invalidate-confirm-99');
+    await act(async () => {
+      fireEvent.press(confirm);
+    });
+
+    await waitFor(() =>
+      expect(mockInvalidateValue).toHaveBeenCalledWith(42, 99, {
+        invalidation_reason: 'wrong size',
+      })
+    );
+    expect(mockShowSuccess).toHaveBeenCalledWith(
+      'Invalidated',
+      'Value marked as invalidated'
+    );
+  });
+
+  it('reports an invalidate failure on the Confirm button and toasts', async () => {
+    mockInvalidateValue.mockRejectedValueOnce(new Error('Nope'));
+    const { getByTestId, findByTestId } = renderPanel();
+
+    await waitFor(() =>
+      expect(getByTestId('custom-field-value-row-99')).toBeTruthy()
+    );
+
+    fireEvent.press(getByTestId('invalidate-btn-99'));
+    const confirm = await findByTestId('invalidate-confirm-99');
+    await act(async () => {
+      fireEvent.press(confirm);
+    });
+
+    expect(await findByTestId('invalidate-confirm-99-error')).toBeTruthy();
+    expect(mockShowError).toHaveBeenCalledWith('Invalidate failed', 'Nope');
+  });
+
+  it('drives both mutations through ActionButton with auditory feedback', () => {
+    const fs = require('fs') as typeof import('fs');
+    const path = require('path') as typeof import('path');
+    const src = fs.readFileSync(
+      path.join(__dirname, '..', 'PlayerCustomFieldsPanel.tsx'),
+      'utf8'
+    );
+    expect(src).toContain(
+      "import ActionButton from '@/components/ui/ActionButton'"
+    );
+    expect(src).toContain(
+      'const submitStatus = useActionButtonStatus({ auditoryFeedback: true });'
+    );
+    expect(src).toMatch(
+      /const invalidateStatus = useActionButtonStatus\(\{[\s\S]*?auditoryFeedback: true,/
+    );
+    expect(src).toContain('showSuccess(');
+    expect(src).toContain('showError(');
+    expect(src).not.toContain('successHoldMs');
+    expect(src).not.toContain('setSubmitting');
   });
 });

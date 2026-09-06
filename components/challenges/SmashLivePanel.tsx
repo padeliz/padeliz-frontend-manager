@@ -4,8 +4,7 @@ import ChallengeSyncStatusBadge from '@/components/challenges/ChallengeSyncStatu
 import SortableRow, {
   SortableDragHandle,
 } from '@/components/editions/SortableRow';
-import HeaderActionButton from '@/components/ui/HeaderActionButton';
-import IconActionButton from '@/components/ui/IconActionButton';
+import ActionButton from '@/components/ui/ActionButton';
 import SingleSelectDropdown from '@/components/ui/SingleSelectDropdown';
 import Tooltip from '@/components/ui/Tooltip';
 import {
@@ -248,10 +247,11 @@ export default function SmashLivePanel({ sessionId, onFooterReady }: Props) {
   );
 
   const completeButton = (
-    <HeaderActionButton
+    <ActionButton
       label="Complete"
-      icon={CHALLENGE_ICONS.complete.name}
+      startIcon={CHALLENGE_ICONS.complete.name}
       iconOnly
+      disabledStyle="mute"
       iconColor={CHALLENGE_ICONS.complete.color}
       iconSize={CHALLENGE_HEADER_ICON_SIZE}
       accessibilityLabel="Complete"
@@ -293,7 +293,7 @@ export default function SmashLivePanel({ sessionId, onFooterReady }: Props) {
         )}
         <ChallengeSyncStatusBadge badge={syncBadge} />
         {readOnly ? (
-          <HeaderActionButton
+          <ActionButton
             label="Reactivate"
             variant="primary"
             onPress={() => void runSmash({ type: 'reactivate' })}
@@ -301,10 +301,11 @@ export default function SmashLivePanel({ sessionId, onFooterReady }: Props) {
           />
         ) : (
           <>
-            <HeaderActionButton
+            <ActionButton
               label="Undo"
-              icon={CHALLENGE_ICONS.undo.name}
+              startIcon={CHALLENGE_ICONS.undo.name}
               iconOnly
+              disabledStyle="mute"
               iconColor={CHALLENGE_ICONS.undo.color}
               iconSize={CHALLENGE_HEADER_ICON_SIZE}
               accessibilityLabel="Undo"
@@ -353,11 +354,14 @@ export default function SmashLivePanel({ sessionId, onFooterReady }: Props) {
                           : 'opacity-100 web:opacity-0 web:group-hover:opacity-100'
                       }`}
                     >
-                      <IconActionButton
+                      <ActionButton
                         testID={`smash-return-${court.player_id}`}
-                        icon={CHALLENGE_ICONS.returnToWaiting.name}
-                        color={CHALLENGE_ICONS.returnToWaiting.color}
-                        size={CHALLENGE_ROW_ICON_SIZE}
+                        startIcon={CHALLENGE_ICONS.returnToWaiting.name}
+                        iconColor={CHALLENGE_ICONS.returnToWaiting.color}
+                        iconSize={CHALLENGE_ROW_ICON_SIZE}
+                        iconOnly
+                        className="px-1"
+                        disabledStyle="opacity"
                         accessibilityLabel="Return to waiting"
                         disabled={waitingFull}
                         onPress={() =>
@@ -392,19 +396,22 @@ export default function SmashLivePanel({ sessionId, onFooterReady }: Props) {
                           />
                         </View>
                       ) : null}
-                      <IconActionButton
+                      <ActionButton
                         testID="smash-record-attempt"
-                        icon={
+                        startIcon={
                           gotNewRecord
                             ? CHALLENGE_ICONS.trophy.name
                             : CHALLENGE_ICONS.confirmAttempt.name
                         }
-                        color={
+                        iconColor={
                           gotNewRecord
                             ? CHALLENGE_ICONS.trophy.color
                             : CHALLENGE_ICONS.confirmAttempt.color
                         }
-                        size={CHALLENGE_ROW_ICON_SIZE}
+                        iconSize={CHALLENGE_ROW_ICON_SIZE}
+                        iconOnly
+                        className="px-1"
+                        disabledStyle="opacity"
                         accessibilityLabel={
                           gotNewRecord
                             ? 'Record new record'
@@ -519,11 +526,14 @@ export default function SmashLivePanel({ sessionId, onFooterReady }: Props) {
                           {!readOnly ? (
                             <View className="flex-row gap-2 opacity-100 web:opacity-0 web:group-hover:opacity-100">
                               {live.can_manual_jump_in ? (
-                                <IconActionButton
+                                <ActionButton
                                   testID={`smash-jump-in-${row.player_id}`}
-                                  icon={CHALLENGE_ICONS.jumpIn.name}
-                                  color={CHALLENGE_ICONS.jumpIn.color}
-                                  size={CHALLENGE_ROW_ICON_SIZE}
+                                  startIcon={CHALLENGE_ICONS.jumpIn.name}
+                                  iconColor={CHALLENGE_ICONS.jumpIn.color}
+                                  iconSize={CHALLENGE_ROW_ICON_SIZE}
+                                  iconOnly
+                                  className="px-1"
+                                  disabledStyle="opacity"
                                   accessibilityLabel="Jump in"
                                   onPress={() =>
                                     void runSmash({
@@ -533,11 +543,14 @@ export default function SmashLivePanel({ sessionId, onFooterReady }: Props) {
                                   }
                                 />
                               ) : null}
-                              <IconActionButton
+                              <ActionButton
                                 testID={`smash-remove-${row.player_id}`}
-                                icon={CHALLENGE_ICONS.remove.name}
-                                color={CHALLENGE_ICONS.remove.color}
-                                size={CHALLENGE_ROW_ICON_SIZE}
+                                startIcon={CHALLENGE_ICONS.remove.name}
+                                iconColor={CHALLENGE_ICONS.remove.color}
+                                iconSize={CHALLENGE_ROW_ICON_SIZE}
+                                iconOnly
+                                className="px-1"
+                                disabledStyle="opacity"
                                 accessibilityLabel="Remove"
                                 onPress={() =>
                                   void runSmash({

@@ -6,7 +6,7 @@ import { Image } from 'react-native';
 const mockRunKotc = jest.fn();
 const getSizeSpy = jest.spyOn(Image, 'getSize');
 
-jest.mock('@/components/ui/HeaderActionButton', () => {
+jest.mock('@/components/ui/ActionButton', () => {
   const React = require('react');
   const { Pressable, Text } = require('react-native');
   return ({
@@ -32,29 +32,6 @@ jest.mock('@/components/ui/HeaderActionButton', () => {
     >
       {iconOnly ? null : <Text>{label}</Text>}
     </Pressable>
-  );
-});
-
-jest.mock('@/components/ui/IconActionButton', () => {
-  const React = require('react');
-  const { Pressable } = require('react-native');
-  return ({
-    testID,
-    disabled,
-    onPress,
-    accessibilityLabel,
-  }: {
-    testID?: string;
-    disabled?: boolean;
-    onPress?: () => void;
-    accessibilityLabel?: string;
-  }) => (
-    <Pressable
-      testID={testID}
-      accessibilityLabel={accessibilityLabel}
-      accessibilityState={{ disabled: !!disabled }}
-      onPress={onPress}
-    />
   );
 });
 

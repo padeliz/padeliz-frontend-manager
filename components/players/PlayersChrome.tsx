@@ -8,7 +8,8 @@ import EditionTabsBar, {
 } from '@/components/editions/EditionTabsBar';
 import AppLayout from '@/components/layout/AppLayout';
 import { useBreadcrumbSegments } from '@/components/layout/BreadcrumbProvider';
-import HeaderActionButton from '@/components/ui/HeaderActionButton';
+import ActionButton from '@/components/ui/ActionButton';
+import { useActionButtonStatus } from '@/hooks/useActionButtonStatus';
 import { findActiveEditionTabLabel } from '@/utils/editionTabMatch';
 import { confirmDiscardDirty } from '@/utils/softDirtyNav';
 import { Slot, usePathname } from 'expo-router';
@@ -34,6 +35,14 @@ function isImportDraftRoute(pathname: string): boolean {
 export function PlayersChrome() {
   const pathname = usePathname();
   const { actions } = usePageChrome();
+  const saveStatus = useActionButtonStatus({
+    auditoryFeedback: true,
+    resetKey: pathname,
+  });
+  const refreshStatus = useActionButtonStatus({
+    successHoldMs: 4000,
+    resetKey: pathname,
+  });
 
   const tabs: EditionTabLink[] = useMemo(
     () => [
@@ -82,23 +91,37 @@ export function PlayersChrome() {
 
   const canSave = !!actions?.canSave;
   const showSave = isImportDraftRoute(pathname);
+  const onSave = useCallback(async (): Promise<void> => {
+    await actions?.save?.();
+  }, [actions]);
+  const onRefresh = useCallback(async (): Promise<void> => {
+    await actions?.refresh?.();
+  }, [actions]);
 
   const headerActions = (
     <>
       {showSave ? (
-        <HeaderActionButton
+        <ActionButton
           label="Save"
           variant="primary"
-          onPress={() => void actions?.save?.()}
+          status={saveStatus.status}
+          errorMessage={saveStatus.errorMessage ?? undefined}
+          onPress={() => {
+            void saveStatus.run(onSave);
+          }}
           disabled={!canSave}
-          loading={!!actions?.isSaving}
           testID="players-chrome-save"
         />
       ) : null}
-      <HeaderActionButton
+      <ActionButton
         label="Refresh"
-        icon="refresh"
-        onPress={() => void actions?.refresh?.()}
+        startIcon="refresh"
+        pendingAppearance="spinIcon"
+        status={refreshStatus.status}
+        errorMessage={refreshStatus.errorMessage ?? undefined}
+        onPress={() => {
+          void refreshStatus.run(onRefresh);
+        }}
         testID="players-chrome-refresh"
       />
       {actions?.headerActions}

@@ -6,6 +6,8 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import {
   createTestQueryClient,
 } from '@/testing/createTestQueryClient';
+import fs from 'fs';
+import path from 'path';
 import React from 'react';
 import { Pressable } from 'react-native';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
@@ -16,6 +18,13 @@ const mockPreview = jest.fn();
 const mockGenerate = jest.fn(async () => ({ data: {} }));
 const mockDestroy = jest.fn(async () => ({ data: {} }));
 const mockGetCourts = jest.fn();
+const mockPlaySuccess = jest.fn(async () => undefined);
+const mockPlayError = jest.fn(async () => undefined);
+
+jest.mock('@/lib/actionButtonFeedback', () => ({
+  playSuccess: (...args: unknown[]) => mockPlaySuccess(...args),
+  playError: (...args: unknown[]) => mockPlayError(...args),
+}));
 
 jest.mock('@/services/api/scheduleApi', () => ({
   scheduleApi: {
@@ -34,9 +43,24 @@ jest.mock('@/services/api/courtsApi', () => ({
   },
 }));
 
+let lastChromeSaveError: unknown = null;
+
 function ChromeSaveProbe() {
   const { actions } = usePageChrome();
-  return <Pressable testID="chrome-save" onPress={() => void actions?.save?.()} />;
+  return (
+    <Pressable
+      testID="chrome-save"
+      onPress={() => {
+        void (async () => {
+          try {
+            await actions?.save?.();
+          } catch (e) {
+            lastChromeSaveError = e;
+          }
+        })();
+      }}
+    />
+  );
 }
 
 function renderTab(ui: React.ReactElement) {
@@ -96,6 +120,7 @@ function schedulePayload(overrides: Record<string, unknown> = {}) {
 describe('EditionScheduleTab', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    lastChromeSaveError = null;
     (window as any).confirm = jest.fn(() => true);
     mockGetSchedule.mockResolvedValue(schedulePayload());
     mockGetCourts.mockResolvedValue({
@@ -516,5 +541,146 @@ describe('EditionScheduleTab', () => {
     );
     await findByText(/No matches yet/);
     expect(mockGetSchedule).toHaveBeenCalledWith(9, { board: true });
+  });
+
+  it('asks for confirmation before generating and aborts when declined', async () => {
+    (window as any).confirm = jest.fn(() => false);
+    const { findByText, getByText } = renderTab(
+      <EditionScheduleTab
+        editionDivisionId={9}
+        locationId={3}
+        section="knobs"
+      />
+    );
+    await findByText('Courts');
+    fireEvent.press(getByText('Generate'));
+    expect((window as any).confirm).toHaveBeenCalled();
+    expect(mockGenerate).not.toHaveBeenCalled();
+  });
+
+  it('asks for confirmation before deleting and aborts when declined', async () => {
+    (window as any).confirm = jest.fn(() => false);
+    const { findByText, getByText } = renderTab(
+      <EditionScheduleTab
+        editionDivisionId={9}
+        locationId={3}
+        section="knobs"
+      />
+    );
+    await findByText('Courts');
+    fireEvent.press(getByText('Delete schedule'));
+    expect((window as any).confirm).toHaveBeenCalled();
+    expect(mockDestroy).not.toHaveBeenCalled();
+  });
+
+  it('reports action failures on the button instead of a page banner', async () => {
+    mockPreview.mockRejectedValueOnce(new Error('Preview boom'));
+    const { findByText, getByText, findByTestId, queryByText } = renderTab(
+      <EditionScheduleTab
+        editionDivisionId={9}
+        locationId={3}
+        section="knobs"
+      />
+    );
+    await findByText('Courts');
+    fireEvent.press(getByText('Preview'));
+    expect(await findByTestId('schedule-preview-error')).toBeTruthy();
+    expect(queryByText('Preview boom')).toBeNull();
+  });
+
+  it('chrome Save rethrows and renders no error banner', async () => {
+    mockUpdateForm.mockRejectedValueOnce(new Error('Save boom'));
+    const { findByText, getByTestId, queryByText } = renderTab(
+      <EditionScheduleTab
+        editionDivisionId={9}
+        locationId={3}
+        section="knobs"
+      />
+    );
+    await findByText('Courts');
+    fireEvent.press(getByTestId('chrome-save'));
+    await waitFor(() => {
+      expect(lastChromeSaveError).toBeInstanceOf(Error);
+    });
+    expect((lastChromeSaveError as Error).message).toBe('Save boom');
+    expect(queryByText('Save boom')).toBeNull();
+    expect(queryByText('Failed to save form')).toBeNull();
+  });
+
+  it('plays mutation feedback for Generate but stays silent for Preview', async () => {
+    const { findByText, findByTestId, getByText } = renderTab(
+      <EditionScheduleTab
+        editionDivisionId={9}
+        locationId={3}
+        section="knobs"
+      />
+    );
+    await findByText('Courts');
+
+    fireEvent.press(getByText('Preview'));
+    expect(await findByTestId('schedule-preview-success')).toBeTruthy();
+    expect(mockPlaySuccess).not.toHaveBeenCalled();
+
+    fireEvent.press(getByText('Generate'));
+    await waitFor(() => {
+      expect(mockPlaySuccess).toHaveBeenCalledTimes(1);
+    });
+  });
+});
+
+describe('EditionScheduleTab source contract', () => {
+  const src = fs.readFileSync(
+    path.join(__dirname, '..', 'EditionScheduleTab.tsx'),
+    'utf8'
+  );
+
+  it('drives the action pills with ActionButton + useActionButtonStatus', () => {
+    expect(src).toContain(
+      "import ActionButton from '@/components/ui/ActionButton'"
+    );
+    expect(src).toContain(
+      "import { useActionButtonStatus } from '@/hooks/useActionButtonStatus'"
+    );
+    expect(src).not.toContain('actionPillClass');
+    expect(src).toMatch(/testID="schedule-preview"[\s\S]*?variant="primary"/);
+    expect(src).toMatch(/testID="schedule-generate"[\s\S]*?variant="positive"/);
+    expect(src).toMatch(/testID="schedule-delete"[\s\S]*?variant="danger"/);
+  });
+
+  it('uses the shared confirmAction helper instead of a local copy', () => {
+    expect(src).toContain(
+      "import { confirmAction } from '@/utils/confirmAction'"
+    );
+    expect(src).not.toMatch(/function confirmAction\s*\(/);
+    expect(src).not.toContain('Alert.alert');
+  });
+
+  it('never sets a press-tied error banner', () => {
+    expect(src).not.toContain('setError');
+    expect(src).not.toMatch(/const \[error, setError\]/);
+  });
+
+  it('gives mutations auditory feedback and keeps Preview silent', () => {
+    expect(src).toContain('const previewStatus = useActionButtonStatus();');
+    expect(src).toContain(
+      'const generateStatus = useActionButtonStatus({ auditoryFeedback: true });'
+    );
+    expect(src).toContain(
+      'const deleteStatus = useActionButtonStatus({ auditoryFeedback: true });'
+    );
+  });
+
+  it('keeps label-only action statuses sticky (no successHoldMs)', () => {
+    expect(src).not.toContain('successHoldMs');
+  });
+
+  it('confirms outside run and lets the run throw', () => {
+    expect(src).toMatch(
+      /confirmAction\([\s\S]*?generateStatus\.run\(async \(\) => \{/
+    );
+    expect(src).toMatch(
+      /confirmAction\([\s\S]*?deleteStatus\.run\(async \(\) => \{/
+    );
+    expect(src).not.toMatch(/catch \(e: any\)/);
   });
 });

@@ -48,7 +48,7 @@ export function useAdvancedDataManagement<T extends { [key: string]: any }>({
   const bulkDeleteRef = useRef(bulkDelete);
 
   // Hooks
-  const { showSuccess, showError } = useToast();
+  const { showSuccess } = useToast();
 
   // Update refs when functions change
   useEffect(() => {
@@ -92,9 +92,12 @@ export function useAdvancedDataManagement<T extends { [key: string]: any }>({
     listQuery.data?.meta?.total || listQuery.data?.data?.length || 0;
 
   const loadData = useCallback(async () => {
-    await queryClient.invalidateQueries({
-      queryKey: ['resourceList', resourceName],
-    });
+    await queryClient.invalidateQueries(
+      {
+        queryKey: ['resourceList', resourceName],
+      },
+      { throwOnError: true }
+    );
   }, [queryClient, resourceName]);
 
   // Search handlers
@@ -232,43 +235,24 @@ export function useAdvancedDataManagement<T extends { [key: string]: any }>({
   const handleBulkAction = useCallback(
     async (action: string) => {
       if (action === 'delete' && bulkDeleteRef.current) {
-        try {
-          if (!metadata) {
-            showError(
-              'Bulk Delete Failed',
-              'Metadata not available for ID extraction'
-            );
-            return;
-          }
-
-          const ids = selectedItems
-            .map(item => PrimaryKeyService.extractId(item, metadata))
-            .filter((id): id is number => Boolean(id));
-
-          if (ids.length === 0) {
-            showError(
-              'Bulk Delete Failed',
-              'No valid IDs found in selected items'
-            );
-            return;
-          }
-
-          await bulkDeleteRef.current(ids);
-          showSuccess(
-            'Bulk Delete',
-            `Successfully deleted ${ids.length} items`
-          );
-          setSelectedItems([]);
-          await loadData(); // Refresh data
-        } catch (err: any) {
-          showError(
-            'Bulk Delete Failed',
-            err.message || 'Failed to delete items'
-          );
+        if (!metadata) {
+          throw new Error('Metadata not available for ID extraction');
         }
+
+        const ids = selectedItems
+          .map(item => PrimaryKeyService.extractId(item, metadata))
+          .filter((id): id is number => Boolean(id));
+
+        if (ids.length === 0) {
+          throw new Error('No valid IDs found in selected items');
+        }
+
+        await bulkDeleteRef.current(ids);
+        setSelectedItems([]);
+        await loadData();
       }
     },
-    [selectedItems, showSuccess, showError, loadData] // Removed bulkDelete dependency
+    [selectedItems, metadata, loadData]
   );
 
   const handleExportData = useCallback(

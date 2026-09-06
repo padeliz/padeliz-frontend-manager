@@ -1,4 +1,6 @@
 import { useRegisterPageActions } from '@/components/chrome/PageChromeProvider';
+import ActionButton from '@/components/ui/ActionButton';
+import { useActionButtonStatus } from '@/hooks/useActionButtonStatus';
 import { challengesApi } from '@/services/api/challengesApi';
 import { seedLocalFromCreate } from '@/lib/challenges/syncEngine';
 import { ApiChallengeSession } from '@/types/api/challenge';
@@ -19,6 +21,7 @@ type Props = {
 
 export default function ChallengeSessionList({ type, showCreate = false }: Props) {
   const router = useRouter();
+  const createStatus = useActionButtonStatus({ auditoryFeedback: true });
 
   const { data, isLoading, error, refetch, isFetching } = useQuery({
     queryKey: ['challenge-sessions', type ?? 'all'],
@@ -31,9 +34,12 @@ export default function ChallengeSessionList({ type, showCreate = false }: Props
   });
 
   const active = data?.find(s => s.status === 'active');
+  const refresh = useCallback(async (): Promise<void> => {
+    await refetch({ throwOnError: true });
+  }, [refetch]);
 
   useRegisterPageActions({
-    refresh: () => refetch(),
+    refresh,
     isRefreshing: isFetching,
   });
 
@@ -88,13 +94,16 @@ export default function ChallengeSessionList({ type, showCreate = false }: Props
               <Text className="text-gray-700">{active.title}</Text>
             </Pressable>
           ) : (
-            <Pressable
-              testID="challenge-create-button"
-              onPress={() => void handleCreate()}
-              className="bg-blue-600 rounded-lg py-3 px-4 self-start"
-            >
-              <Text className="text-white font-medium">Create session</Text>
-            </Pressable>
+            <View className="self-start">
+              <ActionButton
+                testID="challenge-create-button"
+                label="Create session"
+                variant="primary"
+                status={createStatus.status}
+                errorMessage={createStatus.errorMessage ?? undefined}
+                onPress={() => void createStatus.run(handleCreate)}
+              />
+            </View>
           )}
         </View>
       ) : null}

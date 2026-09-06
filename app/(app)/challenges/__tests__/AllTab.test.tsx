@@ -19,6 +19,7 @@ jest.mock('@/context/ToastContext', () => ({
 
 jest.mock('@/components/chrome/PageChromeProvider', () => ({
   useRegisterPageActions: jest.fn(),
+  useHasPageChrome: () => false,
 }));
 
 jest.mock('@/hooks/useResourceMetadata', () => ({

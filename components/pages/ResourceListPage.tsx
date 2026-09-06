@@ -3,16 +3,21 @@
  * Generic component for displaying and managing any resource type with advanced features
  */
 
-import { useRegisterPageActions } from '@/components/chrome/PageChromeProvider';
+import {
+  useHasPageChrome,
+  useRegisterPageActions,
+} from '@/components/chrome/PageChromeProvider';
 import AppLayout from '@/components/layout/AppLayout';
 import { useBreadcrumbSegments } from '@/components/layout/BreadcrumbProvider';
 import AdvancedDataTable from '@/components/ui/AdvancedDataTable';
 import AdvancedSearchFilters from '@/components/ui/AdvancedSearchFilters';
-import HeaderActionButton from '@/components/ui/HeaderActionButton';
+import ActionButton from '@/components/ui/ActionButton';
+import { useActionButtonStatus } from '@/hooks/useActionButtonStatus';
 import { useAdvancedDataManagement } from '@/hooks/useAdvancedDataManagement';
 import { useResourceMetadata } from '@/hooks/useResourceMetadata';
 import { ApiResourceMetadata } from '@/types/api/metadata';
 import { ResourceListPageProps } from '@/types/ui/pages';
+import { confirmAction } from '@/utils/confirmAction';
 import { PrimaryKeyService } from '@/utils/primaryKeyService';
 import {
   extractLinkedResourceSchemaNames,
@@ -147,8 +152,10 @@ export default function ResourceListPage<
 
   const handleBulkAction = useCallback(
     (action: string) => {
-      if (mutationsDisabled && action === 'delete') return;
-      bulkActionsState.onBulkAction(action);
+      if (mutationsDisabled && action === 'delete') {
+        return Promise.resolve();
+      }
+      return bulkActionsState.onBulkAction(action);
     },
     [bulkActionsState, mutationsDisabled]
   );
@@ -167,6 +174,24 @@ export default function ResourceListPage<
   }, [exportData, onExport]);
 
   const selectedCount = bulkActionsState.selectedItems.length;
+  const {
+    status: deleteButtonStatus,
+    errorMessage: deleteErrorMessage,
+    run: runDelete,
+  } = useActionButtonStatus({
+    successHoldMs: 4000,
+    auditoryFeedback: true,
+  });
+  const {
+    status: refreshButtonStatus,
+    errorMessage: refreshErrorMessage,
+    run: runRefresh,
+  } = useActionButtonStatus({
+    successHoldMs: 4000,
+  });
+
+  const hasPageChrome = useHasPageChrome();
+  const chromeOwnsRefresh = embedded && hasPageChrome;
 
   const headerActions = useMemo(
     () => (
@@ -188,13 +213,37 @@ export default function ResourceListPage<
                     ? 'primary'
                     : 'ghost';
               return (
-                <HeaderActionButton
+                <ActionButton
                   key={action.action}
                   label={action.label}
-                  icon={action.icon as any}
+                  startIcon={action.icon as any}
                   variant={variant}
                   disabled={deleteLocked}
-                  onPress={() => handleBulkAction(action.action)}
+                  status={
+                    action.action === 'delete'
+                      ? deleteButtonStatus
+                      : 'idle'
+                  }
+                  errorMessage={
+                    action.action === 'delete'
+                      ? deleteErrorMessage ?? undefined
+                      : undefined
+                  }
+                  onPress={() => {
+                    if (action.action === 'delete') {
+                      if (deleteLocked) return;
+                      const message =
+                        action.confirmMessage ??
+                        'Are you sure you want to delete the selected items?';
+                      confirmAction('Delete Selected', message, () => {
+                        void runDelete(() =>
+                          handleBulkAction(action.action)
+                        );
+                      });
+                      return;
+                    }
+                    void handleBulkAction(action.action);
+                  }}
                   testID={
                     action.action === 'delete'
                       ? 'resource-list-delete-selected'
@@ -209,34 +258,41 @@ export default function ResourceListPage<
         ) : null}
 
         {reset.hasActiveState ? (
-          <HeaderActionButton
+          <ActionButton
             label="Reset"
-            icon="refresh"
+            startIcon="refresh"
             variant="warning"
             onPress={reset.onReset}
             testID="resource-list-reset"
           />
         ) : null}
 
-        <HeaderActionButton
-          label="Refresh"
-          icon="refresh"
-          onPress={refresh}
-          testID="resource-list-refresh"
-        />
+        {chromeOwnsRefresh ? null : (
+          <ActionButton
+            label="Refresh"
+            startIcon="refresh"
+            pendingAppearance="spinIcon"
+            status={refreshButtonStatus}
+            errorMessage={refreshErrorMessage ?? undefined}
+            onPress={() => {
+              void runRefresh(refresh);
+            }}
+            testID="resource-list-refresh"
+          />
+        )}
 
-        <HeaderActionButton
+        <ActionButton
           label="Export"
-          icon="download"
+          startIcon="download"
           variant="success"
           onPress={handleExportAll}
           testID="resource-list-export"
         />
 
         {onAdd ? (
-          <HeaderActionButton
+          <ActionButton
             label={`Add ${resourceDisplayName}`}
-            icon="add"
+            startIcon="add"
             variant="primary"
             disabled={mutationsDisabled}
             onPress={handleAdd}
@@ -247,15 +303,22 @@ export default function ResourceListPage<
     ),
     [
       bulkActions,
+      chromeOwnsRefresh,
+      deleteButtonStatus,
+      deleteErrorMessage,
       handleAdd,
       handleBulkAction,
       handleExportAll,
       mutationsDisabled,
       onAdd,
       refresh,
+      refreshButtonStatus,
+      refreshErrorMessage,
       reset.hasActiveState,
       reset.onReset,
       resourceDisplayName,
+      runDelete,
+      runRefresh,
       selectedCount,
     ]
   );

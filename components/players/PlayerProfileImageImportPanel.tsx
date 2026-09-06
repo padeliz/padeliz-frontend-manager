@@ -210,7 +210,10 @@ export default function PlayerProfileImageImportPanel() {
   );
 
   const runPreview = useCallback(
-    async (nextFiles: PickedImageFile[]) => {
+    async (
+      nextFiles: PickedImageFile[],
+      throwOnError = false
+    ): Promise<void> => {
       setLoading(true);
       try {
         const response = await api.preview({
@@ -220,6 +223,7 @@ export default function PlayerProfileImageImportPanel() {
         applyPreview(response.data.rows, nextFiles);
       } catch (err: any) {
         showError('Preview failed', err?.message || 'Could not preview filenames');
+        if (throwOnError) throw err;
       } finally {
         setLoading(false);
       }
@@ -336,7 +340,9 @@ export default function PlayerProfileImageImportPanel() {
   const save = useCallback(async () => {
     const included = rows.filter(row => row.included);
     if (included.length === 0 || files.length === 0) return;
-    if (!clientValidate()) return;
+    if (!clientValidate()) {
+      throw new Error('Import validation failed');
+    }
 
     const payloadRows: PlayerProfileImageImportSaveRow[] = included.map(row => ({
       index: row.index,
@@ -375,6 +381,7 @@ export default function PlayerProfileImageImportPanel() {
         );
       }
       showError('Import failed', err?.message || 'Could not save import');
+      throw err;
     } finally {
       setSaving(false);
     }
@@ -386,7 +393,7 @@ export default function PlayerProfileImageImportPanel() {
       const ok = await confirmDiscardDirty();
       if (!ok) return;
     }
-    await runPreview(files);
+    await runPreview(files, true);
   }, [dirty, files, runPreview]);
 
   const includedOnly = rows.filter(row => row.included);

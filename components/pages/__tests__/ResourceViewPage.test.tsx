@@ -217,4 +217,98 @@ describe('ResourceViewPage', () => {
     });
     expect(queryByText('Edit')).toBeNull();
   });
+
+  it('retries the failed load through an ActionButton', async () => {
+    const failingFetch = jest
+      .fn()
+      .mockRejectedValueOnce(new Error('Load failed'))
+      .mockResolvedValue({ data: { id_club: 1, name: 'Club A' } });
+
+    const { getByTestId, getByText, findByText } = render(
+      <ResourceViewPage
+        config={{
+          resourceName: 'Club',
+          resourceDisplayName: 'Club',
+          fetchResource: failingFetch,
+        }}
+      />
+    );
+
+    expect(await findByText('Load failed')).toBeTruthy();
+    const retry = getByTestId('resource-view-retry');
+
+    await act(async () => {
+      fireEvent.press(retry);
+    });
+
+    await waitFor(() => {
+      expect(failingFetch).toHaveBeenCalledTimes(2);
+      expect(getByText('field:name')).toBeTruthy();
+    });
+  });
+
+  it('reuses the refresh status hook for the retry button', () => {
+    const fs = require('fs') as typeof import('fs');
+    const path = require('path') as typeof import('path');
+    const src = fs.readFileSync(
+      path.join(__dirname, '..', 'ResourceViewPage.tsx'),
+      'utf8'
+    );
+    expect(src).toContain('testID="resource-view-retry"');
+    expect(src).toContain('successHoldMs: 4000');
+    expect(src).toMatch(
+      /label="Retry"[\s\S]*?status=\{refreshButtonStatus\}[\s\S]*?testID="resource-view-retry"/
+    );
+    expect(src.match(/useActionButtonStatus\(/g)).toHaveLength(1);
+    expect(src).not.toContain('auditoryFeedback');
+    expect(src).not.toMatch(/onPress=\{handleRefresh\}/);
+  });
+
+  it('publishes a Save action that rejects when update fails', async () => {
+    const onChromeStateChange = jest.fn();
+    const updateError = new Error('Update failed');
+    const failingUpdate = jest.fn(async () => {
+      throw updateError;
+    });
+
+    render(
+      <ResourceViewPage
+        config={{
+          resourceName: 'Club',
+          resourceDisplayName: 'Club',
+          fetchResource,
+          updateResource: failingUpdate,
+          embedded: true,
+          externalChrome: true,
+          onChromeStateChange,
+        }}
+      />
+    );
+
+    // edit is only published after the resource has loaded
+    await waitFor(() => {
+      expect(onChromeStateChange.mock.calls.at(-1)?.[0].edit).toBeDefined();
+      expect(onChromeStateChange.mock.calls.at(-1)?.[0].displayTitle).toBe(
+        'Club A'
+      );
+    });
+    act(() => {
+      onChromeStateChange.mock.calls.at(-1)?.[0].edit();
+    });
+    await waitFor(() => {
+      expect(onChromeStateChange.mock.calls.at(-1)?.[0].isEditing).toBe(true);
+    });
+
+    const save = onChromeStateChange.mock.calls.at(-1)?.[0].save;
+    let rejected: unknown;
+    await act(async () => {
+      try {
+        await save();
+      } catch (error) {
+        rejected = error;
+      }
+    });
+    expect(rejected).toBe(updateError);
+    expect(failingUpdate).toHaveBeenCalled();
+  });
 });

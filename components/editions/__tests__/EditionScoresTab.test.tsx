@@ -282,10 +282,9 @@ describe('EditionScoresTab', () => {
     expect(await findByTestId('couple-missing-right-61')).toBeTruthy();
   });
 
-  it('shows player names and soft standings hint after save', async () => {
-    const { findByText, getByTestId, UNSAFE_getAllByType } = renderTab(
-      <EditionScoresTab editionDivisionId={9} />
-    );
+  it('shows player names and saves without body banner or hint', async () => {
+    const { findByText, getByTestId, queryByText, UNSAFE_getAllByType } =
+      renderTab(<EditionScoresTab editionDivisionId={9} />);
     expect(await findByText('Alice')).toBeTruthy();
     expect(await findByText('Bob')).toBeTruthy();
 
@@ -298,8 +297,20 @@ describe('EditionScoresTab', () => {
       expect(mockUpdateScores).toHaveBeenCalled();
     });
     expect(
-      await findByText(/Scores saved\. Run Recalculate on the Standings tab/)
-    ).toBeTruthy();
+      queryByText(/Scores saved\. Run Recalculate on the Standings tab/)
+    ).toBeNull();
+  });
+
+  it('save path throws without setError or setHint', () => {
+    const fs = require('fs') as typeof import('fs');
+    const path = require('path') as typeof import('path');
+    const src = fs.readFileSync(
+      path.join(__dirname, '../EditionScoresTab.tsx'),
+      'utf8'
+    );
+    expect(src).not.toContain('setError');
+    expect(src).not.toContain('setHint');
+    expect(src).not.toContain('Scores saved. Run Recalculate');
   });
 
   it('locks scores when finalized', async () => {

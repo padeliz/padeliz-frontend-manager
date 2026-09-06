@@ -3,15 +3,20 @@ import EditionTabsBar, {
   EditionTabLink,
 } from '@/components/editions/EditionTabsBar';
 import AppLayout from '@/components/layout/AppLayout';
-import HeaderActionButton from '@/components/ui/HeaderActionButton';
+import ActionButton from '@/components/ui/ActionButton';
+import { useActionButtonStatus } from '@/hooks/useActionButtonStatus';
 import { findActiveEditionTabLabel } from '@/utils/editionTabMatch';
 import { Slot, usePathname } from 'expo-router';
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View } from 'react-native';
 
 export function ChallengesChrome() {
   const pathname = usePathname();
   const { actions } = usePageChrome();
+  const refreshStatus = useActionButtonStatus({
+    successHoldMs: 4000,
+    resetKey: pathname,
+  });
 
   const tabs: EditionTabLink[] = useMemo(
     () => [
@@ -31,13 +36,21 @@ export function ChallengesChrome() {
   );
 
   const activeTabLabel = findActiveEditionTabLabel(pathname, tabs);
+  const onRefresh = useCallback(async (): Promise<void> => {
+    await actions?.refresh?.();
+  }, [actions]);
 
   const headerActions = (
     <>
-      <HeaderActionButton
+      <ActionButton
         label="Refresh"
-        icon="refresh"
-        onPress={() => void actions?.refresh?.()}
+        startIcon="refresh"
+        pendingAppearance="spinIcon"
+        status={refreshStatus.status}
+        errorMessage={refreshStatus.errorMessage ?? undefined}
+        onPress={() => {
+          void refreshStatus.run(onRefresh);
+        }}
         testID="challenges-chrome-refresh"
       />
       {actions?.headerActions}

@@ -3,7 +3,7 @@
  */
 import { PageChromeProvider, usePageChrome } from '@/components/chrome/PageChromeProvider';
 import ResourceListPage from '@/components/pages/ResourceListPage';
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 
@@ -160,6 +160,8 @@ describe('ResourceListPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockList.selectedItems = [];
+    mockList.onBulkAction.mockResolvedValue(undefined);
+    mockList.refresh.mockResolvedValue(undefined);
   });
 
   it('standalone: actions in Page Header, no back button, no Management label', () => {
@@ -192,6 +194,20 @@ describe('ResourceListPage', () => {
       expect(getByTestId('resource-list-add')).toBeTruthy();
       expect(getByTestId('resource-list-export')).toBeTruthy();
     });
+    // Parent chrome owns Refresh — do not also emit resource-list-refresh.
+    expect(queryByTestId('resource-list-refresh')).toBeNull();
+  });
+
+  it('chromeOwnsRefresh only when embedded under PageChromeProvider', () => {
+    const fs = require('fs') as typeof import('fs');
+    const path = require('path') as typeof import('path');
+    const src = fs.readFileSync(
+      path.join(__dirname, '../ResourceListPage.tsx'),
+      'utf8'
+    );
+    expect(src).toContain('useHasPageChrome');
+    expect(src).toContain('chromeOwnsRefresh = embedded && hasPageChrome');
+    expect(src).toContain('chromeOwnsRefresh ? null : (');
   });
 
   it('keeps Add and Delete Selected visible but non-pressable when mutationsDisabled', () => {
@@ -215,6 +231,68 @@ describe('ResourceListPage', () => {
 
     fireEvent.press(getByTestId('resource-list-export-selected'));
     expect(mockList.onBulkAction).toHaveBeenCalledWith('export');
+  });
+
+  it('cancel confirm does not call onBulkAction', () => {
+    mockList.selectedItems = [{ id: 1, name: 'Row' }];
+    (window as any).confirm = jest.fn(() => false);
+    const { getByTestId, queryByTestId } = render(
+      <ResourceListPage config={baseConfig} />
+    );
+    fireEvent.press(getByTestId('resource-list-delete-selected'));
+    expect((window as any).confirm).toHaveBeenCalled();
+    expect(mockList.onBulkAction).not.toHaveBeenCalled();
+    expect(queryByTestId('resource-list-delete-selected-pending')).toBeNull();
+  });
+
+  it('shows pending then error when bulk delete rejects', async () => {
+    mockList.selectedItems = [{ id: 1, name: 'Row' }];
+    (window as any).confirm = jest.fn(() => true);
+    let rejectDelete!: (error: Error) => void;
+    mockList.onBulkAction.mockImplementation(
+      () =>
+        new Promise<void>((_resolve, reject) => {
+          rejectDelete = reject;
+        })
+    );
+
+    const { getByTestId } = render(
+      <ResourceListPage config={baseConfig} />
+    );
+    fireEvent.press(getByTestId('resource-list-delete-selected'));
+
+    await waitFor(() => {
+      expect(
+        getByTestId('resource-list-delete-selected-pending')
+      ).toBeTruthy();
+    });
+    await act(async () => {
+      rejectDelete(new Error('Delete failed'));
+    });
+    await waitFor(() => {
+      expect(getByTestId('resource-list-delete-selected-error')).toBeTruthy();
+    });
+  });
+
+  it('refresh pending uses spinIcon without ActivityIndicator', async () => {
+    let resolveRefresh!: () => void;
+    mockList.refresh.mockImplementation(
+      () =>
+        new Promise<void>(resolve => {
+          resolveRefresh = resolve;
+        })
+    );
+    const { getByTestId, queryByTestId } = render(
+      <ResourceListPage config={baseConfig} />
+    );
+    fireEvent.press(getByTestId('resource-list-refresh'));
+    await waitFor(() => {
+      expect(getByTestId('resource-list-refresh-pending-spin')).toBeTruthy();
+    });
+    expect(queryByTestId('resource-list-refresh-pending')).toBeNull();
+    await act(async () => {
+      resolveRefresh();
+    });
   });
 
   it('registers chrome refresh when embedded and clears it on unmount', async () => {

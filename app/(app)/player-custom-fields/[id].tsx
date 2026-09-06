@@ -8,8 +8,8 @@ import { useBreadcrumbSegments } from '@/components/layout/BreadcrumbProvider';
 import EditModeToggle from '@/components/pages/EditModeToggle';
 import ResourceViewPage from '@/components/pages/ResourceViewPage';
 import PlayerCustomFieldOptionsPanel from '@/components/playerCustomFields/PlayerCustomFieldOptionsPanel';
-import HeaderActionButton from '@/components/ui/HeaderActionButton';
-import { useToast } from '@/context/ToastContext';
+import ActionButton from '@/components/ui/ActionButton';
+import { useActionButtonStatus } from '@/hooks/useActionButtonStatus';
 import { useResourceMetadata } from '@/hooks/useResourceMetadata';
 import { useResourceViewPageConfig } from '@/hooks/useResourceViewPageConfig';
 import { PlayerCustomFieldsApiService } from '@/services/api/playerCustomFieldsApi';
@@ -24,17 +24,17 @@ const api = new PlayerCustomFieldsApiService();
 function CustomFieldChrome({
   fieldId,
   field,
-  archiving,
   onArchiveToggle,
   children,
 }: {
   fieldId: number;
   field: ApiPlayerCustomField | null;
-  archiving: boolean;
-  onArchiveToggle: () => void;
+  onArchiveToggle: () => Promise<void>;
   children: React.ReactNode;
 }) {
   const { actions } = usePageChrome();
+  const archiveStatus = useActionButtonStatus({ auditoryFeedback: true });
+  const refreshStatus = useActionButtonStatus({ successHoldMs: 4000 });
   const { getMetadata } = useResourceMetadata(['PlayerCustomField']);
   const metadata = getMetadata('PlayerCustomField');
 
@@ -52,27 +52,40 @@ function CustomFieldChrome({
 
   const headerActions = (
     <>
-      <HeaderActionButton
+      <ActionButton
         testID="player-custom-field-archive-toggle"
         label={field?.archived_at != null ? 'Unarchive' : 'Archive'}
-        onPress={onArchiveToggle}
-        disabled={archiving}
+        status={archiveStatus.status}
+        errorMessage={archiveStatus.errorMessage ?? undefined}
+        onPress={() => {
+          if (!fieldId || Number.isNaN(fieldId)) return;
+          void archiveStatus.run(onArchiveToggle);
+        }}
         variant={field?.archived_at != null ? 'success' : 'warning'}
       />
       {actions?.headerActions}
       {actions?.refresh ? (
-        <HeaderActionButton
+        <ActionButton
           label="Refresh"
-          icon="refresh"
+          startIcon="refresh"
+          pendingAppearance="spinIcon"
           variant="secondary"
-          onPress={() => void actions.refresh?.()}
+          status={refreshStatus.status}
+          errorMessage={refreshStatus.errorMessage ?? undefined}
+          onPress={() => {
+            void refreshStatus.run(async () => {
+              await actions.refresh?.();
+            });
+          }}
         />
       ) : null}
       {actions?.edit ? (
         <EditModeToggle
           isEditing={!!actions.isEditing}
           onEdit={() => actions.edit?.()}
-          onSave={() => void actions.save?.()}
+          onSave={async () => {
+            await actions.save?.();
+          }}
           onCancel={() => actions.cancel?.()}
           loading={!!actions.isSaving}
           showSave
@@ -91,10 +104,8 @@ function CustomFieldChrome({
 export default function ViewPlayerCustomFieldPage() {
   const params = useLocalSearchParams<{ id: string }>();
   const fieldId = Number(params.id);
-  const { showSuccess, showError } = useToast();
   const [field, setField] = useState<ApiPlayerCustomField | null>(null);
   const [refreshToken, setRefreshToken] = useState(0);
-  const [archiving, setArchiving] = useState(false);
 
   const fetchResource = useCallback(
     async (id: string | number) => {
@@ -139,26 +150,14 @@ export default function ViewPlayerCustomFieldPage() {
 
   const onArchiveToggle = async () => {
     if (!fieldId || Number.isNaN(fieldId)) return;
-    setArchiving(true);
-    try {
-      if (field?.archived_at != null) {
-        const response = await api.unarchivePlayerCustomField(fieldId);
-        setField(response.data);
-        showSuccess('Unarchived', 'Custom field is active again');
-      } else {
-        const response = await api.archivePlayerCustomField(fieldId);
-        setField(response.data);
-        showSuccess('Archived', 'Custom field archived');
-      }
-      refresh();
-    } catch (err: any) {
-      showError(
-        'Update failed',
-        err?.message || 'Could not update archive state'
-      );
-    } finally {
-      setArchiving(false);
+    if (field?.archived_at != null) {
+      const response = await api.unarchivePlayerCustomField(fieldId);
+      setField(response.data);
+    } else {
+      const response = await api.archivePlayerCustomField(fieldId);
+      setField(response.data);
     }
+    refresh();
   };
 
   return (
@@ -166,8 +165,7 @@ export default function ViewPlayerCustomFieldPage() {
       <CustomFieldChrome
         fieldId={fieldId}
         field={field}
-        archiving={archiving}
-        onArchiveToggle={() => void onArchiveToggle()}
+        onArchiveToggle={onArchiveToggle}
       >
         <View>
           <ResourceViewPage config={config} />

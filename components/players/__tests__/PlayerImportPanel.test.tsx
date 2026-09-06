@@ -174,8 +174,14 @@ function ChromeSave() {
   const { actions } = usePageChrome();
   return (
     <View>
-      <Pressable testID="chrome-save" onPress={() => void actions?.save?.()} />
-      <Pressable testID="chrome-refresh" onPress={() => void actions?.refresh?.()} />
+      <Pressable
+        testID="chrome-save"
+        onPress={() => void actions?.save?.().catch(() => {})}
+      />
+      <Pressable
+        testID="chrome-refresh"
+        onPress={() => void actions?.refresh?.().catch(() => {})}
+      />
       <Text testID="chrome-can-save">{actions?.canSave ? 'yes' : 'no'}</Text>
     </View>
   );

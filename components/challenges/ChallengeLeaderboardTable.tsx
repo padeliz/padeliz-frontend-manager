@@ -1,4 +1,4 @@
-import IconActionButton from '@/components/ui/IconActionButton';
+import ActionButton from '@/components/ui/ActionButton';
 import TablePagination from '@/components/ui/TablePagination';
 import {
   CHALLENGE_ICONS,
@@ -53,11 +53,14 @@ function RequeueAction({
         waitingFull ? 'opacity-40' : ''
       }`}
     >
-      <IconActionButton
+      <ActionButton
         testID={testID}
-        icon={CHALLENGE_ICONS.requeue.name}
-        color={CHALLENGE_ICONS.requeue.color}
-        size={CHALLENGE_ROW_ICON_SIZE}
+        startIcon={CHALLENGE_ICONS.requeue.name}
+        iconColor={CHALLENGE_ICONS.requeue.color}
+        iconSize={CHALLENGE_ROW_ICON_SIZE}
+        iconOnly
+        className="px-1"
+        disabledStyle="opacity"
         accessibilityLabel="Requeue"
         disabled={waitingFull}
         onPress={onPress}

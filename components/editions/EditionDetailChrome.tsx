@@ -6,14 +6,15 @@ import { usePageChrome } from '@/components/chrome/PageChromeProvider';
 import FullscreenToggleButton from '@/components/chrome/FullscreenToggleButton';
 import EditionDivisionPicker from '@/components/editions/EditionDivisionPicker';
 import EditionTabsBar from '@/components/editions/EditionTabsBar';
-import { confirmAction } from '@/components/editions/editionLotteryUtils';
 import AppLayout from '@/components/layout/AppLayout';
 import { useBreadcrumbSegments } from '@/components/layout/BreadcrumbProvider';
 import EditModeToggle from '@/components/pages/EditModeToggle';
-import HeaderActionButton from '@/components/ui/HeaderActionButton';
+import ActionButton from '@/components/ui/ActionButton';
+import { useActionButtonStatus } from '@/hooks/useActionButtonStatus';
 import { queryKeys } from '@/lib/queryClient';
 import { EditionDivisionsApiService } from '@/services/api/editionDivisionsApi';
 import { EditionsApiService } from '@/services/api/editionsApi';
+import { confirmAction } from '@/utils/confirmAction';
 import { findActiveEditionTabLabel } from '@/utils/editionTabMatch';
 import {
   buildEditionTopTabs,
@@ -36,13 +37,7 @@ import {
   useRouter,
 } from 'expo-router';
 import React, { useCallback, useEffect, useMemo } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  BackHandler,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, BackHandler, Text, View } from 'react-native';
 
 const editionsApi = new EditionsApiService();
 const editionDivisionsApi = new EditionDivisionsApiService();
@@ -65,6 +60,19 @@ export function EditionChrome() {
   const editionId = Number(localParams.id ?? globalParams.id);
   const edParam = globalParams.ed ?? localParams.ed;
   const lotteryParam = globalParams.lottery ?? localParams.lottery;
+  const actionButtonResetKey = `${pathname}|${edParam ?? ''}|${lotteryParam ?? ''}`;
+  const finalizeStatus = useActionButtonStatus({
+    auditoryFeedback: true,
+    resetKey: actionButtonResetKey,
+  });
+  const saveStatus = useActionButtonStatus({
+    auditoryFeedback: true,
+    resetKey: actionButtonResetKey,
+  });
+  const refreshStatus = useActionButtonStatus({
+    successHoldMs: 4000,
+    resetKey: actionButtonResetKey,
+  });
 
   const editionQuery = useQuery({
     queryKey: queryKeys.edition(editionId),
@@ -153,20 +161,29 @@ export function EditionChrome() {
     [discardIfNeeded, navigateEd, selectedDivisionId]
   );
 
-  const onRefresh = useCallback(async () => {
+  const onRefresh = useCallback(async (): Promise<void> => {
     if (!(await discardIfNeeded())) return;
     if (actions?.refresh) {
       await actions.refresh();
       return;
     }
-    await queryClient.invalidateQueries({ queryKey: queryKeys.edition(editionId) });
-    await queryClient.invalidateQueries({
-      queryKey: queryKeys.editionDivisions(editionId),
-    });
+    await queryClient.invalidateQueries(
+      { queryKey: queryKeys.edition(editionId) },
+      { throwOnError: true }
+    );
+    await queryClient.invalidateQueries(
+      {
+        queryKey: queryKeys.editionDivisions(editionId),
+      },
+      { throwOnError: true }
+    );
     if (selectedDivisionId) {
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.schedule(selectedDivisionId),
-      });
+      await queryClient.invalidateQueries(
+        {
+          queryKey: queryKeys.schedule(selectedDivisionId),
+        },
+        { throwOnError: true }
+      );
     }
   }, [
     actions,
@@ -176,33 +193,37 @@ export function EditionChrome() {
     selectedDivisionId,
   ]);
 
-  const onSave = useCallback(async () => {
-    if (actions?.save) await actions.save();
+  const onSave = useCallback(async (): Promise<void> => {
+    await actions?.save?.();
   }, [actions]);
 
-  const onFinalize = useCallback(async () => {
-    if (isFinalized) return;
-    if (!(await discardIfNeeded())) return;
-    confirmAction(
-      'Finalize edition?',
-      'This cannot be undone. Schedule, scores, divisions, and related edits will lock. Edition details stay editable.',
-      () => {
-        void (async () => {
-          try {
-            await editionsApi.finalizeEdition(editionId);
-            await queryClient.invalidateQueries({
-              queryKey: queryKeys.edition(editionId),
-            });
-            await queryClient.invalidateQueries({
-              queryKey: queryKeys.editionDivisions(editionId),
-            });
-          } catch (e: any) {
-            Alert.alert('Finalize failed', e?.message || 'Unknown error');
-          }
-        })();
-      }
+  const doFinalize = useCallback(async (): Promise<void> => {
+    await editionsApi.finalizeEdition(editionId);
+    await queryClient.invalidateQueries(
+      {
+        queryKey: queryKeys.edition(editionId),
+      },
+      { throwOnError: true }
     );
-  }, [discardIfNeeded, editionId, isFinalized, queryClient]);
+    await queryClient.invalidateQueries(
+      {
+        queryKey: queryKeys.editionDivisions(editionId),
+      },
+      { throwOnError: true }
+    );
+  }, [editionId, queryClient]);
+
+  const onFinalizePress = useCallback(() => {
+    if (isFinalized) return;
+    void (async () => {
+      if (!(await discardIfNeeded())) return;
+      const message =
+        'This cannot be undone. Schedule, scores, divisions, and related edits will lock. Edition details stay editable.';
+      confirmAction('Finalize edition?', message, () => {
+        void finalizeStatus.run(doFinalize);
+      });
+    })();
+  }, [discardIfNeeded, doFinalize, finalizeStatus.run, isFinalized]);
 
   const onBack = useCallback(async () => {
     if (!(await discardIfNeeded())) return;
@@ -294,29 +315,39 @@ export function EditionChrome() {
           </Text>
         </View>
       ) : (
-        <HeaderActionButton
+        <ActionButton
           label="Finalize"
           variant="warning"
-          onPress={() => void onFinalize()}
+          status={finalizeStatus.status}
+          errorMessage={finalizeStatus.errorMessage ?? undefined}
+          onPress={onFinalizePress}
           testID="edition-chrome-finalize"
         />
       )}
 
       {!actions?.isEditing ? (
-        <HeaderActionButton
+        <ActionButton
           label="Save"
           variant="primary"
-          onPress={() => void onSave()}
+          status={saveStatus.status}
+          errorMessage={saveStatus.errorMessage ?? undefined}
+          onPress={() => {
+            void saveStatus.run(onSave);
+          }}
           disabled={!canSave}
-          loading={!!actions?.isSaving}
           testID="edition-chrome-save"
         />
       ) : null}
 
-      <HeaderActionButton
+      <ActionButton
         label="Refresh"
-        icon="refresh"
-        onPress={() => void onRefresh()}
+        startIcon="refresh"
+        pendingAppearance="spinIcon"
+        status={refreshStatus.status}
+        errorMessage={refreshStatus.errorMessage ?? undefined}
+        onPress={() => {
+          void refreshStatus.run(onRefresh);
+        }}
         testID="edition-chrome-refresh"
       />
 
@@ -326,7 +357,7 @@ export function EditionChrome() {
         <EditModeToggle
           isEditing={!!actions?.isEditing}
           onEdit={actions!.edit!}
-          onSave={() => void onSave()}
+          onSave={onSave}
           onCancel={actions!.cancel ?? (() => {})}
           loading={!!actions?.isSaving}
           disabled={!!actions?.isSaving}

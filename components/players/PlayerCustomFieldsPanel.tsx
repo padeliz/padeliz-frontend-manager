@@ -2,9 +2,11 @@
  * Player custom field values: history table, submit form, invalidate.
  */
 
+import ActionButton from '@/components/ui/ActionButton';
 import AppTextInput from '@/components/ui/AppTextInput';
 import SingleSelectDropdown from '@/components/ui/SingleSelectDropdown';
 import { useToast } from '@/context/ToastContext';
+import { useActionButtonStatus } from '@/hooks/useActionButtonStatus';
 import { EditionsApiService } from '@/services/api/editionsApi';
 import { PlayerCustomFieldsApiService } from '@/services/api/playerCustomFieldsApi';
 import {
@@ -59,7 +61,6 @@ export default function PlayerCustomFieldsPanel({ playerId }: Props) {
   const [page, setPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
   const [selectedFieldId, setSelectedFieldId] = useState<number | null>(null);
   const [editionId, setEditionId] = useState<number | null>(null);
   const [textValue, setTextValue] = useState('');
@@ -70,6 +71,11 @@ export default function PlayerCustomFieldsPanel({ playerId }: Props) {
   const [optionIds, setOptionIds] = useState<number[]>([]);
   const [invalidatingId, setInvalidatingId] = useState<number | null>(null);
   const [invalidationReason, setInvalidationReason] = useState('');
+  const submitStatus = useActionButtonStatus({ auditoryFeedback: true });
+  const invalidateStatus = useActionButtonStatus({
+    auditoryFeedback: true,
+    resetKey: invalidatingId,
+  });
 
   const selectedField = useMemo(
     () => fields.find(f => f.id_player_custom_field === selectedFieldId) ?? null,
@@ -191,38 +197,35 @@ export default function PlayerCustomFieldsPanel({ playerId }: Props) {
   const onSubmit = async () => {
     const payload = buildPayload();
     if (!payload) {
-      showError('Validation', 'Complete the value for the selected field.');
-      return;
+      const message = 'Complete the value for the selected field.';
+      showError('Validation', message);
+      throw new Error(message);
     }
-    setSubmitting(true);
     try {
       await valuesApi.createValue(playerId, payload);
-      showSuccess('Submitted', 'Custom field value saved');
-      resetInput();
-      setPage(1);
-      await loadValues();
     } catch (err: any) {
       showError('Submit failed', err?.message || 'Could not submit value');
-    } finally {
-      setSubmitting(false);
+      throw err;
     }
+    showSuccess('Submitted', 'Custom field value saved');
+    resetInput();
+    setPage(1);
+    await loadValues();
   };
 
   const onInvalidate = async (valueId: number) => {
-    setSubmitting(true);
     try {
       await valuesApi.invalidateValue(playerId, valueId, {
         invalidation_reason: invalidationReason.trim() || undefined,
       });
-      showSuccess('Invalidated', 'Value marked as invalidated');
-      setInvalidatingId(null);
-      setInvalidationReason('');
-      await loadValues();
     } catch (err: any) {
       showError('Invalidate failed', err?.message || 'Could not invalidate');
-    } finally {
-      setSubmitting(false);
+      throw err;
     }
+    showSuccess('Invalidated', 'Value marked as invalidated');
+    setInvalidatingId(null);
+    setInvalidationReason('');
+    await loadValues();
   };
 
   const toggleMultiOption = (id: number) => {
@@ -358,16 +361,18 @@ export default function PlayerCustomFieldsPanel({ playerId }: Props) {
             clearable
           />
         </View>
-        <Pressable
-          testID="custom-field-submit"
-          disabled={submitting || !selectedFieldId}
-          onPress={() => void onSubmit()}
-          className={`self-start rounded-lg px-4 py-2 ${
-            submitting || !selectedFieldId ? 'bg-gray-300' : 'bg-blue-600'
-          }`}
-        >
-          <Text className="text-white text-sm font-medium">Submit</Text>
-        </Pressable>
+        <View className="self-start">
+          <ActionButton
+            testID="custom-field-submit"
+            label="Submit"
+            variant="primary"
+            disabled={!selectedFieldId}
+            disabledReason="Select a field first."
+            status={submitStatus.status}
+            errorMessage={submitStatus.errorMessage ?? undefined}
+            onPress={() => void submitStatus.run(onSubmit)}
+          />
+        </View>
       </View>
 
       <Text className="text-base font-medium text-gray-900 mb-3">History</Text>
@@ -419,16 +424,21 @@ export default function PlayerCustomFieldsPanel({ playerId }: Props) {
                         className="border border-gray-300 rounded-lg px-2 py-1 mb-2 bg-white"
                       />
                       <View className="flex-row gap-2">
-                        <Pressable
+                        <ActionButton
                           testID={`invalidate-confirm-${row.id_player_custom_field_value}`}
-                          disabled={submitting}
-                          onPress={() =>
-                            void onInvalidate(row.id_player_custom_field_value)
+                          label="Confirm"
+                          variant="danger"
+                          size="sm"
+                          status={invalidateStatus.status}
+                          errorMessage={
+                            invalidateStatus.errorMessage ?? undefined
                           }
-                          className="bg-red-600 rounded px-3 py-1"
-                        >
-                          <Text className="text-white text-xs">Confirm</Text>
-                        </Pressable>
+                          onPress={() =>
+                            void invalidateStatus.run(() =>
+                              onInvalidate(row.id_player_custom_field_value)
+                            )
+                          }
+                        />
                         <Pressable
                           testID={`invalidate-cancel-${row.id_player_custom_field_value}`}
                           onPress={() => {

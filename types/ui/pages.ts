@@ -127,8 +127,8 @@ export interface ResourceViewPageConfig<
   /** When false, EditModeToggle omits Save. Default true. */
   showSave?: boolean;
   onChromeStateChange?: (state: {
-    save: () => void | Promise<void>;
-    refresh: () => void | Promise<void>;
+    save: () => Promise<void>;
+    refresh: () => Promise<void>;
     edit?: () => void;
     cancel?: () => void;
     isEditing: boolean;

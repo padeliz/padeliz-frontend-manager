@@ -4,8 +4,7 @@ import ChallengeSyncStatusBadge from '@/components/challenges/ChallengeSyncStatu
 import SortableRow, {
   SortableDragHandle,
 } from '@/components/editions/SortableRow';
-import HeaderActionButton from '@/components/ui/HeaderActionButton';
-import IconActionButton from '@/components/ui/IconActionButton';
+import ActionButton from '@/components/ui/ActionButton';
 import Tooltip from '@/components/ui/Tooltip';
 import {
   CHALLENGE_COORDINATOR_LOGO_MAX_HEIGHT,
@@ -222,10 +221,11 @@ export default function KotcLivePanel({ sessionId, onFooterReady }: Props) {
   );
 
   const completeButton = (
-    <HeaderActionButton
+    <ActionButton
       label="Complete"
-      icon={CHALLENGE_ICONS.complete.name}
+      startIcon={CHALLENGE_ICONS.complete.name}
       iconOnly
+      disabledStyle="mute"
       iconColor={CHALLENGE_ICONS.complete.color}
       iconSize={CHALLENGE_HEADER_ICON_SIZE}
       accessibilityLabel="Complete"
@@ -265,7 +265,7 @@ export default function KotcLivePanel({ sessionId, onFooterReady }: Props) {
         )}
         <ChallengeSyncStatusBadge badge={syncBadge} />
         {readOnly ? (
-          <HeaderActionButton
+          <ActionButton
             label="Reactivate"
             variant="primary"
             onPress={() => void runKotc({ type: 'reactivate' })}
@@ -273,10 +273,11 @@ export default function KotcLivePanel({ sessionId, onFooterReady }: Props) {
           />
         ) : (
           <>
-            <HeaderActionButton
+            <ActionButton
               label="Undo"
-              icon={CHALLENGE_ICONS.undo.name}
+              startIcon={CHALLENGE_ICONS.undo.name}
               iconOnly
+              disabledStyle="mute"
               iconColor={CHALLENGE_ICONS.undo.color}
               iconSize={CHALLENGE_HEADER_ICON_SIZE}
               accessibilityLabel="Undo"
@@ -333,11 +334,14 @@ export default function KotcLivePanel({ sessionId, onFooterReady }: Props) {
                             {!readOnly ? (
                               <View className="flex-row gap-1 opacity-100 web:opacity-0 web:group-hover:opacity-100">
                                 {live.court_count === 2 ? (
-                                  <IconActionButton
+                                  <ActionButton
                                     testID={`kotc-winner-${team.team_id}`}
-                                    icon={CHALLENGE_ICONS.trophy.name}
-                                    color={CHALLENGE_ICONS.trophy.color}
-                                    size={CHALLENGE_ROW_ICON_SIZE}
+                                    startIcon={CHALLENGE_ICONS.trophy.name}
+                                    iconColor={CHALLENGE_ICONS.trophy.color}
+                                    iconSize={CHALLENGE_ROW_ICON_SIZE}
+                                    iconOnly
+                                    className="px-1"
+                                    disabledStyle="opacity"
                                     accessibilityLabel="Declare winner"
                                     onPress={() =>
                                       void runKotc({
@@ -347,11 +351,14 @@ export default function KotcLivePanel({ sessionId, onFooterReady }: Props) {
                                     }
                                   />
                                 ) : null}
-                                <IconActionButton
+                                <ActionButton
                                   testID={`kotc-return-${team.team_id}`}
-                                  icon={CHALLENGE_ICONS.returnToWaiting.name}
-                                  color={CHALLENGE_ICONS.returnToWaiting.color}
-                                  size={CHALLENGE_ROW_ICON_SIZE}
+                                  startIcon={CHALLENGE_ICONS.returnToWaiting.name}
+                                  iconColor={CHALLENGE_ICONS.returnToWaiting.color}
+                                  iconSize={CHALLENGE_ROW_ICON_SIZE}
+                                  iconOnly
+                                  className="px-1"
+                                  disabledStyle="opacity"
                                   accessibilityLabel="Return to waiting"
                                   disabled={waitingFull}
                                   onPress={() =>
@@ -462,11 +469,14 @@ export default function KotcLivePanel({ sessionId, onFooterReady }: Props) {
                           {!readOnly ? (
                             <View className="flex-row gap-2 opacity-100 web:opacity-0 web:group-hover:opacity-100">
                               {live.can_manual_jump_in && vacantSlot ? (
-                                <IconActionButton
+                                <ActionButton
                                   testID={`kotc-jump-in-${row.team_id}`}
-                                  icon={CHALLENGE_ICONS.jumpIn.name}
-                                  color={CHALLENGE_ICONS.jumpIn.color}
-                                  size={CHALLENGE_ROW_ICON_SIZE}
+                                  startIcon={CHALLENGE_ICONS.jumpIn.name}
+                                  iconColor={CHALLENGE_ICONS.jumpIn.color}
+                                  iconSize={CHALLENGE_ROW_ICON_SIZE}
+                                  iconOnly
+                                  className="px-1"
+                                  disabledStyle="opacity"
                                   accessibilityLabel="Jump in"
                                   onPress={() =>
                                     void runKotc({
@@ -477,11 +487,14 @@ export default function KotcLivePanel({ sessionId, onFooterReady }: Props) {
                                   }
                                 />
                               ) : null}
-                              <IconActionButton
+                              <ActionButton
                                 testID={`kotc-remove-${row.team_id}`}
-                                icon={CHALLENGE_ICONS.remove.name}
-                                color={CHALLENGE_ICONS.remove.color}
-                                size={CHALLENGE_ROW_ICON_SIZE}
+                                startIcon={CHALLENGE_ICONS.remove.name}
+                                iconColor={CHALLENGE_ICONS.remove.color}
+                                iconSize={CHALLENGE_ROW_ICON_SIZE}
+                                iconOnly
+                                className="px-1"
+                                disabledStyle="opacity"
                                 accessibilityLabel="Remove"
                                 onPress={() =>
                                   void runKotc({

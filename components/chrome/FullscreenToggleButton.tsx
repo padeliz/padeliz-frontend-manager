@@ -1,7 +1,7 @@
+import ActionButton from '@/components/ui/ActionButton';
 import { useLayoutChrome } from '@/hooks/useLayoutChrome';
-import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { Pressable } from 'react-native';
+import { View } from 'react-native';
 
 export default function FullscreenToggleButton() {
   const { isFullscreen, enterFullscreen } = useLayoutChrome();
@@ -14,15 +14,21 @@ export default function FullscreenToggleButton() {
   const color = hovered ? '#111827' : '#6b7280';
 
   return (
-    <Pressable
-      testID="fullscreen-toggle"
-      accessibilityLabel="Enter fullscreen"
-      onPress={enterFullscreen}
-      onHoverIn={() => setHovered(true)}
-      onHoverOut={() => setHovered(false)}
-      className="p-1"
+    <View
+      // @ts-expect-error RN Web mouse events for hover icon color
+      onMouseEnter={() => setHovered(true)}
+      // @ts-expect-error RN Web mouse events for hover icon color
+      onMouseLeave={() => setHovered(false)}
     >
-      <Ionicons name="expand-outline" size={20} color={color} />
-    </Pressable>
+      <ActionButton
+        testID="fullscreen-toggle"
+        iconOnly
+        startIcon="expand-outline"
+        iconSize={20}
+        iconColor={color}
+        accessibilityLabel="Enter fullscreen"
+        onPress={enterFullscreen}
+      />
+    </View>
   );
 }

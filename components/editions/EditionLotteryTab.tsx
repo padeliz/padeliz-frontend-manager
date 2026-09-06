@@ -1,5 +1,7 @@
 import CachedPdfImageReload from '@/components/editions/CachedPdfImageReload';
+import ActionButton from '@/components/ui/ActionButton';
 import SingleSelectDropdown from '@/components/ui/SingleSelectDropdown';
+import { useActionButtonStatus } from '@/hooks/useActionButtonStatus';
 import { queryKeys } from '@/lib/queryClient';
 import { EditionLotteriesApiService } from '@/services/api/editionLotteriesApi';
 import { EditionLotteryPrizesApiService } from '@/services/api/editionLotteryPrizesApi';
@@ -61,8 +63,11 @@ function DeepLinkButton({
 }) {
   const router = useRouter();
   return (
-    <Pressable
+    <ActionButton
       testID={testID}
+      label={label}
+      variant="secondary"
+      size="sm"
       onPress={() => {
         if (Platform.OS === 'web' && typeof window !== 'undefined') {
           const url =
@@ -74,10 +79,7 @@ function DeepLinkButton({
         }
         router.push(href as any);
       }}
-      className="bg-gray-100 border border-gray-300 px-3 py-2 rounded-lg"
-    >
-      <Text className="text-sm text-gray-700">{label}</Text>
-    </Pressable>
+    />
   );
 }
 
@@ -338,7 +340,7 @@ function EditionLotteryPrizesMode({
   editionFinalized: boolean;
 }) {
   const queryClient = useQueryClient();
-  const [actionError, setActionError] = useState<string | null>(null);
+  const deleteStatus = useActionButtonStatus({ auditoryFeedback: true });
 
   const linesQuery = useQuery({
     queryKey: queryKeys.editionLotteryPrizes(lotteryId),
@@ -371,18 +373,11 @@ function EditionLotteryPrizesMode({
 
   const onDelete = () => {
     if (editionFinalized) return;
-    confirmAction(
-      'Delete lottery',
-      `Delete lottery #${lotteryId}?`,
-      async () => {
-        setActionError(null);
-        try {
-          await deleteMutation.mutateAsync(lotteryId);
-        } catch (e: any) {
-          setActionError(e?.message || 'Delete failed');
-        }
-      }
-    );
+    confirmAction('Delete lottery', `Delete lottery #${lotteryId}?`, () => {
+      void deleteStatus.run(async () => {
+        await deleteMutation.mutateAsync(lotteryId);
+      });
+    });
   };
 
   const lines = linesQuery.data || [];
@@ -395,19 +390,18 @@ function EditionLotteryPrizesMode({
         <Text className="text-xs text-gray-500">
           Edition #{editionId} · prizes are edition-scoped (division filter ignored).
         </Text>
-        <Pressable
-          testID="lottery-delete-lottery"
-          disabled={editionFinalized || deleteMutation.isPending}
-          onPress={onDelete}
-          className={`self-start px-3 py-2 rounded-lg ${
-            editionFinalized ? 'bg-gray-300' : 'bg-red-600'
-          }`}
-        >
-          <Text className="text-white text-sm">Delete lottery</Text>
-        </Pressable>
-        {actionError && (
-          <Text className="text-sm text-red-600">{actionError}</Text>
-        )}
+        <View className="self-start">
+          <ActionButton
+            testID="lottery-delete-lottery"
+            label="Delete lottery"
+            variant="danger"
+            size="sm"
+            disabled={editionFinalized}
+            status={deleteStatus.status}
+            errorMessage={deleteStatus.errorMessage ?? undefined}
+            onPress={onDelete}
+          />
+        </View>
       </View>
       <View className="bg-white border border-gray-200 rounded-lg p-3 gap-2">
         <Text className="font-semibold text-gray-900">Prize lines</Text>
@@ -449,6 +443,44 @@ function EditionLotteryPrizesMode({
   );
 }
 
+function DeleteRuleButton({
+  rule,
+  disabled,
+  onDeleted,
+}: {
+  rule: ApiEditionLotteryRule;
+  disabled: boolean;
+  onDeleted: () => Promise<void>;
+}) {
+  const { status, errorMessage, run } = useActionButtonStatus({
+    auditoryFeedback: true,
+  });
+
+  return (
+    <ActionButton
+      testID={`lottery-delete-rule-${rule.id_lottery_rule}`}
+      label="Delete"
+      variant="danger"
+      size="sm"
+      disabled={disabled}
+      status={status}
+      errorMessage={errorMessage ?? undefined}
+      onPress={() => {
+        confirmAction(
+          'Delete rule',
+          `Delete rule #${rule.id_lottery_rule}?`,
+          () => {
+            void run(async () => {
+              await rulesApi.deleteRule(rule.id_lottery_rule);
+              await onDeleted();
+            });
+          }
+        );
+      }}
+    />
+  );
+}
+
 function EditionLotteryRulesMode({
   editionId,
   editionDivisionId,
@@ -463,8 +495,6 @@ function EditionLotteryRulesMode({
   editionFinalized: boolean;
 }) {
   const queryClient = useQueryClient();
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const rulesQuery = useQuery({
     queryKey: queryKeys.editionLotteryRules(
@@ -504,30 +534,14 @@ function EditionLotteryRulesMode({
       }));
   }, [rulesQuery.data, editionDivisionId]);
 
-  const onDelete = (rule: ApiEditionLotteryRule) => {
-    if (editionFinalized) return;
-    confirmAction(
-      'Delete rule',
-      `Delete rule #${rule.id_lottery_rule}?`,
-      async () => {
-        setDeletingId(rule.id_lottery_rule);
-        setActionError(null);
-        try {
-          await rulesApi.deleteRule(rule.id_lottery_rule);
-          await queryClient.invalidateQueries({
-            queryKey: queryKeys.editionLotteryRules(
-              editionId,
-              editionDivisionId,
-              lotteryId
-            ),
-          });
-        } catch (e: any) {
-          setActionError(e?.message || 'Delete failed');
-        } finally {
-          setDeletingId(null);
-        }
-      }
-    );
+  const invalidateRules = async () => {
+    await queryClient.invalidateQueries({
+      queryKey: queryKeys.editionLotteryRules(
+        editionId,
+        editionDivisionId,
+        lotteryId
+      ),
+    });
   };
 
   if (rulesQuery.isLoading) return <ActivityIndicator />;
@@ -546,11 +560,6 @@ function EditionLotteryRulesMode({
   return (
     <View className="gap-3">
       <LotteryDeepLinks mode="rules" ruleId={firstRuleId} />
-      {actionError && (
-        <Text className="text-sm text-red-600 bg-red-50 p-2 rounded">
-          {actionError}
-        </Text>
-      )}
       {totalRules === 0 ? (
         <Text className="text-sm text-gray-500">
           {editionDivisionId != null
@@ -591,18 +600,11 @@ function EditionLotteryRulesMode({
                     label="Edit"
                     href={`/edition-lottery-rules/${rule.id_lottery_rule}`}
                   />
-                  <Pressable
-                    testID={`lottery-delete-rule-${rule.id_lottery_rule}`}
-                    disabled={
-                      editionFinalized || deletingId === rule.id_lottery_rule
-                    }
-                    onPress={() => onDelete(rule)}
-                    className={`px-3 py-2 rounded-lg ${
-                      editionFinalized ? 'bg-gray-300' : 'bg-red-600'
-                    }`}
-                  >
-                    <Text className="text-white text-sm">Delete</Text>
-                  </Pressable>
+                  <DeleteRuleButton
+                    rule={rule}
+                    disabled={editionFinalized}
+                    onDeleted={invalidateRules}
+                  />
                 </View>
               </View>
             ))}
@@ -610,6 +612,62 @@ function EditionLotteryRulesMode({
         ))
       )}
     </View>
+  );
+}
+
+type LuckyDecision = 'accept' | 'reject';
+
+function LuckyDecideButton({
+  action,
+  lucky,
+  lotteryId,
+  disabled,
+  onDecide,
+}: {
+  action: LuckyDecision;
+  lucky: any;
+  lotteryId: number;
+  disabled: boolean;
+  onDecide: (
+    action: LuckyDecision,
+    lotteryId: number,
+    idLucky: number
+  ) => Promise<void>;
+}) {
+  const { status, errorMessage, run } = useActionButtonStatus({
+    auditoryFeedback: true,
+  });
+  const isAccept = action === 'accept';
+
+  return (
+    <ActionButton
+      testID={`lottery-${action}-lucky-${lucky.id_lucky}`}
+      label={isAccept ? 'Accept' : 'Reject'}
+      variant={isAccept ? 'positive' : 'danger'}
+      size="sm"
+      disabled={disabled}
+      status={status}
+      errorMessage={errorMessage ?? undefined}
+      onPress={() => {
+        confirmAction(
+          isAccept ? 'Accept prize' : 'Reject prize',
+          isAccept ? 'Accept this lucky prize?' : 'Reject this lucky prize?',
+          () => {
+            void run(async () => {
+              const lotteryIdForLucky = luckyLotteryId(lucky, lotteryId);
+              if (!lotteryIdForLucky) {
+                throw new Error('Could not resolve lottery for this lucky.');
+              }
+              await onDecide(
+                action,
+                lotteryIdForLucky,
+                Number(lucky.id_lucky)
+              );
+            });
+          }
+        );
+      }}
+    />
   );
 }
 
@@ -627,11 +685,6 @@ function EditionLotteryLuckiesMode({
   editionFinalized: boolean;
 }) {
   const queryClient = useQueryClient();
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [actingId, setActingId] = useState<number | null>(null);
-  const [actingAction, setActingAction] = useState<'accept' | 'reject' | null>(
-    null
-  );
   const [infoOpenId, setInfoOpenId] = useState<number | null>(null);
   const [avatarOverrides, setAvatarOverrides] = useState<Record<number, string>>(
     {}
@@ -696,7 +749,7 @@ function EditionLotteryLuckiesMode({
       lotteryId,
       idLucky,
     }: {
-      action: 'accept' | 'reject';
+      action: LuckyDecision;
       lotteryId: number;
       idLucky: number;
     }) => {
@@ -710,36 +763,16 @@ function EditionLotteryLuckiesMode({
     },
   });
 
-  const onDecide = (action: 'accept' | 'reject', lucky: any) => {
-    if (editionFinalized) return;
-    const lotteryIdForLucky = luckyLotteryId(lucky, lotteryId);
-    if (!lotteryIdForLucky) {
-      setActionError('Could not resolve lottery for this lucky.');
-      return;
-    }
-    confirmAction(
-      action === 'accept' ? 'Accept prize' : 'Reject prize',
-      action === 'accept'
-        ? 'Accept this lucky prize?'
-        : 'Reject this lucky prize?',
-      async () => {
-        setActingId(lucky.id_lucky);
-        setActingAction(action);
-        setActionError(null);
-        try {
-          await decideMutation.mutateAsync({
-            action,
-            lotteryId: lotteryIdForLucky,
-            idLucky: lucky.id_lucky,
-          });
-        } catch (e: any) {
-          setActionError(e?.message || `${action} failed`);
-        } finally {
-          setActingId(null);
-          setActingAction(null);
-        }
-      }
-    );
+  const onDecide = async (
+    action: LuckyDecision,
+    lotteryIdForLucky: number,
+    idLucky: number
+  ) => {
+    await decideMutation.mutateAsync({
+      action,
+      lotteryId: lotteryIdForLucky,
+      idLucky,
+    });
   };
 
   const onReloadAvatar = async (lucky: any) => {
@@ -811,11 +844,6 @@ function EditionLotteryLuckiesMode({
 
   return (
     <View className="gap-3" testID="lottery-luckies-board">
-      {actionError && (
-        <Text className="text-sm text-red-600 bg-red-50 p-2 rounded">
-          {actionError}
-        </Text>
-      )}
       {lastRefreshLabel ? (
         <Text testID="lottery-luckies-last-refresh" className="text-xs text-gray-500">
           {lastRefreshLabel}
@@ -991,42 +1019,20 @@ function EditionLotteryLuckiesMode({
                     ) : null}
                     {pending ? (
                       <View className="flex-row flex-wrap gap-2 mt-2">
-                        {(() => {
-                          const isActing = actingId === lucky.id_lucky;
-                          const grayButtons = editionFinalized || isActing;
-                          return (
-                            <>
-                              <Pressable
-                                testID={`lottery-accept-lucky-${lucky.id_lucky}`}
-                                disabled={grayButtons}
-                                onPress={() => onDecide('accept', lucky)}
-                                className={`px-3 py-2 rounded-lg ${
-                                  grayButtons ? 'bg-gray-300' : 'bg-green-600'
-                                }`}
-                              >
-                                <Text className="text-white text-sm">
-                                  {isActing && actingAction === 'accept'
-                                    ? 'Accept...'
-                                    : 'Accept'}
-                                </Text>
-                              </Pressable>
-                              <Pressable
-                                testID={`lottery-reject-lucky-${lucky.id_lucky}`}
-                                disabled={grayButtons}
-                                onPress={() => onDecide('reject', lucky)}
-                                className={`px-3 py-2 rounded-lg ${
-                                  grayButtons ? 'bg-gray-300' : 'bg-red-600'
-                                }`}
-                              >
-                                <Text className="text-white text-sm">
-                                  {isActing && actingAction === 'reject'
-                                    ? 'Reject...'
-                                    : 'Reject'}
-                                </Text>
-                              </Pressable>
-                            </>
-                          );
-                        })()}
+                        <LuckyDecideButton
+                          action="accept"
+                          lucky={lucky}
+                          lotteryId={lotteryId}
+                          disabled={editionFinalized}
+                          onDecide={onDecide}
+                        />
+                        <LuckyDecideButton
+                          action="reject"
+                          lucky={lucky}
+                          lotteryId={lotteryId}
+                          disabled={editionFinalized}
+                          onDecide={onDecide}
+                        />
                       </View>
                     ) : null}
                   </View>

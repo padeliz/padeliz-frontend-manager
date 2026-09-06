@@ -1,5 +1,6 @@
 import { API_BASE_URL } from '@/utils/constants';
-import { Alert } from 'react-native';
+
+export { confirmAction } from '@/utils/confirmAction';
 
 export function resolveBoardAsset(path: unknown): string | null {
   if (!path || typeof path !== 'string') return null;
@@ -8,21 +9,6 @@ export function resolveBoardAsset(path: unknown): string | null {
   const cleaned = path.replace(/^\/+/, '');
   if (cleaned.startsWith('media/')) return `${base}/${cleaned}`;
   return `${base}/media/${cleaned}`;
-}
-
-export function confirmAction(
-  title: string,
-  message: string,
-  onConfirm: () => void
-) {
-  if (typeof window !== 'undefined' && window.confirm) {
-    if (window.confirm(message)) onConfirm();
-  } else {
-    Alert.alert(title, message, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'OK', onPress: onConfirm },
-    ]);
-  }
 }
 
 export function formatUnixDateTime24h(value: unknown): string {

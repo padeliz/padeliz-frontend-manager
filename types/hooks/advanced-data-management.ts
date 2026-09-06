@@ -76,7 +76,7 @@ export interface UseAdvancedDataManagementReturn<T> {
     onSelectAll: () => void;
     onSelectItem: (item: T) => void;
     onClearSelection: () => void;
-    onBulkAction: (action: string) => void;
+    onBulkAction: (action: string) => Promise<void>;
     isAllSelected: boolean;
     isPartiallySelected: boolean;
   };
@@ -86,6 +86,6 @@ export interface UseAdvancedDataManagementReturn<T> {
   metadataLoading: boolean;
 
   // Actions
-  refresh: () => void;
+  refresh: () => Promise<void>;
   exportData: (format: 'csv' | 'json') => void;
 }

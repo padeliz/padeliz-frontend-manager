@@ -1,5 +1,10 @@
 import React from 'react';
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import {
+  act,
+  fireEvent,
+  render,
+  waitFor,
+} from '@testing-library/react-native';
 import { Platform } from 'react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -25,6 +30,8 @@ const mockGenerateAttendance = jest.fn(async () => ({
 const mockDownloadAttendancePdf = jest.fn(async () => undefined);
 const mockOpenAttendancePreview = jest.fn(async () => undefined);
 const mockDownloadMergedPostersPdf = jest.fn(async () => undefined);
+const mockPlaySuccess = jest.fn(async () => undefined);
+const mockPlayError = jest.fn(async () => undefined);
 
 jest.mock('@/services/api/scheduleApi', () => ({
   scheduleApi: {
@@ -55,6 +62,16 @@ jest.mock('@/services/api/editionPostersApi', () => ({
     downloadMergedPostersPdf: (...args: unknown[]) =>
       mockDownloadMergedPostersPdf(...args),
   },
+}));
+
+jest.mock('@/lib/actionButtonFeedback', () => ({
+  playSuccess: (...args: unknown[]) => mockPlaySuccess(...args),
+  playError: (...args: unknown[]) => mockPlayError(...args),
+}));
+
+// Keep Tooltip on its native branch so error text is readable via a11y hint.
+jest.mock('@/utils/isWebPlatform', () => ({
+  isWebPlatform: () => false,
 }));
 
 function renderWithClient(ui: React.ReactElement) {
@@ -122,6 +139,7 @@ describe('EditionPdfsTab', () => {
   });
 
   afterEach(() => {
+    jest.useRealTimers();
     Object.defineProperty(Platform, 'OS', {
       configurable: true,
       get: () => originalOs,
@@ -137,6 +155,27 @@ describe('EditionPdfsTab', () => {
     expect(getByTestId('matches-9-77-generate')).toBeTruthy();
     expect(queryByText(/Court \(edition_division_court/)).toBeNull();
   }, 15000);
+
+  it('renders poster actions as ActionButtons with mapped variants', async () => {
+    const { findByTestId, getByTestId } = renderWithClient(
+      <EditionPdfsTab editionId={1} editionDivisionId={9} />
+    );
+    const generate = await findByTestId('ranking-9-generate');
+    expect(generate.props.className).toMatch(/bg-blue-600/);
+    expect(generate.props.accessibilityState).toMatchObject({
+      disabled: false,
+      busy: false,
+    });
+    expect(getByTestId('ranking-9-download').props.className).toMatch(
+      /bg-green-600/
+    );
+    expect(getByTestId('ranking-9-download-printed').props.className).toMatch(
+      /bg-green-600/
+    );
+    expect(getByTestId('upload-printed-7').props.className).toMatch(
+      /bg-blue-600/
+    );
+  });
 
   it('generates MATCHES with only the court, no branding ids', async () => {
     const { findByTestId } = renderWithClient(
@@ -174,7 +213,7 @@ describe('EditionPdfsTab', () => {
     expect(mockGenerateMatches).not.toHaveBeenCalled();
   });
 
-  it('shows generating state then a success message', async () => {
+  it('generate reports pending then success on its own button', async () => {
     let resolveGen: (v: unknown) => void = () => undefined;
     mockGenerateRanking.mockImplementationOnce(
       () =>
@@ -182,15 +221,87 @@ describe('EditionPdfsTab', () => {
           resolveGen = resolve;
         })
     );
-    const { findByTestId, findByText, getByTestId } = renderWithClient(
+    const { findByTestId, getByTestId, queryByTestId, queryByText } =
+      renderWithClient(<EditionPdfsTab editionId={1} editionDivisionId={9} />);
+    const btn = await findByTestId('ranking-9-generate');
+    fireEvent.press(btn);
+    expect(await findByTestId('ranking-9-generate-pending')).toBeTruthy();
+    // Sibling buttons are not held hostage by a shared busy key.
+    expect(
+      getByTestId('matches-9-77-generate').props.accessibilityState.disabled
+    ).toBe(false);
+
+    await act(async () => {
+      resolveGen({
+        data: { id_edition_division_poster: 7, poster_kind: 'RANKING' },
+      });
+    });
+    expect(await findByTestId('ranking-9-generate-success')).toBeTruthy();
+    expect(queryByTestId('ranking-9-generate-pending')).toBeNull();
+    // Press-tied banners are gone.
+    expect(queryByText('RANKING PDF generated.')).toBeNull();
+    expect(queryByText('Generating…')).toBeNull();
+  });
+
+  it('generate plays auditory feedback and holds success (sticky)', async () => {
+    const { findByTestId, getByTestId } = renderWithClient(
       <EditionPdfsTab editionId={1} editionDivisionId={9} />
     );
     const btn = await findByTestId('ranking-9-generate');
+
+    jest.useFakeTimers();
     fireEvent.press(btn);
-    expect(await findByText('Generating…')).toBeTruthy();
-    resolveGen({ data: { id_edition_division_poster: 7, poster_kind: 'RANKING' } });
-    expect(await findByText('RANKING PDF generated.')).toBeTruthy();
-    expect(getByTestId('ranking-9-generate')).toBeTruthy();
+    await waitFor(() => {
+      expect(getByTestId('ranking-9-generate-success')).toBeTruthy();
+    });
+    expect(mockPlaySuccess).toHaveBeenCalled();
+
+    await act(async () => {
+      jest.advanceTimersByTime(4000);
+    });
+    expect(getByTestId('ranking-9-generate-success')).toBeTruthy();
+  });
+
+  it('download success clears after 4000ms and stays silent', async () => {
+    const { findByTestId, getByTestId, queryByTestId } = renderWithClient(
+      <EditionPdfsTab editionId={1} editionDivisionId={9} />
+    );
+    const btn = await findByTestId('matches-9-77-download');
+
+    jest.useFakeTimers();
+    fireEvent.press(btn);
+    await waitFor(() => {
+      expect(getByTestId('matches-9-77-download-success')).toBeTruthy();
+    });
+    expect(mockPlaySuccess).not.toHaveBeenCalled();
+    expect(mockPlayError).not.toHaveBeenCalled();
+
+    await act(async () => {
+      jest.advanceTimersByTime(4000);
+    });
+    expect(queryByTestId('matches-9-77-download-success')).toBeNull();
+  });
+
+  it('upload printed plays auditory feedback', async () => {
+    const { findByTestId, getByTestId } = renderWithClient(
+      <EditionPdfsTab editionId={1} editionDivisionId={9} />
+    );
+    // No file picker in this environment, so the run throws and reports error.
+    const upload = await findByTestId('upload-printed-7');
+    const originalDocument = (global as any).document;
+    (global as any).document = undefined;
+    try {
+      fireEvent.press(upload);
+      await waitFor(() => {
+        expect(getByTestId('upload-printed-7-error')).toBeTruthy();
+      });
+    } finally {
+      (global as any).document = originalDocument;
+    }
+    expect(mockPlayError).toHaveBeenCalled();
+    expect(
+      getByTestId('upload-printed-7-tooltip').props.accessibilityHint
+    ).toBe('Printed upload is easiest on web (file picker).');
   });
 
   it('General: download only, no branding, generate, or upload', async () => {
@@ -243,6 +354,7 @@ describe('EditionPdfsTab', () => {
       <EditionPdfsTab editionId={1} editionDivisionId={9} />
     );
     const generate = await findByTestId('matches-9-77-generate');
+    expect(generate.props.accessibilityState.disabled).toBe(true);
     fireEvent.press(generate);
     expect(mockGenerateMatches).not.toHaveBeenCalled();
     fireEvent.press(await findByTestId('matches-9-77-download'));
@@ -256,7 +368,9 @@ describe('EditionPdfsTab', () => {
     const { findByTestId } = renderWithClient(
       <EditionPdfsTab editionId={1} editionDivisionId={9} />
     );
-    fireEvent.press(await findByTestId('matches-9-77-download'));
+    const download = await findByTestId('matches-9-77-download');
+    expect(download.props.accessibilityState.disabled).toBe(true);
+    fireEvent.press(download);
     expect(mockDownloadMatches).not.toHaveBeenCalled();
   });
 
@@ -287,22 +401,47 @@ describe('EditionPdfsTab', () => {
     });
   });
 
-  it('shows an error and re-enables generate after failure', async () => {
+  it('reports generate failure on the button and re-enables it', async () => {
     mockGenerateRanking.mockRejectedValueOnce(new Error('mPDF failed'));
-    const { findByTestId, findByText } = renderWithClient(
+    const { findByTestId, getByTestId, queryByText } = renderWithClient(
       <EditionPdfsTab editionId={1} editionDivisionId={9} />
     );
     fireEvent.press(await findByTestId('ranking-9-generate'));
-    expect(await findByText('mPDF failed')).toBeTruthy();
-    fireEvent.press(await findByTestId('ranking-9-generate'));
+    expect(await findByTestId('ranking-9-generate-error')).toBeTruthy();
+    expect(
+      getByTestId('ranking-9-generate-tooltip').props.accessibilityHint
+    ).toBe('mPDF failed');
+    expect(mockPlayError).toHaveBeenCalled();
+    // No press-tied banner text.
+    expect(queryByText('mPDF failed')).toBeNull();
+
+    fireEvent.press(getByTestId('ranking-9-generate'));
     await waitFor(() => {
       expect(mockGenerateRanking).toHaveBeenCalledTimes(2);
     });
   });
 
+  it('keeps the load error banner when the schedule fails', async () => {
+    mockGetSchedule.mockRejectedValueOnce(new Error('schedule unavailable'));
+    const { findByText } = renderWithClient(
+      <EditionPdfsTab editionId={1} editionDivisionId={9} />
+    );
+    expect(await findByText('schedule unavailable')).toBeTruthy();
+  });
+
+  it('keeps the load error banner when edition posters fail', async () => {
+    mockListEditionPosters.mockRejectedValueOnce(new Error('posters down'));
+    const { findByText } = renderWithClient(
+      <EditionPdfsTab editionId={1} editionDivisionId={null} divisions={[]} />
+    );
+    expect(await findByText('posters down')).toBeTruthy();
+  });
+
   it('shows generated/printed download labels and no branding block', async () => {
     const { findByTestId, queryByTestId, queryByText, getAllByText } =
-      renderWithClient(<EditionPdfsTab editionDivisionId={9} />);
+      renderWithClient(
+        <EditionPdfsTab editionId={1} editionDivisionId={9} />
+      );
     const download = await findByTestId('matches-9-77-download');
     const printed = await findByTestId('matches-9-77-download-printed');
     expect(download.props.accessibilityLabel).toBe('Download generated');
@@ -327,6 +466,7 @@ describe('EditionPdfsTab', () => {
     await waitFor(() => {
       expect(mockDownloadMergedPostersPdf).toHaveBeenCalledWith(1);
     });
+    expect(mockPlaySuccess).not.toHaveBeenCalled();
   });
 
   it('single-ED view does not show download-all-pdfs', async () => {
@@ -371,6 +511,22 @@ describe('EditionPdfsTab', () => {
     expect(mockOpenAttendancePreview).toHaveBeenCalledTimes(1);
   });
 
+  it('ATTENDANCE preview succeeds without auditory feedback', async () => {
+    const { findByTestId, getByTestId } = renderWithClient(
+      <EditionPdfsTab
+        editionId={1}
+        editionDivisionId={null}
+        divisions={[{ id_edition_division: 9, division_title: 'A' }] as any}
+      />
+    );
+    fireEvent.press(await findByTestId('attendance-1-preview'));
+    expect(await findByTestId('attendance-1-preview-success')).toBeTruthy();
+    expect(mockPlaySuccess).not.toHaveBeenCalled();
+    expect(getByTestId('attendance-1-preview').props.className).toMatch(
+      /bg-blue-600/
+    );
+  });
+
   it('ATTENDANCE preview works when edition is finalized but generate is blocked', async () => {
     const { findByTestId } = renderWithClient(
       <EditionPdfsTab
@@ -388,12 +544,12 @@ describe('EditionPdfsTab', () => {
     expect(mockGenerateAttendance).not.toHaveBeenCalled();
   });
 
-  it('shows web-only preview message on native', async () => {
+  it('preview throws a web-only error on native instead of a banner', async () => {
     Object.defineProperty(Platform, 'OS', {
       configurable: true,
       get: () => 'ios',
     });
-    const { findByTestId, findByText } = renderWithClient(
+    const { findByTestId, getByTestId, queryByText } = renderWithClient(
       <EditionPdfsTab
         editionId={1}
         editionDivisionId={null}
@@ -401,8 +557,12 @@ describe('EditionPdfsTab', () => {
       />
     );
     fireEvent.press(await findByTestId('attendance-1-preview'));
-    expect(await findByText('Attendance preview is web-only.')).toBeTruthy();
+    expect(await findByTestId('attendance-1-preview-error')).toBeTruthy();
+    expect(
+      getByTestId('attendance-1-preview-tooltip').props.accessibilityHint
+    ).toBe('Attendance preview is web-only.');
     expect(mockOpenAttendancePreview).not.toHaveBeenCalled();
+    expect(queryByText('Attendance preview is web-only.')).toBeNull();
   });
 
   it('General view shows ATTENDANCE generate and download actions', async () => {
@@ -443,12 +603,12 @@ describe('EditionPdfsTab', () => {
     expect(mockDownloadPrinted).not.toHaveBeenCalled();
   });
 
-  it('shows web-only download message on native', async () => {
+  it('downloads throw a web-only error on native instead of a banner', async () => {
     Object.defineProperty(Platform, 'OS', {
       configurable: true,
       get: () => 'ios',
     });
-    const { findByTestId, findByText } = renderWithClient(
+    const { findByTestId, getByTestId, queryByText } = renderWithClient(
       <EditionPdfsTab
         editionId={1}
         editionDivisionId={null}
@@ -456,11 +616,18 @@ describe('EditionPdfsTab', () => {
       />
     );
     fireEvent.press(await findByTestId('download-all-pdfs'));
-    expect(await findByText('PDF download is web-only.')).toBeTruthy();
+    expect(await findByTestId('download-all-pdfs-error')).toBeTruthy();
+    expect(
+      getByTestId('download-all-pdfs-tooltip').props.accessibilityHint
+    ).toBe('PDF download is web-only.');
     expect(mockDownloadMergedPostersPdf).not.toHaveBeenCalled();
+
     fireEvent.press(await findByTestId('attendance-1-download'));
-    expect(await findByText('PDF download is web-only.')).toBeTruthy();
+    expect(await findByTestId('attendance-1-download-error')).toBeTruthy();
     expect(mockDownloadAttendancePdf).not.toHaveBeenCalled();
+    expect(queryByText('PDF download is web-only.')).toBeNull();
+    // Downloads never trigger sound / haptics, not even on failure.
+    expect(mockPlayError).not.toHaveBeenCalled();
   });
 
   it('skips listEditionPosters when editionId is not finite', async () => {
@@ -474,5 +641,19 @@ describe('EditionPdfsTab', () => {
     await waitFor(() => {
       expect(mockListEditionPosters).not.toHaveBeenCalled();
     });
+  });
+
+  it('has no legacy action pill or press-tied banner state', () => {
+    const fs = require('fs') as typeof import('fs');
+    const path = require('path') as typeof import('path');
+    const src = fs.readFileSync(
+      path.join(__dirname, '..', 'EditionPdfsTab.tsx'),
+      'utf8'
+    );
+    expect(src).not.toContain('actionPillClass');
+    expect(src).not.toContain('setMessage');
+    expect(src).not.toContain('busyKey');
+    expect(src).toContain('useActionButtonStatus');
+    expect(src).toMatch(/DOWNLOAD_SUCCESS_HOLD_MS = 4000/);
   });
 });

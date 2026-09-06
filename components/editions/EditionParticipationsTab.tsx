@@ -3,24 +3,26 @@
  */
 
 import { useRegisterPageActions } from '@/components/chrome/PageChromeProvider';
+import ActionButton from '@/components/ui/ActionButton';
 import SingleSelectDropdown from '@/components/ui/SingleSelectDropdown';
 import MultiSelectDropdown from '@/components/ui/MultiSelectDropdown';
 import EllipsisText from '@/components/ui/EllipsisText';
+import { useActionButtonStatus } from '@/hooks/useActionButtonStatus';
 import { usePlayerPicker } from '@/hooks/usePlayerPicker';
 import { EditionParticipationsApiService } from '@/services/api/editionParticipationsApi';
 import {
   ApiEditionDivision,
   ApiEditionParticipation,
 } from '@/types/api/entities';
+import { confirmAction } from '@/utils/confirmAction';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import {
   applyDrop,
   EdListFrame,
   resolveDropTarget,
 } from './editionDivisionsDnD';
-import { confirmAction } from './editionLotteryUtils';
 import ParticipationFlagBadges from './ParticipationFlagBadges';
 import SortableRow, {
   moveInList,
@@ -161,6 +163,46 @@ function ParticipationCustomFieldValues({ p }: { p: ApiEditionParticipation }) {
   );
 }
 
+function ExcludeParticipationButton({
+  p,
+  onExcluded,
+}: {
+  p: ApiEditionParticipation;
+  onExcluded: () => Promise<void>;
+}) {
+  const { status, errorMessage, run } = useActionButtonStatus({
+    auditoryFeedback: true,
+    successHoldMs: 4000,
+  });
+
+  return (
+    <ActionButton
+      testID={`exclude-participation-${p.id_participation}`}
+      label="Exclude"
+      startIcon="remove-circle-outline"
+      accessibilityLabel={`Exclude ${playerLabel(p)}`}
+      variant="secondary"
+      size="sm"
+      iconColor="#dc2626"
+      status={status}
+      errorMessage={errorMessage ?? undefined}
+      className="p-2 flex-row items-center"
+      onPress={() => {
+        confirmAction(
+          'Exclude player',
+          `Exclude ${playerLabel(p)} from participations?`,
+          () => {
+            void run(async () => {
+              await participationsApi.deleteParticipation(p.id_participation);
+              await onExcluded();
+            });
+          }
+        );
+      }}
+    />
+  );
+}
+
 /**
  * Same-ED reordering is the shared primitive; when the "General" ED view is
  * active a drop can also land in another ED's list, which needs the measured
@@ -232,8 +274,7 @@ export default function EditionParticipationsTab({
 }: Props) {
   const [local, setLocal] = useState(participations);
   const [saving, setSaving] = useState(false);
-  const [adding, setAdding] = useState(false);
-  const [addError, setAddError] = useState<string | null>(null);
+  const addStatus = useActionButtonStatus({ auditoryFeedback: true });
   const [playerId, setPlayerId] = useState<number | null>(null);
   const [targetEdId, setTargetEdId] = useState<number | null>(
     selectedDivisionId
@@ -363,32 +404,13 @@ export default function EditionParticipationsTab({
     setLocal(prev => applyDrop(prev, fromEd, fromIndex, targetEd, toIndex));
   };
 
-  const onExclude = (p: ApiEditionParticipation) => {
-    if (editionFinalized || participationsLocked) return;
-    confirmAction(
-      'Exclude player',
-      `Exclude ${playerLabel(p)} from participations?`,
-      async () => {
-        try {
-          await participationsApi.deleteParticipation(p.id_participation);
-          await onRefresh();
-        } catch (e: any) {
-          Alert.alert('Exclude failed', e?.message || 'Unknown error');
-        }
-      }
-    );
-  };
-
-  const onAdd = async () => {
+  const onAdd = () => {
     if (editionFinalized) return;
-    const edId = selectedDivisionId ?? targetEdId;
-    if (playerId == null || edId == null) {
-      setAddError('Select a player and edition division.');
-      return;
-    }
-    setAdding(true);
-    setAddError(null);
-    try {
+    void addStatus.run(async () => {
+      const edId = selectedDivisionId ?? targetEdId;
+      if (playerId == null || edId == null) {
+        throw new Error('Select a player and edition division.');
+      }
       await participationsApi.createParticipation({
         edition_id: editionId,
         edition_division_id: edId,
@@ -397,11 +419,7 @@ export default function EditionParticipationsTab({
       setPlayerId(null);
       if (selectedDivisionId == null) setTargetEdId(null);
       await onRefresh();
-    } catch (e: any) {
-      setAddError(e?.message || 'Failed to add player');
-    } finally {
-      setAdding(false);
-    }
+    });
   };
 
   const originalById = useMemo(
@@ -596,22 +614,16 @@ export default function EditionParticipationsTab({
                   />
                 </View>
               )}
-              <Pressable
+              <ActionButton
                 testID="participations-add-button"
-                disabled={adding}
-                onPress={() => void onAdd()}
-                className={`px-3 py-2 rounded-lg ${
-                  adding ? 'bg-gray-300' : 'bg-blue-600'
-                }`}
-              >
-                <Text className="text-white text-sm font-medium">
-                  {adding ? 'Adding…' : 'Add'}
-                </Text>
-              </Pressable>
+                label="Add"
+                variant="primary"
+                size="sm"
+                status={addStatus.status}
+                errorMessage={addStatus.errorMessage ?? undefined}
+                onPress={onAdd}
+              />
             </View>
-            {addError && (
-              <Text className="text-sm text-red-600">{addError}</Text>
-            )}
           </View>
           {customFieldOptions.length > 0 && (
             <View testID="participations-custom-fields-picker" style={{ minWidth: 180 }}>
@@ -765,21 +777,10 @@ export default function EditionParticipationsTab({
                         />
                       )}
                       {!locked && !participationsLocked && (
-                        <Pressable
-                          testID={`exclude-participation-${p.id_participation}`}
-                          accessibilityLabel={`Exclude ${playerLabel(p)}`}
-                          onPress={() => onExclude(p)}
-                          className="p-2 flex-row items-center"
-                        >
-                          <Ionicons
-                            name="remove-circle-outline"
-                            size={18}
-                            color="#dc2626"
-                          />
-                          <Text className="ml-1 text-xs text-red-600">
-                            Exclude
-                          </Text>
-                        </Pressable>
+                        <ExcludeParticipationButton
+                          p={p}
+                          onExcluded={onRefresh}
+                        />
                       )}
                     </View>
                   </View>

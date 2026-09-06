@@ -344,6 +344,7 @@ export default function EditionScheduleMatchesBoard({
       });
     } catch (e: any) {
       setError(e?.message || 'Reorder failed');
+      throw e;
     } finally {
       setSaving(false);
     }

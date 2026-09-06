@@ -9,7 +9,7 @@ import {
   createTestQueryClient,
 } from '@/testing/createTestQueryClient';
 import React from 'react';
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 const mockGetSchedule = jest.fn();
 const mockReorderMatches = jest.fn();
@@ -33,6 +33,8 @@ jest.mock('@/utils/softDirtyNav', () => ({
   confirmDiscardDirty: (...args: unknown[]) => mockConfirmDiscardDirty(...args),
 }));
 
+let lastSavePromise: Promise<void> | undefined;
+
 function ChromeProbe() {
   const { actions } = usePageChrome();
   return (
@@ -46,7 +48,13 @@ function ChromeProbe() {
         value={actions?.canSave ? '1' : '0'}
       />
       {actions?.save ? (
-        <Btn testID="chrome-save" onPress={() => void actions.save?.()} />
+        <Btn
+          testID="chrome-save"
+          onPress={() => {
+            lastSavePromise = actions.save?.();
+            void lastSavePromise?.catch(() => {});
+          }}
+        />
       ) : null}
       {actions?.cancel ? (
         <Btn testID="chrome-cancel" onPress={() => actions.cancel?.()} />
@@ -461,6 +469,9 @@ describe('EditionScheduleMatchesBoard', () => {
     );
     fireEvent.press(getByTestId('match-move-down-10'));
     fireEvent.press(getByTestId('chrome-save'));
+    await act(async () => {
+      await expect(lastSavePromise).rejects.toThrow('boom');
+    });
     await waitFor(() => {
       expect(getByTestId('matches-reorder-error')).toBeTruthy();
     });

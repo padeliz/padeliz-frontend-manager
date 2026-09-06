@@ -4,12 +4,13 @@
 
 import AppLayout from '@/components/layout/AppLayout';
 import { useBreadcrumbSegments } from '@/components/layout/BreadcrumbProvider';
-import HeaderActionButton from '@/components/ui/HeaderActionButton';
+import ActionButton from '@/components/ui/ActionButton';
 import ManagerFileUpload, {
   PendingUploadFile,
   uploadPendingFiles,
 } from '@/components/ui/ManagerFileUpload';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { useActionButtonStatus } from '@/hooks/useActionButtonStatus';
 import { useResourceMetadata } from '@/hooks/useResourceMetadata';
 import { ResourceCreatePageProps } from '@/types/ui/pages';
 import { buildResourceBreadcrumbs } from '@/utils/buildResourceBreadcrumbs';
@@ -54,6 +55,7 @@ export default function ResourceCreatePage<
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mediaWarning, setMediaWarning] = useState<string | null>(null);
+  const saveStatus = useActionButtonStatus({ auditoryFeedback: true });
 
   const { getMetadata, getError, isLoading } = useResourceMetadata([
     resourceName,
@@ -115,8 +117,10 @@ export default function ResourceCreatePage<
     }
   };
 
-  const handleSave = async () => {
-    if (!metadata || !createResource) return;
+  const handleSave = async (): Promise<void> => {
+    if (!metadata || !createResource) {
+      throw new Error('Create functionality not available');
+    }
     setSaving(true);
     setError(null);
     setMediaWarning(null);
@@ -147,7 +151,7 @@ export default function ResourceCreatePage<
           fieldErrors[err.field] = err.message;
         });
         setErrors(fieldErrors);
-        return;
+        throw new Error('Validation failed');
       }
 
       const response = await createResource(formattedValues as Partial<T>);
@@ -181,32 +185,43 @@ export default function ResourceCreatePage<
             ? `/${metadata.resource_path}/${newId}`
             : null);
         if (!path) {
-          setError('Created but could not determine view path');
-          return;
+          const pathError = new Error(
+            'Created but could not determine view path'
+          );
+          setError(pathError.message);
+          throw pathError;
         }
         router.replace(path as any);
         return;
       }
 
-      setError('Created but could not determine new resource id');
+      const idError = new Error(
+        'Created but could not determine new resource id'
+      );
+      setError(idError.message);
+      throw idError;
     } catch (err: any) {
       if (err.errors && typeof err.errors === 'object') {
         setErrors(err.errors);
       } else {
         setError(err.message || 'Failed to create resource');
       }
+      throw err;
     } finally {
       setSaving(false);
     }
   };
 
   const headerActions = (
-    <HeaderActionButton
+    <ActionButton
       label="Save"
       variant="primary"
-      loading={saving}
+      status={saveStatus.status}
+      errorMessage={saveStatus.errorMessage ?? undefined}
       disabled={saving || metadataLoading || !metadata}
-      onPress={() => void handleSave()}
+      onPress={() => {
+        void saveStatus.run(handleSave);
+      }}
       testID="resource-create-save"
     />
   );
