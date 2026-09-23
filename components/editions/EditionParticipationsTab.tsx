@@ -3,11 +3,13 @@
  */
 
 import { useRegisterPageActions } from '@/components/chrome/PageChromeProvider';
+import CachedPdfImageReload from '@/components/editions/CachedPdfImageReload';
 import ActionButton from '@/components/ui/ActionButton';
 import SingleSelectDropdown from '@/components/ui/SingleSelectDropdown';
 import MultiSelectDropdown from '@/components/ui/MultiSelectDropdown';
 import EllipsisText from '@/components/ui/EllipsisText';
 import { useActionButtonStatus } from '@/hooks/useActionButtonStatus';
+import { useCachedPdfAvatarReload } from '@/hooks/useCachedPdfAvatarReload';
 import { usePlayerPicker } from '@/hooks/usePlayerPicker';
 import { EditionParticipationsApiService } from '@/services/api/editionParticipationsApi';
 import {
@@ -281,6 +283,12 @@ export default function EditionParticipationsTab({
   );
   const [frames, setFrames] = useState<EdListFrame[]>([]);
   const listHosts = useRef(new Map<number, View | null>());
+  const {
+    spinning: avatarSpinning,
+    errors: avatarErrors,
+    urlFor: avatarUrlFor,
+    reload: reloadAvatar,
+  } = useCachedPdfAvatarReload();
 
   useEffect(() => {
     setLocal(participations);
@@ -736,7 +744,24 @@ export default function EditionParticipationsTab({
                         testID={`drag-handle-${p.id_participation}`}
                       />
                     )}
-                    <Text className="text-gray-800 flex-1 mr-2 shrink">
+                    <CachedPdfImageReload
+                      testIdPrefix={`participation-avatar-${p.id_participation}`}
+                      imageUrl={avatarUrlFor(
+                        p.id_participation,
+                        p.pdf_avatar_url ?? null
+                      )}
+                      size={28}
+                      spinning={Boolean(avatarSpinning[p.id_participation])}
+                      errorReason={avatarErrors[p.id_participation] || null}
+                      onReload={() =>
+                        void reloadAvatar({
+                          key: p.id_participation,
+                          playerId: Number(p.player_id),
+                          collecting: Boolean(p.is_collecting_points),
+                        })
+                      }
+                    />
+                    <Text className="text-gray-800 flex-1 mr-2 shrink ml-2">
                       {playerLabel(p)}
                     </Text>
                     <ParticipationFlagBadges

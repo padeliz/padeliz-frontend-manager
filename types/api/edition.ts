@@ -168,20 +168,24 @@ export interface ReplacementRow {
   } | null;
   original_participation?: {
     id_participation?: number;
+    is_collecting_points?: boolean;
     player?: {
       id_player?: number;
       name?: string;
       first_name?: string;
       last_name?: string;
+      pdf_avatar_url?: string | null;
     } | null;
   } | null;
   substitute_participation?: {
     id_participation?: number;
+    is_collecting_points?: boolean;
     player?: {
       id_player?: number;
       name?: string;
       first_name?: string;
       last_name?: string;
+      pdf_avatar_url?: string | null;
     } | null;
   } | null;
   substitute_player?: {
@@ -189,6 +193,7 @@ export interface ReplacementRow {
     name?: string;
     first_name?: string;
     last_name?: string;
+    pdf_avatar_url?: string | null;
   } | null;
   [key: string]: unknown;
 }

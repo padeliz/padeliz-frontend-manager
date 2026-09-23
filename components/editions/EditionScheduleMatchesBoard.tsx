@@ -4,8 +4,8 @@
 
 import { useRegisterPageActions } from '@/components/chrome/PageChromeProvider';
 import CachedPdfImageReload from '@/components/editions/CachedPdfImageReload';
+import { useCachedPdfAvatarReload } from '@/hooks/useCachedPdfAvatarReload';
 import { queryKeys } from '@/lib/queryClient';
-import { PlayersApiService } from '@/services/api/playersApi';
 import { scheduleApi } from '@/services/api/scheduleApi';
 import {
   GameMatch,
@@ -32,8 +32,6 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import SortableRow from './SortableRow';
 
 export { completeRoundCount, isSparseMatch };
-
-const playersApi = new PlayersApiService();
 
 type Props = {
   editionDivisionId: number;
@@ -133,13 +131,12 @@ export default function EditionScheduleMatchesBoard({
   const [draftMatches, setDraftMatches] = useState<GameMatch[]>([]);
   const [touchedIds, setTouchedIds] = useState<Set<number>>(() => new Set());
   const [lastTouchCourt, setLastTouchCourt] = useState<number | null>(null);
-  const [avatarOverrides, setAvatarOverrides] = useState<
-    Record<number, string>
-  >({});
-  const [avatarSpinning, setAvatarSpinning] = useState<Record<number, boolean>>(
-    {}
-  );
-  const [avatarErrors, setAvatarErrors] = useState<Record<number, string>>({});
+  const {
+    spinning: avatarSpinning,
+    errors: avatarErrors,
+    urlFor: avatarUrlFor,
+    reload: reloadAvatarState,
+  } = useCachedPdfAvatarReload();
 
   const generateBlocked = isGenerateBlocked(state);
   const metrics = state.board_metrics ?? null;
@@ -383,8 +380,6 @@ export default function EditionScheduleMatchesBoard({
   });
 
   const reloadAvatar = async (participationId: number) => {
-    if (avatarSpinning[participationId]) return;
-
     const row = boardByParticipation.get(participationId);
     const participation = participationById.get(participationId);
     const playerId = Number(
@@ -392,53 +387,19 @@ export default function EditionScheduleMatchesBoard({
         participation?.player_id ??
         participation?.player?.id_player
     );
-    if (!Number.isFinite(playerId)) {
-      setAvatarErrors(prev => ({
-        ...prev,
-        [participationId]: 'Missing player for avatar.',
-      }));
-      return;
-    }
     const collecting = Boolean(
       row?.is_collecting_points ?? participation?.is_collecting_points ?? false
     );
-
-    setAvatarSpinning(prev => ({ ...prev, [participationId]: true }));
-    setAvatarErrors(prev => {
-      const next = { ...prev };
-      delete next[participationId];
-      return next;
+    await reloadAvatarState({
+      key: participationId,
+      playerId,
+      collecting,
     });
-
-    try {
-      const res = await playersApi.generatePdfAvatar(playerId, collecting);
-      const url = res?.data?.pdf_avatar_url ?? null;
-      if (url) {
-        setAvatarOverrides(prev => ({ ...prev, [participationId]: url }));
-      } else {
-        setAvatarErrors(prev => ({
-          ...prev,
-          [participationId]: 'Avatar URL missing in response.',
-        }));
-      }
-    } catch (e: any) {
-      setAvatarErrors(prev => ({
-        ...prev,
-        [participationId]: e?.message || 'Failed to generate avatar.',
-      }));
-    } finally {
-      setAvatarSpinning(prev => {
-        const next = { ...prev };
-        delete next[participationId];
-        return next;
-      });
-    }
   };
 
   const avatarForParticipation = (participationId: number, size = 28) => {
     const row = boardByParticipation.get(participationId);
-    const url =
-      avatarOverrides[participationId] ?? row?.pdf_avatar_url ?? null;
+    const url = avatarUrlFor(participationId, row?.pdf_avatar_url ?? null);
     return (
       <CachedPdfImageReload
         testIdPrefix={`avatar-${participationId}`}

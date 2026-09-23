@@ -2,12 +2,12 @@ import CachedPdfImageReload from '@/components/editions/CachedPdfImageReload';
 import ActionButton from '@/components/ui/ActionButton';
 import SingleSelectDropdown from '@/components/ui/SingleSelectDropdown';
 import { useActionButtonStatus } from '@/hooks/useActionButtonStatus';
+import { useCachedPdfAvatarReload } from '@/hooks/useCachedPdfAvatarReload';
 import { queryKeys } from '@/lib/queryClient';
 import { EditionLotteriesApiService } from '@/services/api/editionLotteriesApi';
 import { EditionLotteryPrizesApiService } from '@/services/api/editionLotteryPrizesApi';
 import { EditionLotteryRulesApiService } from '@/services/api/editionLotteryRulesApi';
 import { lotteryLiveApi } from '@/services/api/lotteryLiveApi';
-import { PlayersApiService } from '@/services/api/playersApi';
 import { ApiEditionDivision, ApiEditionLottery, ApiEditionLotteryPrize } from '@/types/api/entities';
 import { ApiEditionLotteryRule } from '@/types/api/edition';
 import {
@@ -169,7 +169,6 @@ function LotteryDeepLinks({
 const lotteriesApi = new EditionLotteriesApiService();
 const lotteryPrizesApi = new EditionLotteryPrizesApiService();
 const rulesApi = new EditionLotteryRulesApiService();
-const playersApi = new PlayersApiService();
 
 function playerLabelFromParticipation(p: any): string {
   const player = p?.player ?? p?.drawnParticipation?.player;
@@ -686,13 +685,12 @@ function EditionLotteryLuckiesMode({
 }) {
   const queryClient = useQueryClient();
   const [infoOpenId, setInfoOpenId] = useState<number | null>(null);
-  const [avatarOverrides, setAvatarOverrides] = useState<Record<number, string>>(
-    {}
-  );
-  const [avatarSpinning, setAvatarSpinning] = useState<Record<number, boolean>>(
-    {}
-  );
-  const [avatarErrors, setAvatarErrors] = useState<Record<number, string>>({});
+  const {
+    spinning: avatarSpinning,
+    errors: avatarErrors,
+    urlFor: avatarUrlFor,
+    reload: reloadAvatarState,
+  } = useCachedPdfAvatarReload();
   const [nowTick, setNowTick] = useState(() => Date.now());
 
   const prizesQuery = useQuery({
@@ -777,8 +775,6 @@ function EditionLotteryLuckiesMode({
 
   const onReloadAvatar = async (lucky: any) => {
     const idLucky = Number(lucky.id_lucky);
-    if (avatarSpinning[idLucky]) return;
-
     const participation =
       lucky.drawn_participation || lucky.drawnParticipation;
     const playerId = Number(
@@ -786,45 +782,12 @@ function EditionLotteryLuckiesMode({
         participation?.player?.id_player ??
         participation?.player?.player_id
     );
-    if (!Number.isFinite(playerId)) {
-      setAvatarErrors(prev => ({
-        ...prev,
-        [idLucky]: 'Missing player for avatar.',
-      }));
-      return;
-    }
     const collecting = Boolean(participation?.is_collecting_points ?? false);
-
-    setAvatarSpinning(prev => ({ ...prev, [idLucky]: true }));
-    setAvatarErrors(prev => {
-      const next = { ...prev };
-      delete next[idLucky];
-      return next;
+    await reloadAvatarState({
+      key: idLucky,
+      playerId,
+      collecting,
     });
-
-    try {
-      const res = await playersApi.generatePdfAvatar(playerId, collecting);
-      const url = res?.data?.pdf_avatar_url ?? null;
-      if (url) {
-        setAvatarOverrides(prev => ({ ...prev, [idLucky]: url }));
-      } else {
-        setAvatarErrors(prev => ({
-          ...prev,
-          [idLucky]: 'Avatar URL missing in response.',
-        }));
-      }
-    } catch (e: any) {
-      setAvatarErrors(prev => ({
-        ...prev,
-        [idLucky]: e?.message || 'Failed to generate avatar.',
-      }));
-    } finally {
-      setAvatarSpinning(prev => {
-        const next = { ...prev };
-        delete next[idLucky];
-        return next;
-      });
-    }
   };
 
   const luckyGroups = prizeLines.map(line => ({
@@ -883,9 +846,10 @@ function EditionLotteryLuckiesMode({
                 const primary = primaryLuckyLifecycle(lucky);
                 const rows = luckyLifecycleRows(lucky);
                 const idLucky = Number(lucky.id_lucky);
-                const avatarUrl =
-                  avatarOverrides[idLucky] ??
-                  (lucky.pdf_avatar_url as string | null);
+                const avatarUrl = avatarUrlFor(
+                  idLucky,
+                  (lucky.pdf_avatar_url as string | null) ?? null
+                );
                 const infoOpen = infoOpenId === lucky.id_lucky;
                 const rejected = lucky.rejected_at != null;
                 const phones = pending ? phoneNumbersFromLucky(lucky) : [];

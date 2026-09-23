@@ -25,8 +25,9 @@ const mockCreate = jest.fn();
 const mockPatch = jest.fn();
 const mockDestroy = jest.fn();
 const mockGetPlayers = jest.fn(async () => ({
-  data: [{ id_player: 5, name: 'Guest Eve' }],
+  data: [{ id_player: 5, name: 'Guest Eve', pdf_avatar_url: 'https://cdn.example/eve.png' }],
 }));
+const mockGeneratePdfAvatar = jest.fn();
 const mockPlaySuccess = jest.fn(async () => undefined);
 const mockPlayError = jest.fn(async () => undefined);
 
@@ -50,8 +51,13 @@ jest.mock('@/services/api/playersApi', () => ({
   PlayersApiService: jest.fn().mockImplementation(() => ({
     getPlayers: (...args: unknown[]) => mockGetPlayers(...args),
     getPlayer: jest.fn(async () => ({
-      data: { id_player: 5, name: 'Guest Eve' },
+      data: {
+        id_player: 5,
+        name: 'Guest Eve',
+        pdf_avatar_url: 'https://cdn.example/eve.png',
+      },
     })),
+    generatePdfAvatar: (...args: unknown[]) => mockGeneratePdfAvatar(...args),
   })),
 }));
 
@@ -546,5 +552,130 @@ describe('EditionReplacementsTab', () => {
     expect(src).toContain("import { confirmAction } from '@/utils/confirmAction'");
     expect(src).toContain('useActionButtonStatus');
     expect(src).toContain('confirmAction(');
+  });
+
+  it('shows list avatars for original and substitute when nested URLs set', async () => {
+    mockGetSchedule.mockResolvedValue(scheduleWithOnePair());
+    mockList.mockResolvedValue({
+      data: [
+        {
+          id_replacement: 7,
+          original_participation_id: 1,
+          substitute_participation_id: 2,
+          original_participation: {
+            id_participation: 1,
+            is_collecting_points: true,
+            player: {
+              id_player: 1,
+              name: 'Original Alice',
+              pdf_avatar_url: 'https://cdn.example/a.png',
+            },
+          },
+          substitute_participation: {
+            id_participation: 2,
+            is_collecting_points: false,
+            player: {
+              id_player: 2,
+              name: 'Sub Bob',
+              pdf_avatar_url: 'https://cdn.example/b.png',
+            },
+          },
+        },
+      ],
+    });
+    const { findByTestId } = renderWithProviders(
+      <EditionReplacementsTab editionId={36} editionDivisionId={9} />
+    );
+    expect(
+      await findByTestId('replacement-original-avatar-7-present')
+    ).toBeTruthy();
+    expect(
+      await findByTestId('replacement-substitute-avatar-7-present')
+    ).toBeTruthy();
+  });
+
+  it('reloads substitute guest avatar with collecting true', async () => {
+    mockGeneratePdfAvatar.mockResolvedValue({
+      data: { pdf_avatar_url: 'https://cdn.example/guest.png' },
+    });
+    mockGetSchedule.mockResolvedValue(scheduleWithOnePair());
+    mockList.mockResolvedValue({
+      data: [
+        {
+          id_replacement: 8,
+          original_participation_id: 1,
+          substitute_player_id: 5,
+          original_participation: {
+            id_participation: 1,
+            is_collecting_points: true,
+            player: { id_player: 1, name: 'Original Alice', pdf_avatar_url: null },
+          },
+          substitute_player: {
+            id_player: 5,
+            name: 'Guest Eve',
+            pdf_avatar_url: null,
+          },
+        },
+      ],
+    });
+    const { findByTestId } = renderWithProviders(
+      <EditionReplacementsTab editionId={36} editionDivisionId={9} />
+    );
+    fireEvent.press(
+      await findByTestId('replacement-substitute-avatar-8-reload')
+    );
+    await waitFor(() => {
+      expect(mockGeneratePdfAvatar).toHaveBeenCalledWith(5, true);
+    });
+    expect(
+      await findByTestId('replacement-substitute-avatar-8-present')
+    ).toBeTruthy();
+  });
+
+  it('passes imageUrl on original and substitute dropdown options', async () => {
+    mockGetSchedule.mockResolvedValue({
+      data: {
+        is_finalized: false,
+        schedule: { allow_replacements: true },
+        participations: [
+          {
+            id_participation: 1,
+            pdf_avatar_url: 'https://cdn.example/alice.png',
+            player: { name: 'Original Alice' },
+          },
+          {
+            id_participation: 2,
+            pdf_avatar_url: 'https://cdn.example/bob.png',
+            player: { name: 'Sub Bob' },
+          },
+        ],
+        matches: [],
+      },
+    });
+    mockList.mockResolvedValue({ data: [] });
+    const { findByTestId, findByText, getByText } = renderWithProviders(
+      <EditionReplacementsTab editionId={36} editionDivisionId={9} />
+    );
+
+    const original = await findByTestId('replacements-original-picker');
+    fireEvent.press(within(original).getByText('Select original participation'));
+    const originalImg = await findByTestId('dropdown-option-image-1');
+    expect(originalImg.props.source).toEqual({
+      uri: 'https://cdn.example/alice.png',
+    });
+    fireEvent.press(getByText('Original Alice'));
+
+    const substitute = await findByTestId('replacements-substitute-picker');
+    fireEvent.press(within(substitute).getByText('None'));
+    expect(await findByText('Participation · Sub Bob')).toBeTruthy();
+    const partImg = await findByTestId('dropdown-option-image-part:2');
+    expect(partImg.props.source).toEqual({
+      uri: 'https://cdn.example/bob.png',
+    });
+    await waitFor(() => expect(mockGetPlayers).toHaveBeenCalled());
+    const playerImg = await findByTestId('dropdown-option-image-player:5');
+    expect(playerImg.props.source).toEqual({
+      uri: 'https://cdn.example/eve.png',
+    });
   });
 });

@@ -1,8 +1,10 @@
 import { useRegisterPageActions } from '@/components/chrome/PageChromeProvider';
+import CachedPdfImageReload from '@/components/editions/CachedPdfImageReload';
 import { EditionGeneralEditHint } from '@/components/editions/editionGeneralHint';
 import ActionButton from '@/components/ui/ActionButton';
 import SingleSelectDropdown from '@/components/ui/SingleSelectDropdown';
 import { useActionButtonStatus } from '@/hooks/useActionButtonStatus';
+import { useCachedPdfAvatarReload } from '@/hooks/useCachedPdfAvatarReload';
 import { usePlayerPicker } from '@/hooks/usePlayerPicker';
 import { queryKeys } from '@/lib/queryClient';
 import { replacementsApi } from '@/services/api/replacementsApi';
@@ -109,6 +111,12 @@ export default function EditionReplacementsTab({
 
   const createStatus = useActionButtonStatus({ auditoryFeedback: true });
   const saveStatus = useActionButtonStatus({ auditoryFeedback: true });
+  const {
+    spinning: avatarSpinning,
+    errors: avatarErrors,
+    urlFor: avatarUrlFor,
+    reload: reloadAvatar,
+  } = useCachedPdfAvatarReload();
 
   const isGeneral = editionDivisionId == null;
 
@@ -184,24 +192,29 @@ export default function EditionReplacementsTab({
       participations.map(p => ({
         label: playerLabel(p),
         value: p.id_participation,
+        imageUrl: (p.pdf_avatar_url as string | null | undefined) ?? null,
       })),
     [participations]
   );
 
   const substituteOptions = useMemo(() => {
-    const opts: Array<{ label: string; value: string }> = [
-      { label: 'None', value: NONE_SUBSTITUTE },
-    ];
+    const opts: Array<{
+      label: string;
+      value: string;
+      imageUrl?: string | null;
+    }> = [{ label: 'None', value: NONE_SUBSTITUTE }];
     participations.forEach(p => {
       opts.push({
         label: `Participation · ${playerLabel(p)}`,
         value: `part:${p.id_participation}`,
+        imageUrl: (p.pdf_avatar_url as string | null | undefined) ?? null,
       });
     });
     (playerPicker.options || []).forEach(opt => {
       opts.push({
         label: `Player · ${opt.label}`,
         value: `player:${opt.value}`,
+        imageUrl: opt.imageUrl ?? null,
       });
     });
     return opts;
@@ -366,7 +379,11 @@ export default function EditionReplacementsTab({
             testID="replacements-create-form-row"
             className="flex-row flex-wrap items-end gap-2"
           >
-            <View className="flex-1" style={{ minWidth: 160 }}>
+            <View
+              testID="replacements-original-picker"
+              className="flex-1"
+              style={{ minWidth: 160 }}
+            >
               <Text className="text-xs text-gray-500 mb-1">
                 Original participation
               </Text>
@@ -476,6 +493,67 @@ export default function EditionReplacementsTab({
                   {edLabel(r)}
                 </Text>
               )}
+              <View className="flex-row items-center gap-2 mb-1">
+                <CachedPdfImageReload
+                  testIdPrefix={`replacement-original-avatar-${r.id_replacement}`}
+                  imageUrl={avatarUrlFor(
+                    r.id_replacement * 10 + 1,
+                    r.original_participation?.player?.pdf_avatar_url ?? null
+                  )}
+                  size={28}
+                  spinning={Boolean(
+                    avatarSpinning[r.id_replacement * 10 + 1]
+                  )}
+                  errorReason={
+                    avatarErrors[r.id_replacement * 10 + 1] || null
+                  }
+                  onReload={() => {
+                    const playerId = Number(
+                      r.original_participation?.player?.id_player
+                    );
+                    void reloadAvatar({
+                      key: r.id_replacement * 10 + 1,
+                      playerId,
+                      collecting: Boolean(
+                        r.original_participation?.is_collecting_points
+                      ),
+                    });
+                  }}
+                />
+                <CachedPdfImageReload
+                  testIdPrefix={`replacement-substitute-avatar-${r.id_replacement}`}
+                  imageUrl={avatarUrlFor(
+                    r.id_replacement * 10 + 2,
+                    r.substitute_participation?.player?.pdf_avatar_url ??
+                      r.substitute_player?.pdf_avatar_url ??
+                      null
+                  )}
+                  size={28}
+                  spinning={Boolean(
+                    avatarSpinning[r.id_replacement * 10 + 2]
+                  )}
+                  errorReason={
+                    avatarErrors[r.id_replacement * 10 + 2] || null
+                  }
+                  onReload={() => {
+                    const playerId = Number(
+                      r.substitute_participation?.player?.id_player ??
+                        r.substitute_player?.id_player ??
+                        r.substitute_player_id
+                    );
+                    const collecting = r.substitute_participation
+                      ? Boolean(
+                          r.substitute_participation.is_collecting_points
+                        )
+                      : true;
+                    void reloadAvatar({
+                      key: r.id_replacement * 10 + 2,
+                      playerId,
+                      collecting,
+                    });
+                  }}
+                />
+              </View>
               <Text className="text-sm text-gray-800">
                 #{r.id_replacement}:{' '}
                 {nameForParticipationId(

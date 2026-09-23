@@ -152,6 +152,7 @@ export interface ApiEditionParticipation {
   division_id: number;
   sort_order?: number;
   is_collecting_points?: boolean;
+  pdf_avatar_url?: string | null;
   absence_reason?: 'SICK' | 'FORGOT' | 'EXAMS' | 'RECONSIDERED';
   ban_reason?: 'LEFT SUDDENLY' | 'AGGRESSIVE PLAYER' | 'LIBIDINOUS' | '';
   inserted_at: number;

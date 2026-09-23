@@ -15,6 +15,7 @@ const mockUpdate = jest.fn();
 const mockGetPlayers = jest.fn(async () => ({
   data: [{ id_player: 1, name: 'Alice' }],
 }));
+const mockGeneratePdfAvatar = jest.fn();
 
 jest.mock('@/services/api/editionParticipationsApi', () => ({
   EditionParticipationsApiService: jest.fn().mockImplementation(() => ({
@@ -31,6 +32,7 @@ jest.mock('@/services/api/playersApi', () => ({
     getPlayer: jest.fn(async () => ({
       data: { id_player: 1, name: 'Alice' },
     })),
+    generatePdfAvatar: (...args: unknown[]) => mockGeneratePdfAvatar(...args),
   })),
 }));
 
@@ -848,5 +850,78 @@ describe('EditionParticipationsTab ActionButton wiring', () => {
     expect(src).not.toContain('Alert,');
     // confirmAction wraps run(), never the other way round.
     expect(src).not.toMatch(/void run\(async[\s\S]{0,400}?confirmAction\(/);
+  });
+});
+
+describe('EditionParticipationsTab avatars', () => {
+  beforeEach(() => {
+    mockGeneratePdfAvatar.mockReset();
+    jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+  });
+
+  it('shows avatar present when pdf_avatar_url is set and reload when missing', () => {
+    const { getByTestId } = renderTab({
+      editionFinalized: false,
+      selectedDivisionId: 9,
+      participationsOverride: [
+        {
+          ...participations[0],
+          pdf_avatar_url: 'https://cdn.example/a.png',
+        },
+        {
+          ...participations[1],
+          edition_division_id: 9,
+          division_id: 2,
+          pdf_avatar_url: null,
+        },
+      ],
+    });
+    expect(getByTestId('participation-avatar-100-present')).toBeTruthy();
+    expect(getByTestId('participation-avatar-101-reload')).toBeTruthy();
+  });
+
+  it('reloads with local collecting flag and swaps to present', async () => {
+    mockGeneratePdfAvatar.mockResolvedValue({
+      data: { pdf_avatar_url: 'https://cdn.example/b.png' },
+    });
+    const { getByTestId, queryByTestId } = renderTab({
+      editionFinalized: false,
+      selectedDivisionId: 10,
+      participationsOverride: [
+        {
+          ...participations[1],
+          pdf_avatar_url: null,
+          is_collecting_points: false,
+        },
+      ],
+    });
+    fireEvent.press(getByTestId('participation-avatar-101-reload'));
+    await waitFor(() => {
+      expect(mockGeneratePdfAvatar).toHaveBeenCalledWith(2, false);
+    });
+    await waitFor(() => {
+      expect(getByTestId('participation-avatar-101-present')).toBeTruthy();
+    });
+    expect(queryByTestId('participation-avatar-101-reload')).toBeNull();
+  });
+
+  it('surfaces avatar reload failures', async () => {
+    mockGeneratePdfAvatar.mockRejectedValue(new Error('avatar boom'));
+    const { getByTestId } = renderTab({
+      editionFinalized: false,
+      selectedDivisionId: 9,
+      participationsOverride: [
+        {
+          ...participations[0],
+          pdf_avatar_url: null,
+        },
+      ],
+    });
+    fireEvent.press(getByTestId('participation-avatar-100-reload'));
+    await waitFor(() => {
+      expect(getByTestId('participation-avatar-100-error')).toHaveTextContent(
+        'avatar boom'
+      );
+    });
   });
 });
