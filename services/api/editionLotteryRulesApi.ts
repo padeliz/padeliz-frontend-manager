@@ -65,6 +65,29 @@ export class EditionLotteryRulesApiService extends BaseApiService {
     );
   }
 
+  async patchRule(
+    id: number,
+    data: Partial<ApiEditionLotteryRule>
+  ): Promise<{ data: ApiEditionLotteryRule }> {
+    return this.patch<{ data: ApiEditionLotteryRule }>(
+      `/edition-lottery-rules/${id}`,
+      data
+    );
+  }
+
+  async reorderLotteryRules(
+    lotteryId: number,
+    lotteryRuleIds: number[]
+  ): Promise<{ data: ApiEditionLotteryRule[] }> {
+    return this.post<{ data: ApiEditionLotteryRule[] }>(
+      '/edition-lottery-rules/reorder',
+      {
+        lottery_id: lotteryId,
+        lottery_rule_ids: lotteryRuleIds,
+      }
+    );
+  }
+
   async deleteRule(id: number): Promise<void> {
     return this.delete(`/edition-lottery-rules/${id}`);
   }

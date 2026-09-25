@@ -60,9 +60,17 @@ export function withLotteryQuery(
   href: string,
   lotteryId: number | null
 ): string {
-  if (lotteryId == null) return href;
-  const sep = href.includes('?') ? '&' : '?';
-  return `${href}${sep}lottery=${lotteryId}`;
+  const qIndex = href.indexOf('?');
+  const path = qIndex >= 0 ? href.slice(0, qIndex) : href;
+  const existing = qIndex >= 0 ? href.slice(qIndex + 1) : '';
+  const search = new URLSearchParams(existing);
+  if (lotteryId == null) {
+    search.delete('lottery');
+  } else {
+    search.set('lottery', String(lotteryId));
+  }
+  const qs = search.toString();
+  return qs ? `${path}?${qs}` : path;
 }
 
 export function buildEditionTopTabs(

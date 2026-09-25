@@ -39,28 +39,14 @@ export const queryKeys = {
     ['lotteryLive', lotteryId] as const,
   editionLotteries: (editionId: number | string) =>
     ['editionLotteries', editionId] as const,
-  editionLotteryRules: (
-    editionId: number | string,
-    editionDivisionId: number | null,
-    lotteryId: number | string | null = null
-  ) => ['editionLotteryRules', editionId, editionDivisionId, lotteryId] as const,
+  editionLotteryRules: (lotteryId: number | string) =>
+    ['editionLotteryRules', lotteryId] as const,
   editionLotteryPrizes: (lotteryId: number | string) =>
     ['editionLotteryPrizes', lotteryId] as const,
-  editionLotteryPrizesWithLuckies: (
-    editionId: number | string,
-    editionDivisionId: number | null,
-    lotteryId: number | string | null = null
-  ) =>
-    [
-      'editionLotteryPrizesWithLuckies',
-      editionId,
-      editionDivisionId,
-      lotteryId,
-    ] as const,
-  editionLotteryLuckies: (
-    editionId: number | string,
-    editionDivisionId: number | null
-  ) => ['editionLotteryLuckies', editionId, editionDivisionId] as const,
+  editionLotteryPrizesWithLuckies: (lotteryId: number | string) =>
+    ['editionLotteryPrizesWithLuckies', lotteryId] as const,
+  editionLotteryLuckies: (lotteryId: number | string) =>
+    ['editionLotteryLuckies', lotteryId] as const,
   lotteryPrizesBoard: (lotteryId: number | string) =>
     ['lotteryPrizesBoard', lotteryId] as const,
   replacements: (editionDivisionId: number | string) =>

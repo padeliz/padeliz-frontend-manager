@@ -262,6 +262,7 @@ export interface ApiEditionLotteryPrize {
   sponsor?: ApiSponsor | null;
   rules?: unknown[];
   luckies?: ApiEditionLuckyOne[];
+  rules_count?: number;
   rule_prize_quantity_total?: number;
   activity_at?: number | null;
 }
@@ -277,6 +278,7 @@ export interface ApiEditionLottery {
   lottery_prizes?: ApiEditionLotteryPrize[];
   rules?: unknown[];
   luckies?: ApiEditionLuckyOne[];
+  has_luckies?: boolean;
 }
 
 export interface ApiEditionLuckyOne {

@@ -5,6 +5,9 @@ import {
   createTestQueryClient,
 } from '@/testing/createTestQueryClient';
 import LotteryLiveKiosk from '@/components/lottery/LotteryLiveKiosk';
+import fs from 'fs';
+import path from 'path';
+import { Platform } from 'react-native';
 
 const mockLive = jest.fn();
 const mockAnnounce = jest.fn(async () => ({
@@ -81,6 +84,8 @@ const prizeLucky = {
 };
 
 describe('LotteryLiveKiosk', () => {
+  const originalOs = Platform.OS;
+
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
@@ -100,6 +105,10 @@ describe('LotteryLiveKiosk', () => {
   });
 
   afterEach(() => {
+    Object.defineProperty(Platform, 'OS', {
+      configurable: true,
+      get: () => originalOs,
+    });
     cleanup();
     jest.useRealTimers();
   });
@@ -221,6 +230,10 @@ describe('LotteryLiveKiosk', () => {
   });
 
   it('renders still prize media with expected uri', async () => {
+    Object.defineProperty(Platform, 'OS', {
+      configurable: true,
+      get: () => 'web',
+    });
     const mediaUrl = 'https://example.com/liliac.png';
     mockLive.mockResolvedValue({
       data: {
@@ -242,14 +255,21 @@ describe('LotteryLiveKiosk', () => {
         accepted: [],
       },
     });
-    const { findByText, findByTestId } = renderKiosk();
+    const { findByText, UNSAFE_getByProps } = renderKiosk();
     expect(await findByText('Liliac Wine')).toBeTruthy();
-    const media = await findByTestId('lottery-live-prize-media');
+    const media = UNSAFE_getByProps({
+      'data-testid': 'lottery-live-prize-media',
+    });
+    expect(media.props.testID).toBeUndefined();
     const src = media.props.src ?? media.props.source?.uri;
     expect(src).toBe(mediaUrl);
   });
 
   it('renders video prize media element', async () => {
+    Object.defineProperty(Platform, 'OS', {
+      configurable: true,
+      get: () => 'web',
+    });
     const mediaUrl = 'https://example.com/sticker.mp4';
     mockLive.mockResolvedValue({
       data: {
@@ -271,8 +291,31 @@ describe('LotteryLiveKiosk', () => {
         accepted: [],
       },
     });
-    const { findByText, findByTestId } = renderKiosk();
+    const { findByText, UNSAFE_getByProps } = renderKiosk();
     expect(await findByText('MiniTour Sticker')).toBeTruthy();
-    expect(await findByTestId('lottery-live-prize-media')).toBeTruthy();
+    const media = UNSAFE_getByProps({
+      'data-testid': 'lottery-live-prize-media',
+    });
+    expect(media.props.testID).toBeUndefined();
+    expect(media.props.src).toBe(mediaUrl);
+  });
+
+  it('uses data-testid on raw video and img createElement, not testID', () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, '..', 'LotteryLiveKiosk.tsx'),
+      'utf8'
+    );
+    expect(src).toMatch(
+      /createElement\(\s*['"]video['"][\s\S]*?['"]data-testid['"]\s*:/
+    );
+    expect(src).toMatch(
+      /createElement\(\s*['"]img['"][\s\S]*?['"]data-testid['"]\s*:/
+    );
+    expect(src).not.toMatch(
+      /createElement\(\s*['"]video['"][\s\S]*?\btestID\s*:/
+    );
+    expect(src).not.toMatch(
+      /createElement\(\s*['"]img['"][\s\S]*?\btestID\s*:/
+    );
   });
 });

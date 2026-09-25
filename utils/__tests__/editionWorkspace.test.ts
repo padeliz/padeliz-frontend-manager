@@ -93,6 +93,15 @@ describe('editionWorkspace', () => {
     ).toBe('/editions/1/lottery/rules?ed=9&lottery=3');
   });
 
+  it('deletes lottery from href when id is null', () => {
+    expect(
+      withLotteryQuery('/editions/1/lottery/prizes?lottery=99', null)
+    ).toBe('/editions/1/lottery/prizes');
+    expect(
+      withLotteryQuery('/editions/1/lottery/prizes?ed=9&lottery=99', null)
+    ).toBe('/editions/1/lottery/prizes?ed=9');
+  });
+
   it('preserves lottery on top lottery tab href', () => {
     const tabs = buildEditionTopTabs(42, 7, 3);
     expect(tabs.find(t => t.label === 'Lottery')?.href).toContain('lottery=3');

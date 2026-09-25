@@ -24,6 +24,18 @@ interface AppLayoutProps {
   footer?: React.ReactNode;
 }
 
+/** Leaf trail consumer — keeps AppLayoutChrome / content off breadcrumb state. */
+function BreadcrumbSlot() {
+  const items = useBreadcrumbTrail();
+  if (items.length === 0) return null;
+  return <Breadcrumbs items={items} />;
+}
+
+/** Leaf trail consumer — keeps AppLayoutChrome / content off subtab entry. */
+function SubTabBarSlot() {
+  return useSubTabBarTrail();
+}
+
 function AppLayoutChrome({
   children,
   title,
@@ -35,8 +47,6 @@ function AppLayoutChrome({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user } = useAuth();
   const pathname = usePathname();
-  const breadcrumbItems = useBreadcrumbTrail();
-  const subTabBar = useSubTabBarTrail();
   const { visibility } = useLayoutChrome();
 
   const toggleSidebar = () => {
@@ -84,9 +94,7 @@ function AppLayoutChrome({
         ) : null}
 
         <View className="flex-1 min-h-0 flex-col">
-          {visibility.breadcrumbs && breadcrumbItems.length > 0 ? (
-            <Breadcrumbs items={breadcrumbItems} />
-          ) : null}
+          {visibility.breadcrumbs ? <BreadcrumbSlot /> : null}
 
           {visibility.header && showPageHeader ? (
             <View
@@ -122,7 +130,7 @@ function AppLayoutChrome({
             <View testID="app-tab-bar">{tabBar}</View>
           ) : null}
 
-          {visibility.subtabs ? subTabBar : null}
+          {visibility.subtabs ? <SubTabBarSlot /> : null}
 
           <View className="flex-1 min-h-0" testID="app-content-column">
             <AppContentScroll>{children}</AppContentScroll>

@@ -5,7 +5,7 @@ import {
 } from '@/components/layout/BreadcrumbProvider';
 import { SegmentFocusContext } from '@/components/layout/__tests__/breadcrumbFocusTestContext';
 import { buildResourceBreadcrumbs } from '@/utils/buildResourceBreadcrumbs';
-import { render, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 import { Text, View } from 'react-native';
 
@@ -285,5 +285,50 @@ describe('BreadcrumbProvider', () => {
     expect(() =>
       render(<SegmentRegistrar id="x" items={[{ label: 'X' }]} />)
     ).not.toThrow();
+  });
+
+  it('does not re-render a stable segment registrar when a sibling updates items', async () => {
+    let stableRenders = 0;
+    const stableItems = [{ label: 'Stable', href: '/stable' }];
+
+    function StableSegment() {
+      stableRenders += 1;
+      useBreadcrumbSegments('stable', stableItems, 0);
+      return <Text testID="stable-renders">{String(stableRenders)}</Text>;
+    }
+
+    function FlipSegment() {
+      const [n, setN] = React.useState(0);
+      useBreadcrumbSegments('flip', [{ label: `Flip${n}` }], 1);
+      return (
+        <Text testID="flip-items" onPress={() => setN(v => v + 1)}>
+          flip
+        </Text>
+      );
+    }
+
+    const { getByTestId } = render(
+      <BreadcrumbProvider>
+        <SegmentFocusContext.Provider value={true}>
+          <StableSegment />
+          <FlipSegment />
+        </SegmentFocusContext.Provider>
+        <TrailProbe />
+      </BreadcrumbProvider>
+    );
+
+    await waitFor(() => {
+      expect(getByTestId('trail').props.children).toContain('Flip0');
+    });
+    const afterMount = Number(getByTestId('stable-renders').props.children);
+
+    fireEvent.press(getByTestId('flip-items'));
+
+    await waitFor(() => {
+      expect(getByTestId('trail').props.children).toContain('Flip1');
+    });
+    expect(Number(getByTestId('stable-renders').props.children)).toBe(
+      afterMount
+    );
   });
 });

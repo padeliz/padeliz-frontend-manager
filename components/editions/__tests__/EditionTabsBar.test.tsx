@@ -1,5 +1,5 @@
 import EditionTabsBar from '@/components/editions/EditionTabsBar';
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
 
 const mockPathname = { value: '/editions/1/lottery/prizes' };
@@ -37,5 +37,29 @@ describe('EditionTabsBar', () => {
     expect(getByTestId('edition-tab-Rules').props.className).toContain(
       'bg-gray-100'
     );
+  });
+
+  it('disabled live chip prevents press and shows disabled styling', () => {
+    const onPress = jest.fn();
+    mockPathname.value = '/editions/1/lottery/prizes';
+    const { getByTestId } = render(
+      <EditionTabsBar
+        tabs={[
+          {
+            label: 'Open LIVE lottery',
+            href: '/lottery-live/1',
+            match: '/lottery-live',
+            variant: 'live',
+            disabled: true,
+            onPress,
+          },
+        ]}
+      />
+    );
+    const chip = getByTestId('open-live-lottery');
+    expect(chip.props.accessibilityState?.disabled).toBe(true);
+    expect(String(chip.props.className)).toContain('opacity-60');
+    fireEvent.press(chip);
+    expect(onPress).not.toHaveBeenCalled();
   });
 });

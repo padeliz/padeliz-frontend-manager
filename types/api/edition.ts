@@ -287,13 +287,23 @@ export interface ApiEditionLotteryRule {
   gender?: string | null;
   has_social_status?: boolean | null;
   legal_age?: boolean | null;
+  luckies_count?: number;
   lottery_prize?: {
     id_lottery_prize?: number;
     lottery_id?: number;
     prize_id?: number;
     sponsor_id?: number | null;
-    prize?: { name?: string | null } | null;
+    prize_quantity?: number;
+    rule_prize_quantity_total?: number;
+    prize?: { name?: string | null; media_path?: string | null; url?: string | null } | null;
     sponsor?: { name?: string | null } | null;
+    [key: string]: unknown;
+  } | null;
+  edition_division?: {
+    id_edition_division?: number;
+    division_title?: string | null;
+    color?: string | null;
+    division?: { name?: string | null } | null;
     [key: string]: unknown;
   } | null;
   luckies?: Array<Record<string, unknown>>;

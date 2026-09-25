@@ -56,6 +56,18 @@ describe('Schedule nested tabs', () => {
     expect(src).not.toContain('<EditionTabsBar');
   });
 
+  it('stabilizes onBeforeNavigate via actionsRef', () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, '..', '[id]', 'schedule', '_layout.tsx'),
+      'utf8'
+    );
+    expect(src).toContain('usePageChromeActionsRef');
+    expect(src).not.toContain('usePageChrome(');
+    expect(src).not.toContain('actionsRef.current = actions');
+    expect(src).toMatch(/onBeforeNavigate = useCallback\(async \(\) => \{[\s\S]*?\}, \[\]\)/);
+    expect(src).not.toMatch(/onBeforeNavigate = useCallback\(async \(\) => \{[\s\S]*?\}, \[actions\]\)/);
+  });
+
   it('exposes Knobs and Matches via useSubTabBar', async () => {
     activeClient = createTestQueryClient();
     const { findByTestId, queryByTestId } = render(

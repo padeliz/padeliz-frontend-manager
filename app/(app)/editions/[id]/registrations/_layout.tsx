@@ -1,5 +1,5 @@
 import type { EditionTabLink } from '@/components/editions/EditionTabsBar';
-import { usePageChrome } from '@/components/chrome/PageChromeProvider';
+import { usePageChromeActionsRef } from '@/components/chrome/PageChromeProvider';
 import { useBreadcrumbSegments } from '@/components/layout/BreadcrumbProvider';
 import { useSubTabBar } from '@/components/layout/SubTabBarProvider';
 import {
@@ -22,7 +22,7 @@ export default function RegistrationsLayout() {
   const globalParams = useGlobalSearchParams<{ id?: string; ed?: string }>();
   const editionId = Number(localParams.id ?? globalParams.id);
   const edParam = globalParams.ed ?? localParams.ed;
-  const { actions } = usePageChrome();
+  const actionsRef = usePageChromeActionsRef();
 
   const divisionsQuery = useQuery({
     queryKey: queryKeys.editionDivisions(editionId),
@@ -44,12 +44,12 @@ export default function RegistrationsLayout() {
   );
 
   const onBeforeNavigate = useCallback(async () => {
-    if (!actions?.isDirty) return true;
+    if (!actionsRef.current?.isDirty) return true;
     const ok = await confirmDiscardDirty();
     if (!ok) return false;
-    actions.cancel?.();
+    actionsRef.current.cancel?.();
     return true;
-  }, [actions]);
+  }, []);
 
   const tabs = useMemo((): EditionTabLink[] => {
     const base = `/editions/${editionId}/registrations`;

@@ -59,4 +59,41 @@ describe('EditionLotteryPrizesApiService', () => {
     expect(url).toContain('include=luckies');
     expect(url).not.toContain('edition_division_id=');
   });
+
+  it('patchLotteryPrize PATCHes the prize line', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: { id_lottery_prize: 11 } }),
+    });
+    const api = new EditionLotteryPrizesApiService();
+    await api.patchLotteryPrize(11, {
+      prize_quantity: 3,
+      sponsor_id: null,
+    });
+    expect(String(fetchMock.mock.calls[0][0])).toBe(
+      'http://localhost:8000/api/v1/manager/edition-lottery-prizes/11'
+    );
+    expect(fetchMock.mock.calls[0][1].method).toBe('PATCH');
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+      prize_quantity: 3,
+      sponsor_id: null,
+    });
+  });
+
+  it('reorderLotteryPrizes posts lottery_id and ordered ids', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: [] }),
+    });
+    const api = new EditionLotteryPrizesApiService();
+    await api.reorderLotteryPrizes(7, [3, 1, 2]);
+    expect(String(fetchMock.mock.calls[0][0])).toBe(
+      'http://localhost:8000/api/v1/manager/edition-lottery-prizes/reorder'
+    );
+    expect(fetchMock.mock.calls[0][1].method).toBe('POST');
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+      lottery_id: 7,
+      lottery_prize_ids: [3, 1, 2],
+    });
+  });
 });

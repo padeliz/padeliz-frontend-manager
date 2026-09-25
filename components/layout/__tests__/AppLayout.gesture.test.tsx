@@ -1,13 +1,15 @@
 import AppContentScroll from '@/components/layout/AppContentScroll';
 import AppLayout from '@/components/layout/AppLayout';
-import { useBreadcrumbSegments } from '@/components/layout/BreadcrumbProvider';
+import {
+  BreadcrumbProvider,
+  useBreadcrumbSegments,
+} from '@/components/layout/BreadcrumbProvider';
 import { useSubTabBar } from '@/components/layout/SubTabBarProvider';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import fs from 'fs';
 import path from 'path';
-import React from 'react';
+import React, { useState } from 'react';
 import { Text, View } from 'react-native';
-import { render, waitFor } from '@testing-library/react-native';
-import { BreadcrumbProvider } from '@/components/layout/BreadcrumbProvider';
 import { renderWithAppShell } from './renderWithAppShell';
 
 jest.mock('@/context/managerAuth', () => ({
@@ -44,9 +46,17 @@ jest.mock('@/components/layout/Sidebar', () => {
 });
 
 jest.mock('@/components/editions/EditionTabsBar', () => {
-  const { View } = require('react-native');
-  return function EditionTabsBar() {
-    return <View testID="edition-tabs-bar" />;
+  const { Text, View } = require('react-native');
+  return function EditionTabsBar({ tabs }: { tabs: { label: string }[] }) {
+    return (
+      <View testID="edition-tabs-bar">
+        {tabs.map(t => (
+          <Text key={t.label} testID={`edition-tab-${t.label}`}>
+            {t.label}
+          </Text>
+        ))}
+      </View>
+    );
   };
 });
 
@@ -83,6 +93,30 @@ describe('AppLayout', () => {
     expect(src).toContain('AppContentScroll');
   });
 
+  it('keeps trail hooks in leaf slots, not AppLayoutChrome', () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, '..', 'AppLayout.tsx'),
+      'utf8'
+    );
+    expect(src).toMatch(/function BreadcrumbSlot\b/);
+    expect(src).toMatch(/function SubTabBarSlot\b/);
+    expect(src).toContain('<BreadcrumbSlot');
+    expect(src).toContain('<SubTabBarSlot');
+    const chromeStart = src.indexOf('function AppLayoutChrome');
+    const exportStart = src.indexOf('export default function AppLayout');
+    expect(chromeStart).toBeGreaterThan(-1);
+    expect(exportStart).toBeGreaterThan(chromeStart);
+    const chromeBody = src.slice(chromeStart, exportStart);
+    expect(chromeBody).not.toMatch(/useBreadcrumbTrail\s*\(/);
+    expect(chromeBody).not.toMatch(/useSubTabBarTrail\s*\(/);
+    expect(src).toMatch(
+      /function BreadcrumbSlot\(\) \{[\s\S]*?useBreadcrumbTrail\s*\(/
+    );
+    expect(src).toMatch(
+      /function SubTabBarSlot\(\) \{[\s\S]*?useSubTabBarTrail\s*\(/
+    );
+  });
+
   it('renders tabBar and subTabBar before app-content-scroll', () => {
     const { getByTestId, getByText } = render(
       <AppLayout
@@ -104,6 +138,101 @@ describe('AppLayout', () => {
     expect(getByTestId('app-content-column')).toBeTruthy();
     expect(getByTestId('app-content-scroll')).toBeTruthy();
     expect(getByText('Body')).toBeTruthy();
+  });
+
+  it('does not re-render content children when subtab entry flips', async () => {
+    let contentRenders = 0;
+
+    function ContentProbe() {
+      contentRenders += 1;
+      return <Text testID="content-renders">{String(contentRenders)}</Text>;
+    }
+
+    function FlipSubTab() {
+      const [n, setN] = useState(0);
+      useSubTabBar('flip', [
+        { label: `Flip${n}`, href: `/flip-${n}`, match: '/flip' },
+      ]);
+      return (
+        <Text testID="flip-subtab" onPress={() => setN(v => v + 1)}>
+          flip
+        </Text>
+      );
+    }
+
+    const { getByTestId } = render(
+      <AppLayout title="Clubs">
+        <FlipSubTab />
+        <ContentProbe />
+      </AppLayout>
+    );
+
+    await waitFor(() => {
+      expect(getByTestId('edition-tab-Flip0')).toBeTruthy();
+    });
+    const afterMount = Number(getByTestId('content-renders').props.children);
+
+    fireEvent.press(getByTestId('flip-subtab'));
+
+    await waitFor(() => {
+      expect(getByTestId('edition-tab-Flip1')).toBeTruthy();
+    });
+    expect(Number(getByTestId('content-renders').props.children)).toBe(
+      afterMount
+    );
+  });
+
+  it('does not re-render content children when breadcrumb items flip', async () => {
+    let contentRenders = 0;
+
+    function ContentProbe() {
+      contentRenders += 1;
+      return <Text testID="content-renders">{String(contentRenders)}</Text>;
+    }
+
+    function FlipCrumb() {
+      const [n, setN] = useState(0);
+      useBreadcrumbSegments('flip', [{ label: `Crumb${n}` }]);
+      return (
+        <Text testID="flip-crumb" onPress={() => setN(v => v + 1)}>
+          flip
+        </Text>
+      );
+    }
+
+    const { getByTestId, getByText } = render(
+      <BreadcrumbProvider>
+        <AppLayout title="Clubs">
+          <FlipCrumb />
+          <ContentProbe />
+        </AppLayout>
+      </BreadcrumbProvider>
+    );
+
+    await waitFor(() => {
+      expect(getByText('Crumb0')).toBeTruthy();
+    });
+    const afterMount = Number(getByTestId('content-renders').props.children);
+
+    fireEvent.press(getByTestId('flip-crumb'));
+
+    await waitFor(() => {
+      expect(getByText('Crumb1')).toBeTruthy();
+    });
+    expect(Number(getByTestId('content-renders').props.children)).toBe(
+      afterMount
+    );
+  });
+
+  it('omits breadcrumb UI when no segments are registered', () => {
+    const { queryByTestId } = render(
+      <BreadcrumbProvider>
+        <AppLayout title="Clubs">
+          <Text>Body</Text>
+        </AppLayout>
+      </BreadcrumbProvider>
+    );
+    expect(queryByTestId('breadcrumbs-scroll')).toBeNull();
   });
 
   it('renders breadcrumbs from app-shell provider when registrar is above AppLayout', async () => {

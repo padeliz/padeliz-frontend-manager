@@ -1,6 +1,9 @@
 /**
  * Composable breadcrumbs: nested layouts/pages register segment groups by stable id.
  * Trail order follows depth (ascending), then registration order within the same depth.
+ *
+ * Commands (register/unregister) are separated from state (items) so
+ * registrars do not re-render when the trail updates.
  */
 
 import type { BreadcrumbItem } from '@/components/layout/Breadcrumbs';
@@ -20,13 +23,19 @@ type SegmentGroup = {
   depth: number;
 };
 
-type BreadcrumbContextValue = {
-  items: BreadcrumbItem[];
+type BreadcrumbCommands = {
   register: (id: string, items: BreadcrumbItem[], depth: number) => void;
   unregister: (id: string) => void;
 };
 
-const BreadcrumbContext = createContext<BreadcrumbContextValue | null>(null);
+type BreadcrumbState = {
+  items: BreadcrumbItem[];
+};
+
+const BreadcrumbCommandsContext = createContext<BreadcrumbCommands | null>(
+  null
+);
+const BreadcrumbStateContext = createContext<BreadcrumbState | null>(null);
 
 function sortGroups(groups: SegmentGroup[], order: string[]): SegmentGroup[] {
   return [...groups].sort((a, b) => {
@@ -84,24 +93,29 @@ export function BreadcrumbProvider({
     setGroups(prev => prev.filter(g => g.id !== id));
   }, []);
 
-  const value = useMemo(
+  const commands = useMemo(
+    () => ({ register, unregister }),
+    [register, unregister]
+  );
+
+  const state = useMemo(
     () => ({
       items: flattenGroups(groups, orderRef.current),
-      register,
-      unregister,
     }),
-    [groups, register, unregister]
+    [groups]
   );
 
   return (
-    <BreadcrumbContext.Provider value={value}>
-      {children}
-    </BreadcrumbContext.Provider>
+    <BreadcrumbCommandsContext.Provider value={commands}>
+      <BreadcrumbStateContext.Provider value={state}>
+        {children}
+      </BreadcrumbStateContext.Provider>
+    </BreadcrumbCommandsContext.Provider>
   );
 }
 
 export function useBreadcrumbTrail(): BreadcrumbItem[] {
-  const ctx = useContext(BreadcrumbContext);
+  const ctx = useContext(BreadcrumbStateContext);
   return ctx?.items ?? [];
 }
 
@@ -110,15 +124,16 @@ export function useBreadcrumbTrail(): BreadcrumbItem[] {
  * Unfocused stack screens unregister on blur so trails do not accumulate.
  * @param depth - Lower depth renders earlier in the trail (parent chrome = 0, nested sub-tab = 1).
  * Safe no-op outside BreadcrumbProvider.
+ * Does not subscribe to trail items — only commands.
  */
 export function useBreadcrumbSegments(
   id: string,
   items: BreadcrumbItem[],
   depth = 0
 ) {
-  const ctx = useContext(BreadcrumbContext);
-  const register = ctx?.register;
-  const unregister = ctx?.unregister;
+  const commands = useContext(BreadcrumbCommandsContext);
+  const register = commands?.register;
+  const unregister = commands?.unregister;
   const itemsKey = JSON.stringify(items);
 
   useFocusEffect(

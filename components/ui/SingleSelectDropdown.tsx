@@ -34,6 +34,7 @@ export default function SingleSelectDropdown({
   loading = false,
   clearable = false,
   onOpenChange,
+  footer,
 }: SingleSelectDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -250,6 +251,7 @@ export default function SingleSelectDropdown({
       maxHeight={maxHeight}
       minWidth={minWidth}
       disabled={disabled}
+      footer={footer}
     >
       {content}
     </FloatingDropdown>

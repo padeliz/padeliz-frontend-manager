@@ -21,6 +21,8 @@ export type EditionTabLink = {
   onPress?: () => void;
   /** Visual treatment; live = emerald CTA chip */
   variant?: 'default' | 'live';
+  /** When true, press is ignored and disabled styling is applied */
+  disabled?: boolean;
 };
 
 type Props = {
@@ -43,8 +45,10 @@ export default function EditionTabsBar({ tabs, onBeforeNavigate }: Props) {
       {tabs.map(tab => {
         const isAction = typeof tab.onPress === 'function';
         const isLive = tab.variant === 'live';
+        const isDisabled = !!tab.disabled;
         const isActive =
           !isAction &&
+          !isDisabled &&
           isEditionTabActive(pathname, tab.match, tab.matchExact);
         return (
           <Pressable
@@ -54,7 +58,10 @@ export default function EditionTabsBar({ tabs, onBeforeNavigate }: Props) {
                 ? 'open-live-lottery'
                 : `edition-tab-${tab.label}`
             }
+            disabled={isDisabled}
+            accessibilityState={{ disabled: isDisabled }}
             onPress={() => {
+              if (isDisabled) return;
               void (async () => {
                 if (isAction) {
                   tab.onPress?.();
@@ -68,16 +75,24 @@ export default function EditionTabsBar({ tabs, onBeforeNavigate }: Props) {
               })();
             }}
             className={`mx-1 px-3 py-2 rounded-lg ${
-              isLive
-                ? 'bg-emerald-600'
-                : isActive
-                  ? 'bg-blue-600'
-                  : 'bg-gray-100'
+              isDisabled
+                ? isLive
+                  ? 'bg-emerald-300 opacity-60'
+                  : 'bg-gray-100 opacity-50'
+                : isLive
+                  ? 'bg-emerald-600'
+                  : isActive
+                    ? 'bg-blue-600'
+                    : 'bg-gray-100'
             }`}
           >
             <Text
               className={`text-sm font-medium ${
-                isLive || isActive ? 'text-white' : 'text-gray-700'
+                isDisabled
+                  ? 'text-gray-500'
+                  : isLive || isActive
+                    ? 'text-white'
+                    : 'text-gray-700'
               }`}
             >
               {tab.label}

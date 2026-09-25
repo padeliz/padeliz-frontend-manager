@@ -20,8 +20,10 @@ describe('resolvePrizeMediaUrl', () => {
     );
   });
 
-  it('leaves /media paths unchanged', () => {
-    expect(resolvePrizeMediaUrl('/media/prize.png')).toBe('/media/prize.png');
+  it('rejects disk-relative prize media paths', () => {
+    expect(resolvePrizeMediaUrl('prizes/38/media/x.png')).toBeNull();
+    expect(resolvePrizeMediaUrl('/prizes/38/media/x.png')).toBeNull();
+    expect(resolvePrizeMediaUrl('/media/prize.png')).toBeNull();
   });
 });
 
@@ -38,14 +40,17 @@ describe('resolvePrizeMedia', () => {
 
   it('detects video from extension when is_video missing', () => {
     expect(
-      resolvePrizeMedia({ media_url: '/media/prize.webm' })
-    ).toEqual({ url: '/media/prize.webm', isVideo: true });
+      resolvePrizeMedia({ media_url: 'https://example.com/prize.webm' })
+    ).toEqual({ url: 'https://example.com/prize.webm', isVideo: true });
   });
 
   it('returns image when not video', () => {
     expect(
-      resolvePrizeMedia({ media_url: '/media/prize.png', is_video: false })
-    ).toEqual({ url: '/media/prize.png', isVideo: false });
+      resolvePrizeMedia({
+        media_url: 'https://example.com/prize.png',
+        is_video: false,
+      })
+    ).toEqual({ url: 'https://example.com/prize.png', isVideo: false });
   });
 
   it('absolutizes storage media_url', () => {
@@ -56,6 +61,24 @@ describe('resolvePrizeMedia', () => {
       })
     ).toEqual({
       url: 'http://localhost:8000/storage/prizes/38/x.png',
+      isVideo: false,
+    });
+  });
+
+  it('rejects remapped disk media_path fed as media_url', () => {
+    expect(
+      resolvePrizeMedia({ media_url: 'prizes/38/media/x.png' })
+    ).toEqual({ url: null, isVideo: false });
+  });
+
+  it('uses Storage url field when present', () => {
+    expect(
+      resolvePrizeMedia({
+        url: '/storage/prizes/1/media/x.png',
+        media_path: 'prizes/1/media/x.png',
+      })
+    ).toEqual({
+      url: 'http://localhost:8000/storage/prizes/1/media/x.png',
       isVideo: false,
     });
   });

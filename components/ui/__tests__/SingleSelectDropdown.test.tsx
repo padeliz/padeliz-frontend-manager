@@ -1,6 +1,7 @@
 import SingleSelectDropdown from '@/components/ui/SingleSelectDropdown';
 import { fireEvent, render } from '@testing-library/react-native';
 import React from 'react';
+import { Text } from 'react-native';
 
 const OPTIONS = [
   { label: 'Alice', value: 1 },
@@ -130,5 +131,23 @@ describe('SingleSelectDropdown', () => {
     expect(onOpenChange).toHaveBeenCalledWith(true);
     fireEvent.press(getByText('Alice'));
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it('renders footer and keeps selection behavior', () => {
+    const onSelectionChange = jest.fn();
+    const { getByText, getByTestId } = render(
+      <SingleSelectDropdown
+        options={OPTIONS}
+        selectedValue={null}
+        onSelectionChange={onSelectionChange}
+        placeholder="Pick one"
+        title="Players"
+        footer={<Text testID="dropdown-footer">View all</Text>}
+      />
+    );
+    fireEvent.press(getByText('Pick one'));
+    expect(getByTestId('dropdown-footer')).toHaveTextContent('View all');
+    fireEvent.press(getByText('Bob'));
+    expect(onSelectionChange).toHaveBeenCalledWith(2);
   });
 });

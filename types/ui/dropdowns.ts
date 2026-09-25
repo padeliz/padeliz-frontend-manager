@@ -42,6 +42,8 @@ export interface SingleSelectDropdownProps {
   clearable?: boolean;
   /** Notified when the floating menu opens or closes. */
   onOpenChange?: (open: boolean) => void;
+  /** Optional footer rendered below the options list (same as FloatingDropdown). */
+  footer?: ReactNode;
 }
 
 export interface MultiSelectDropdownProps {

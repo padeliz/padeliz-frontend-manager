@@ -94,7 +94,7 @@ function PrizeBlock({ prize }: { prize: LotteryLucky['prize'] }) {
     media.url &&
     (media.isVideo && Platform.OS === 'web'
       ? React.createElement('video', {
-          testID: 'lottery-live-prize-media',
+          'data-testid': 'lottery-live-prize-media',
           src: media.url,
           autoPlay: true,
           loop: true,
@@ -108,7 +108,7 @@ function PrizeBlock({ prize }: { prize: LotteryLucky['prize'] }) {
         })
       : Platform.OS === 'web'
         ? React.createElement('img', {
-            testID: 'lottery-live-prize-media',
+            'data-testid': 'lottery-live-prize-media',
             src: media.url,
             alt: '',
             style: {

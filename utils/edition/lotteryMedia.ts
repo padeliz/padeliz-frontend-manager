@@ -5,7 +5,7 @@ export type PrizeMediaInfo = {
   isVideo: boolean;
 };
 
-/** Absolutize /storage/… against API_BASE_URL; leave http(s) and other relatives alone. */
+/** Absolutize /storage/… against API_BASE_URL; accept http(s) only otherwise. */
 export function resolvePrizeMediaUrl(url: string | null): string | null {
   if (!url) return null;
   if (/^https?:\/\//i.test(url)) return url;
@@ -14,11 +14,12 @@ export function resolvePrizeMediaUrl(url: string | null): string | null {
     const base = (API_BASE_URL || 'http://localhost:8000').replace(/\/+$/, '');
     return `${base}/${cleaned}`;
   }
-  return url.startsWith('/') ? url : `/${cleaned}`;
+  return null;
 }
 
 /**
  * Resolve prize media from live/board API payloads (media_url + is_video).
+ * Does not read disk `media_path` — callers must pass Storage `url` / `media_url`.
  */
 export function resolvePrizeMedia(prize: unknown): PrizeMediaInfo {
   if (!prize || typeof prize !== 'object') {

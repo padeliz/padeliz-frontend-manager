@@ -87,6 +87,17 @@ export class EditionLotteriesApiService extends BaseApiService {
   }
 
   /**
+   * Generate or recreate balanced rules for a lottery.
+   */
+  async generateRules(
+    lotteryId: number
+  ): Promise<{ data: unknown; message?: string }> {
+    return this.post<{ data: unknown; message?: string }>(
+      `/edition-lotteries/${lotteryId}/rules/generate`
+    );
+  }
+
+  /**
    * Bulk delete lotteries
    */
   async bulkDeleteLotteries(

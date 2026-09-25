@@ -179,3 +179,79 @@ export function phoneNumbersFromLucky(lucky: Record<string, unknown>): string[] 
     .map((p: any) => (p?.phone != null ? String(p.phone) : ''))
     .filter(Boolean);
 }
+
+export function sortLotteriesByDisplayOrder<
+  T extends { id_lottery: number; display_order?: number | null },
+>(lotteries: T[]): T[] {
+  return [...lotteries].sort(
+    (a, b) =>
+      (a.display_order ?? 0) - (b.display_order ?? 0) ||
+      a.id_lottery - b.id_lottery
+  );
+}
+
+/** Prize name only (no sponsor) for display name columns. */
+export function prizeNameFromLine(line: {
+  prize?: { name?: string | null } | null;
+  prize_id?: number | null;
+}): string {
+  return (
+    line?.prize?.name ||
+    (line?.prize_id != null ? `Prize #${line.prize_id}` : 'prize')
+  );
+}
+
+/** Combined "Prize · Sponsor" for dropdowns and a11y labels. */
+export function prizeLineLabel(line: {
+  prize?: { name?: string | null } | null;
+  prize_id?: number | null;
+  sponsor?: { name?: string | null } | null;
+}): string {
+  const prizeName = prizeNameFromLine(line);
+  const sponsorName = line?.sponsor?.name;
+  return sponsorName ? `${prizeName} · ${sponsorName}` : String(prizeName);
+}
+
+export function prizeLuckiesHeader(line: {
+  prize?: { name?: string | null } | null;
+  sponsor?: { name?: string | null } | null;
+  rule_prize_quantity_total?: number | null;
+}): string {
+  const prizeName = line?.prize?.name;
+  const sponsorName = line?.sponsor?.name;
+  const qty = Number(line?.rule_prize_quantity_total ?? 0);
+  if (prizeName == null || String(prizeName).trim() === '') {
+    return String(qty || '');
+  }
+  const namePart = sponsorName
+    ? `${prizeName} · ${sponsorName}`
+    : String(prizeName);
+  return `${namePart} × ${qty}`;
+}
+
+export function hasPrizeQuantityMismatch(line: {
+  prize_quantity?: number | null;
+  rule_prize_quantity_total?: number | null;
+}): boolean {
+  return (
+    Number(line.prize_quantity ?? 0) !==
+    Number(line.rule_prize_quantity_total ?? 0)
+  );
+}
+
+/** Division label from nested edition_division on a rule/lucky board payload. */
+export function divisionLabelFromPayload(
+  editionDivisionId: number | null | undefined,
+  editionDivision?: {
+    division_title?: string | null;
+    division?: { name?: string | null } | null;
+  } | null
+): string {
+  if (editionDivisionId == null) return 'General';
+  return (
+    editionDivision?.division_title ||
+    editionDivision?.division?.name ||
+    `ED #${editionDivisionId}`
+  );
+}
+

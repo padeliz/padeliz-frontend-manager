@@ -1,5 +1,10 @@
 /**
  * Page chrome: parent layout Save/Refresh/headerActions registration for nested routes.
+ *
+ * Actions live in a mutable actionsRef. useSyncExternalStore publishes a monotonic
+ * version number so getSnapshot() stays Object.is-stable until scalar chrome fields
+ * change (React 19 uSES contract). Handler-only updates refresh actionsRef without
+ * bumping version or forcing subscriber re-renders.
  */
 
 import React, {
@@ -10,7 +15,7 @@ import React, {
   useLayoutEffect,
   useMemo,
   useRef,
-  useState,
+  useSyncExternalStore,
 } from 'react';
 
 export type PageChromeActions = {
@@ -34,77 +39,145 @@ export type PageChromeActions = {
   displayTitle?: string | null;
 };
 
-type PageChromeContextValue = {
-  actions: PageChromeActions | null;
+type PageChromeCommands = {
   register: (actions: PageChromeActions | null) => void;
 };
 
-const PageChromeContext = createContext<PageChromeContextValue | null>(null);
+type PageChromeStore = {
+  subscribe: (onStoreChange: () => void) => () => void;
+  /** Monotonic version; Object.is-stable until scalar chrome fields change. */
+  getSnapshot: () => number;
+};
+
+const PageChromeCommandsContext = createContext<PageChromeCommands | null>(
+  null
+);
+const PageChromeStoreContext = createContext<PageChromeStore | null>(null);
+const PageChromeActionsRefContext =
+  createContext<React.MutableRefObject<PageChromeActions | null> | null>(null);
+
+/** Scalar fields that should cause usePageChrome subscribers to re-render. */
+function scalarsEqual(
+  prev: PageChromeActions | null,
+  next: PageChromeActions | null
+): boolean {
+  if (prev === next) return true;
+  if (!prev && !next) return true;
+  if (!prev || !next) return false;
+  return (
+    prev.isEditing === next.isEditing &&
+    prev.isSaving === next.isSaving &&
+    prev.isRefreshing === next.isRefreshing &&
+    prev.canSave === next.canSave &&
+    prev.isDirty === next.isDirty &&
+    prev.headerActionsKey === next.headerActionsKey &&
+    prev.displayTitle === next.displayTitle &&
+    !!prev.save === !!next.save &&
+    !!prev.refresh === !!next.refresh &&
+    !!prev.edit === !!next.edit &&
+    !!prev.cancel === !!next.cancel
+  );
+}
 
 export function PageChromeProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [actions, setActions] = useState<PageChromeActions | null>(null);
+  const actionsRef = useRef<PageChromeActions | null>(null);
+  /** Last payload whose scalars were published (for scalarsEqual). */
+  const notifiedRef = useRef<PageChromeActions | null>(null);
+  const versionRef = useRef(0);
+  const listenersRef = useRef(new Set<() => void>());
 
-  const register = useCallback((next: PageChromeActions | null) => {
-    setActions(prev => {
-      if (prev === next) return prev;
-      if (!prev && !next) return prev;
-      if (!prev || !next) return next;
-      if (
-        prev.isEditing === next.isEditing &&
-        prev.isSaving === next.isSaving &&
-        prev.isRefreshing === next.isRefreshing &&
-        prev.canSave === next.canSave &&
-        prev.isDirty === next.isDirty &&
-        prev.save === next.save &&
-        prev.refresh === next.refresh &&
-        prev.edit === next.edit &&
-        prev.cancel === next.cancel &&
-        prev.headerActionsKey === next.headerActionsKey &&
-        prev.displayTitle === next.displayTitle
-      ) {
-        return prev;
-      }
-      return next;
-    });
+  const subscribe = useCallback((onStoreChange: () => void) => {
+    listenersRef.current.add(onStoreChange);
+    return () => {
+      listenersRef.current.delete(onStoreChange);
+    };
   }, []);
 
-  const value = useMemo(
-    () => ({
-      actions,
-      register,
-    }),
-    [actions, register]
+  const getSnapshot = useCallback(() => versionRef.current, []);
+
+  const register = useCallback((next: PageChromeActions | null) => {
+    actionsRef.current = next;
+    if (scalarsEqual(notifiedRef.current, next)) return;
+    notifiedRef.current = next;
+    versionRef.current += 1;
+    listenersRef.current.forEach(listener => listener());
+  }, []);
+
+  const commands = useMemo(() => ({ register }), [register]);
+  const store = useMemo(
+    () => ({ subscribe, getSnapshot }),
+    [subscribe, getSnapshot]
   );
 
   return (
-    <PageChromeContext.Provider value={value}>
-      {children}
-    </PageChromeContext.Provider>
+    <PageChromeActionsRefContext.Provider value={actionsRef}>
+      <PageChromeCommandsContext.Provider value={commands}>
+        <PageChromeStoreContext.Provider value={store}>
+          {children}
+        </PageChromeStoreContext.Provider>
+      </PageChromeCommandsContext.Provider>
+    </PageChromeActionsRefContext.Provider>
   );
 }
 
 export function usePageChrome() {
-  const ctx = useContext(PageChromeContext);
-  if (!ctx) {
+  const store = useContext(PageChromeStoreContext);
+  const actionsRef = useContext(PageChromeActionsRefContext);
+  if (!store || !actionsRef) {
     throw new Error('usePageChrome must be used within PageChromeProvider');
   }
-  return ctx;
+  const version = useSyncExternalStore(
+    store.subscribe,
+    store.getSnapshot,
+    store.getSnapshot
+  );
+  void version;
+  return { actions: actionsRef.current };
+}
+
+/**
+ * Stable actions ref for dirty-gates / layout readers that must not re-render
+ * when registered page actions change.
+ */
+export function usePageChromeActionsRef(): React.MutableRefObject<PageChromeActions | null> {
+  const actionsRef = useContext(PageChromeActionsRefContext);
+  if (!actionsRef) {
+    throw new Error(
+      'usePageChromeActionsRef must be used within PageChromeProvider'
+    );
+  }
+  return actionsRef;
 }
 
 /** True when nested under PageChromeProvider (safe outside provider). */
 export function useHasPageChrome(): boolean {
-  return useContext(PageChromeContext) != null;
+  return useContext(PageChromeCommandsContext) != null;
+}
+
+/**
+ * Imperative register (tests / rare cases). Prefer useRegisterPageActions in UI.
+ */
+export function usePageChromeRegister(): (
+  actions: PageChromeActions | null
+) => void {
+  const commands = useContext(PageChromeCommandsContext);
+  if (!commands) {
+    throw new Error(
+      'usePageChromeRegister must be used within PageChromeProvider'
+    );
+  }
+  return commands.register;
 }
 
 const noopRegister = (_next: PageChromeActions | null) => {};
 
 export function useRegisterPageActions(actions: PageChromeActions | null) {
-  const ctx = useContext(PageChromeContext);
-  const register = ctx?.register ?? noopRegister;
+  const commands = useContext(PageChromeCommandsContext);
+  const register = commands?.register ?? noopRegister;
   const actionsRef = useRef(actions);
   actionsRef.current = actions;
 

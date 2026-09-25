@@ -85,6 +85,29 @@ export class EditionLotteryPrizesApiService extends BaseApiService {
     );
   }
 
+  async patchLotteryPrize(
+    id: number,
+    data: Partial<ApiEditionLotteryPrize>
+  ): Promise<{ data: ApiEditionLotteryPrize }> {
+    return this.patch<{ data: ApiEditionLotteryPrize }>(
+      `/edition-lottery-prizes/${id}`,
+      data
+    );
+  }
+
+  async reorderLotteryPrizes(
+    lotteryId: number,
+    lotteryPrizeIds: number[]
+  ): Promise<{ data: ApiEditionLotteryPrize[] }> {
+    return this.post<{ data: ApiEditionLotteryPrize[] }>(
+      '/edition-lottery-prizes/reorder',
+      {
+        lottery_id: lotteryId,
+        lottery_prize_ids: lotteryPrizeIds,
+      }
+    );
+  }
+
   async deleteLotteryPrize(id: number): Promise<void> {
     return this.delete(`/edition-lottery-prizes/${id}`);
   }
