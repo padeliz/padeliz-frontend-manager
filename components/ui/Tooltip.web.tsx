@@ -19,7 +19,9 @@ import {
 } from '@floating-ui/react';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
+  tipBodyWeb,
   tipChromeWeb,
+  tipTitleWeb,
   type TooltipProps,
 } from '@/components/ui/tooltipShared';
 
@@ -27,6 +29,7 @@ export type { TooltipProps };
 
 export default function Tooltip({
   content,
+  title,
   children,
   disabled = false,
   testID,
@@ -118,9 +121,17 @@ export default function Tooltip({
             }}
             {...getFloatingProps()}
           >
-            {content}
+            {title ? (
+              <div data-testid="tooltip-title" style={tipTitleWeb}>
+                {title}
+              </div>
+            ) : null}
+            <div data-testid="tooltip-body" style={tipBodyWeb}>
+              {content}
+            </div>
           </div>
         </FloatingPortal>
-      )}    </>
+      )}
+    </>
   );
 }

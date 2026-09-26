@@ -48,6 +48,25 @@ describe('EllipsisText', () => {
     });
   });
 
+  it('forwards tooltipTitle to the floating tooltip', async () => {
+    const { getByTestId } = render(
+      <EllipsisText
+        tooltip={'(Spring Cup) XL'}
+        tooltipTitle="Shirt size"
+        testID="cf-value"
+      >
+        XL
+      </EllipsisText>
+    );
+
+    fireEvent.press(getByTestId('cf-value-tooltip'));
+
+    await waitFor(() => {
+      expect(getByTestId('tooltip-title')).toHaveTextContent('Shirt size');
+      expect(getByTestId('tooltip-body')).toHaveTextContent('(Spring Cup) XL');
+    });
+  });
+
   it('applies maxWidth style when provided', () => {
     const { getByText } = render(
       <EllipsisText maxWidth={128}>Short</EllipsisText>

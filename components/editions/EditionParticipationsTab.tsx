@@ -17,6 +17,7 @@ import {
   ApiEditionParticipation,
 } from '@/types/api/entities';
 import { confirmAction } from '@/utils/confirmAction';
+import { formatDisplayDate } from '@/utils/fieldFormatter';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -33,10 +34,15 @@ import SortableRow, {
   SortableDragHandle,
   SORTABLE_ROW_HEIGHT,
 } from './SortableRow';
+import Tooltip from '@/components/ui/Tooltip';
 
 const participationsApi = new EditionParticipationsApiService();
 
 const ROW_HEIGHT = SORTABLE_ROW_HEIGHT;
+
+const COLLECTING_POINTS_TOOLTIP =
+  'If player is collecting points from the matches and they appear on the Ranking poster.';
+
 
 type Props = {
   editionId: number;
@@ -69,77 +75,151 @@ function PlayerHistoryText({ p }: { p: ApiEditionParticipation }) {
   const h = p.player_history;
   if (!h) return null;
 
-  const facts: React.ReactNode[] = [];
+  const facts: Array<{ key: string; node: React.ReactNode; title: string; body: string }> = [];
+
   if (h.last_played) {
     const rank =
       h.last_played.rank == null ? '—' : String(h.last_played.rank);
-    facts.push(
-      <Text key="played">
-        Played{' '}
-        <Text
-          testID={`history-division-title-${p.id_participation}`}
-          className="font-bold"
-        >
-          {h.last_played.division_title}
-        </Text>{' '}
-        {rank}/{h.last_played.participant_count}
-      </Text>
-    );
+    const playedBody = (h.played_recent || [])
+      .map(entry => {
+        const entryRank = entry.rank == null ? '—' : String(entry.rank);
+        return `${entry.edition_name}: Played ${entry.division_title} ${entryRank}/${entry.participant_count}`;
+      })
+      .join('\n');
+    facts.push({
+      key: 'played',
+      title: 'Played',
+      body: playedBody,
+      node: (
+        <Text>
+          Played{' '}
+          <Text
+            testID={`history-division-title-${p.id_participation}`}
+            className="font-bold"
+          >
+            {h.last_played.division_title}
+          </Text>{' '}
+          {rank}/{h.last_played.participant_count}
+        </Text>
+      ),
+    });
   }
+
   if (h.participated_count > 0) {
-    facts.push(
-      <Text key="participated">
-        Participated{' '}
-        <Text
-          testID={`history-times-participated-${p.id_participation}`}
-          className="font-bold"
-        >
-          {timesLabel(h.participated_count)}
+    const participatedBody = (h.participated_tooltip?.lines || [])
+      .map(line =>
+        line.type === 'ellipsis'
+          ? '...'
+          : `${line.edition_name}: ${formatDisplayDate(line.date)}`
+      )
+      .join('\n');
+    facts.push({
+      key: 'participated',
+      title: 'Participated',
+      body: participatedBody,
+      node: (
+        <Text>
+          Participated{' '}
+          <Text
+            testID={`history-times-participated-${p.id_participation}`}
+            className="font-bold"
+          >
+            {timesLabel(h.participated_count)}
+          </Text>
         </Text>
-      </Text>
-    );
+      ),
+    });
   }
+
   if (h.banned_count > 0) {
-    facts.push(
-      <Text key="banned">
-        Banned{' '}
-        <Text
-          testID={`history-times-banned-${p.id_participation}`}
-          className="font-bold"
-        >
-          {timesLabel(h.banned_count)}
+    const bannedBody = (h.banned_recent || [])
+      .map(
+        entry =>
+          `${entry.edition_name}: ${formatDisplayDate(entry.date)} (${entry.ban_reason})`
+      )
+      .join('\n');
+    facts.push({
+      key: 'banned',
+      title: 'Banned',
+      body: bannedBody,
+      node: (
+        <Text>
+          Banned{' '}
+          <Text
+            testID={`history-times-banned-${p.id_participation}`}
+            className="font-bold"
+          >
+            {timesLabel(h.banned_count)}
+          </Text>
         </Text>
-      </Text>
-    );
+      ),
+    });
   }
+
   if (h.absented_count > 0) {
-    facts.push(
-      <Text key="absented">
-        Absented{' '}
-        <Text
-          testID={`history-times-absented-${p.id_participation}`}
-          className="font-bold"
-        >
-          {timesLabel(h.absented_count)}
+    const absentedBody = (h.absented_recent || [])
+      .map(
+        entry =>
+          `${entry.edition_name}: ${formatDisplayDate(entry.date)} (${entry.absence_reason})`
+      )
+      .join('\n');
+    facts.push({
+      key: 'absented',
+      title: 'Absented',
+      body: absentedBody,
+      node: (
+        <Text>
+          Absented{' '}
+          <Text
+            testID={`history-times-absented-${p.id_participation}`}
+            className="font-bold"
+          >
+            {timesLabel(h.absented_count)}
+          </Text>
         </Text>
-      </Text>
-    );
+      ),
+    });
   }
+
   if (facts.length === 0) return null;
 
   return (
-    <Text
+    <View
       testID={`player-history-${p.id_participation}`}
-      className="text-xs text-gray-500"
+      className="flex-row flex-wrap items-center"
     >
       {facts.map((fact, i) => (
-        <React.Fragment key={i}>
-          {i > 0 ? ' • ' : null}
-          {fact}
+        <React.Fragment key={fact.key}>
+          {i > 0 ? <Text className="text-xs text-gray-500">{' • '}</Text> : null}
+          {fact.body ? (
+            <Tooltip
+              title={fact.title}
+              content={fact.body}
+              testID={`history-tooltip-${fact.key}-${p.id_participation}`}
+            >
+              <Text className="text-xs text-gray-500">{fact.node}</Text>
+            </Tooltip>
+          ) : (
+            <Text className="text-xs text-gray-500">{fact.node}</Text>
+          )}
         </React.Fragment>
       ))}
-    </Text>
+    </View>
   );
+}
+
+function recentAnswersTooltipBody(
+  answers: NonNullable<
+    NonNullable<ApiEditionParticipation['custom_field_values']>[number]['recent_answers']
+  >
+): string {
+  return answers
+    .map(answer =>
+      answer.edition_name != null
+        ? `(${answer.edition_name}) ${answer.value}`
+        : `(${formatDisplayDate(answer.inserted_date)}) ${answer.value}`
+    )
+    .join('\n');
 }
 
 function ParticipationCustomFieldValues({ p }: { p: ApiEditionParticipation }) {
@@ -148,19 +228,23 @@ function ParticipationCustomFieldValues({ p }: { p: ApiEditionParticipation }) {
 
   return (
     <Text className="text-xs text-gray-500">
-      {values.map((entry, i) => (
-        <React.Fragment key={entry.field_id}>
-          {i > 0 ? ' • ' : null}
-          <EllipsisText
-            className="text-xs text-gray-500"
-            maxWidth={128}
-            tooltip={`${entry.label}: ${entry.value}`}
-            testID={`custom-field-value-${p.id_participation}-${entry.field_id}`}
-          >
-            {entry.value}
-          </EllipsisText>
-        </React.Fragment>
-      ))}
+      {values.map(entry => {
+        const tipBody = recentAnswersTooltipBody(entry.recent_answers || []);
+        return (
+          <React.Fragment key={entry.field_id}>
+            {' • '}
+            <EllipsisText
+              className="text-xs text-gray-500"
+              maxWidth={128}
+              tooltip={tipBody || undefined}
+              tooltipTitle={tipBody ? entry.label : undefined}
+              testID={`custom-field-value-${p.id_participation}-${entry.field_id}`}
+            >
+              {entry.value}
+            </EllipsisText>
+          </React.Fragment>
+        );
+      })}
     </Text>
   );
 }
@@ -634,7 +718,12 @@ export default function EditionParticipationsTab({
             </View>
           </View>
           {customFieldOptions.length > 0 && (
-            <View testID="participations-custom-fields-picker" style={{ minWidth: 180 }}>
+            <View
+              testID="participations-custom-fields-picker"
+              className="border border-gray-200 rounded-lg p-3 bg-white gap-2"
+              style={{ minWidth: 180 }}
+            >
+              <Text className="font-semibold text-gray-900">Custom fields</Text>
               <MultiSelectDropdown
                 options={customFieldOptions}
                 selectedValues={selectedCustomFieldIds}
@@ -655,8 +744,9 @@ export default function EditionParticipationsTab({
       {editionFinalized && customFieldOptions.length > 0 && (
         <View
           testID="participations-custom-fields-filter-row"
-          className="mb-4 border border-gray-200 rounded-lg p-3 bg-white"
+          className="mb-4 border border-gray-200 rounded-lg p-3 bg-white gap-2"
         >
+          <Text className="font-semibold text-gray-900">Custom fields</Text>
           <MultiSelectDropdown
             options={customFieldOptions}
             selectedValues={selectedCustomFieldIds}
@@ -737,7 +827,9 @@ export default function EditionParticipationsTab({
                 >
                   <View
                     testID={`participation-row-${p.id_participation}`}
-                    className="flex-row flex-wrap items-center py-2 border-b border-gray-100"
+                    className={`flex-row flex-wrap items-center py-2 border-b border-gray-100${
+                      index % 2 === 1 ? ' bg-gray-50' : ''
+                    }`}
                   >
                     {!locked && (
                       <SortableDragHandle
@@ -764,28 +856,39 @@ export default function EditionParticipationsTab({
                     <Text className="text-gray-800 flex-1 mr-2 shrink ml-2">
                       {playerLabel(p)}
                     </Text>
+                    <View className="flex-row items-center mr-2">
+                      <Pressable
+                        testID={`collecting-points-${p.id_participation}`}
+                        accessibilityLabel="Collecting points"
+                        onPress={() => toggleCollecting(p)}
+                        className="flex-row items-center"
+                      >
+                        <Ionicons
+                          name={
+                            p.is_collecting_points
+                              ? 'checkbox'
+                              : 'square-outline'
+                          }
+                          size={18}
+                          color={locked ? '#9ca3af' : '#6b7280'}
+                        />
+                      </Pressable>
+                      <Tooltip
+                        content={COLLECTING_POINTS_TOOLTIP}
+                        testID={`collecting-points-tip-${p.id_participation}`}
+                      >
+                        <Ionicons
+                          name="albums-outline"
+                          size={16}
+                          color={locked ? '#9ca3af' : '#6b7280'}
+                          style={{ marginLeft: 4 }}
+                        />
+                      </Tooltip>
+                    </View>
                     <ParticipationFlagBadges
                       flags={p.flags}
                       participationId={p.id_participation}
                     />
-                    <Pressable
-                      testID={`collecting-points-${p.id_participation}`}
-                      onPress={() => toggleCollecting(p)}
-                      className="flex-row items-center mr-2"
-                    >
-                      <Ionicons
-                        name={
-                          p.is_collecting_points
-                            ? 'checkbox'
-                            : 'square-outline'
-                        }
-                        size={18}
-                        color={locked ? '#9ca3af' : '#2563eb'}
-                      />
-                      <Text className="ml-1 text-xs text-gray-600">
-                        Collecting points
-                      </Text>
-                    </Pressable>
                     <View className="flex-row flex-wrap items-center justify-end gap-1">
                       <PlayerHistoryText p={p} />
                       <ParticipationCustomFieldValues p={p} />

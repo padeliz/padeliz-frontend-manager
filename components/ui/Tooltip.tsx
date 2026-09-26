@@ -11,8 +11,9 @@ import {
 import React, { useCallback, useEffect, useState } from 'react';
 import { Modal, Pressable, Text, View } from 'react-native';
 import {
+  tipBodyNative,
   tipChromeNative,
-  tipTextNative,
+  tipTitleNative,
   type TooltipProps,
 } from '@/components/ui/tooltipShared';
 
@@ -20,6 +21,7 @@ export type { TooltipProps };
 
 export default function Tooltip({
   content,
+  title,
   children,
   disabled = false,
   testID,
@@ -59,6 +61,9 @@ export default function Tooltip({
     setOpen(prev => !prev);
   }, [enabled]);
 
+  const accessibilityHint =
+    title && content ? `${title}\n${content}` : content || undefined;
+
   return (
     <>
       <Pressable
@@ -66,7 +71,7 @@ export default function Tooltip({
         collapsable={false}
         ref={refs.setReference}
         onPress={toggle}
-        accessibilityHint={content || undefined}
+        accessibilityHint={accessibilityHint}
         disabled={disabled}
       >
         {children}
@@ -98,7 +103,14 @@ export default function Tooltip({
             pointerEvents="none"
             style={[floatingStyles, tipChromeNative]}
           >
-            <Text style={tipTextNative}>{content}</Text>
+            {title ? (
+              <Text testID="tooltip-title" style={tipTitleNative}>
+                {title}
+              </Text>
+            ) : null}
+            <Text testID="tooltip-body" style={tipBodyNative}>
+              {content}
+            </Text>
           </View>
         </View>
       </Modal>

@@ -9,8 +9,10 @@ import Tooltip from './Tooltip';
 
 type Props = TextProps & {
   children: string;
-  /** Floating tooltip content (label + value). When set, replaces native title. */
+  /** Floating tooltip body. When set, replaces native title. */
   tooltip?: string;
+  /** Optional bold tooltip title above the body. */
+  tooltipTitle?: string;
   /** Max width in px for truncated text. */
   maxWidth?: number;
   /** When true on native, long-press shows full value in an alert. */
@@ -21,6 +23,7 @@ export default function EllipsisText({
   children,
   className = '',
   tooltip,
+  tooltipTitle,
   maxWidth,
   longPressAlert = false,
   numberOfLines = 1,
@@ -55,7 +58,11 @@ export default function EllipsisText({
 
   if (tooltip) {
     return (
-      <Tooltip content={tooltip} testID={rest.testID ? `${rest.testID}-tooltip` : undefined}>
+      <Tooltip
+        content={tooltip}
+        title={tooltipTitle}
+        testID={rest.testID ? `${rest.testID}-tooltip` : undefined}
+      >
         <View collapsable={false} style={maxWidth != null ? { maxWidth } : undefined}>
           {text}
         </View>

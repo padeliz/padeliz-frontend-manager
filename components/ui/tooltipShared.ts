@@ -10,6 +10,8 @@ export const TOOLTIP_Z_INDEX = 200001;
 
 export type TooltipProps = {
   content: string;
+  /** Optional bold title rendered above the body. */
+  title?: string;
   children: ReactNode;
   disabled?: boolean;
   testID?: string;
@@ -34,6 +36,17 @@ export const tipChromeNative: ViewStyle = {
 export const tipTextNative: TextStyle = {
   fontSize: 12,
   color: '#111827',
+  textAlign: 'left',
+};
+
+export const tipTitleNative: TextStyle = {
+  ...tipTextNative,
+  fontWeight: '700',
+  marginBottom: 2,
+};
+
+export const tipBodyNative: TextStyle = {
+  ...tipTextNative,
 };
 
 export const tipChromeWeb: CSSProperties = {
@@ -47,4 +60,18 @@ export const tipChromeWeb: CSSProperties = {
   fontSize: 12,
   color: '#111827',
   pointerEvents: 'none',
+  textAlign: 'left',
+  whiteSpace: 'pre-line',
+};
+
+export const tipTitleWeb: CSSProperties = {
+  fontWeight: 700,
+  marginBottom: 2,
+  textAlign: 'left',
+  whiteSpace: 'pre-line',
+};
+
+export const tipBodyWeb: CSSProperties = {
+  textAlign: 'left',
+  whiteSpace: 'pre-line',
 };

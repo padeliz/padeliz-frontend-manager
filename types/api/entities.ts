@@ -169,12 +169,40 @@ export interface ApiEditionParticipation {
     participated_count: number;
     banned_count: number;
     absented_count: number;
+    played_recent?: Array<{
+      edition_name: string;
+      division_title: string;
+      rank: number | null;
+      participant_count: number;
+      date: string;
+    }>;
+    participated_tooltip?: {
+      lines: Array<
+        | { type: 'entry'; edition_name: string; date: string }
+        | { type: 'ellipsis' }
+      >;
+    };
+    banned_recent?: Array<{
+      edition_name: string;
+      date: string;
+      ban_reason: string;
+    }>;
+    absented_recent?: Array<{
+      edition_name: string;
+      date: string;
+      absence_reason: string;
+    }>;
   };
   flags?: string[];
   custom_field_values?: Array<{
     field_id: number;
     label: string;
     value: string;
+    recent_answers?: Array<{
+      value: string;
+      edition_name: string | null;
+      inserted_date: string;
+    }>;
   }>;
 }
 

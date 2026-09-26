@@ -155,6 +155,47 @@ describe('Tooltip (web)', () => {
     expect(tip()).toBeNull();
   });
 
+  it('renders bold title above body when title is set', () => {
+    renderTooltip({
+      title: 'Played',
+      content: 'Spring: Played Intermediate 3/16',
+    });
+    mouseEnter();
+
+    const titleEl = document.querySelector(
+      '[data-testid="tooltip-title"]'
+    ) as HTMLElement;
+    const bodyEl = document.querySelector(
+      '[data-testid="tooltip-body"]'
+    ) as HTMLElement;
+    expect(titleEl?.textContent).toBe('Played');
+    expect(bodyEl?.textContent).toBe('Spring: Played Intermediate 3/16');
+    expect(titleEl.style.fontWeight).toBe('700');
+    expect(titleEl.style.textAlign).toBe('left');
+    expect(bodyEl.style.textAlign).toBe('left');
+    expect(bodyEl.style.whiteSpace).toBe('pre-line');
+  });
+
+  it('omits title node when title is absent', () => {
+    renderTooltip();
+    mouseEnter();
+    expect(document.querySelector('[data-testid="tooltip-title"]')).toBeNull();
+    expect(
+      (document.querySelector('[data-testid="tooltip-body"]') as HTMLElement)
+        ?.textContent
+    ).toBe('Hint text');
+  });
+
+  it('preserves newlines in the body via pre-line', () => {
+    renderTooltip({ content: 'Line one\nLine two' });
+    mouseEnter();
+    const bodyEl = document.querySelector(
+      '[data-testid="tooltip-body"]'
+    ) as HTMLElement;
+    expect(bodyEl?.textContent).toBe('Line one\nLine two');
+    expect(bodyEl.style.whiteSpace).toBe('pre-line');
+  });
+
   it('opens on focus and closes on blur when unpinned', () => {
     renderTooltip();
 

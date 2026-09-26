@@ -390,13 +390,17 @@ describe('EditionParticipationsTab collecting points', () => {
   });
 
   it('shows a collecting toggle per row and marks dirty on change', () => {
-    const { getByTestId } = renderTab({
+    const { getByTestId, queryByText } = renderTab({
       editionFinalized: false,
       selectedDivisionId: 9,
     });
-    expect(getByTestId('collecting-points-100')).toBeTruthy();
+    const toggle = getByTestId('collecting-points-100');
+    expect(toggle).toBeTruthy();
+    expect(toggle.props.accessibilityLabel).toBe('Collecting points');
+    expect(queryByText('Collecting points')).toBeNull();
+    expect(getByTestId('collecting-points-tip-100')).toBeTruthy();
     expect(getByTestId('chrome-is-dirty')).toHaveTextContent('no');
-    fireEvent.press(getByTestId('collecting-points-100'));
+    fireEvent.press(toggle);
     expect(getByTestId('chrome-is-dirty')).toHaveTextContent('yes');
     expect(getByTestId('chrome-can-save')).toHaveTextContent('yes');
   });
@@ -584,7 +588,7 @@ describe('EditionParticipationsTab custom fields', () => {
   });
 
   it('shows custom fields multiselect beside add form when not finalized', () => {
-    const { getByTestId } = renderTab({
+    const { getByTestId, getAllByText } = renderTab({
       editionFinalized: false,
       selectedDivisionId: 9,
       customFieldOptions,
@@ -599,6 +603,8 @@ describe('EditionParticipationsTab custom fields', () => {
     expect(picker.props.style).toEqual(
       expect.objectContaining({ minWidth: 180 })
     );
+    expect(picker.props.className).toContain('border-gray-200');
+    expect(getAllByText('Custom fields').length).toBeGreaterThan(0);
   });
 
   it('hides custom fields picker when not finalized and no options', () => {
@@ -618,6 +624,9 @@ describe('EditionParticipationsTab custom fields', () => {
     expect(getByTestId('participations-custom-fields-filter-row')).toBeTruthy();
     expect(queryByTestId('participations-add-form')).toBeNull();
     expect(queryByTestId('participations-custom-fields-picker')).toBeNull();
+    expect(
+      getByTestId('participations-custom-fields-filter-row')
+    ).toHaveTextContent(/Custom fields/);
   });
 
   it('hides custom fields filter row when finalized without options', () => {
@@ -628,7 +637,7 @@ describe('EditionParticipationsTab custom fields', () => {
     expect(queryByTestId('participations-custom-fields-filter-row')).toBeNull();
   });
 
-  it('renders custom field values with EllipsisText after player history', () => {
+  it('renders custom field values with EllipsisText after player history', async () => {
     const withCustomFields = [
       {
         ...participations[0],
@@ -647,6 +656,18 @@ describe('EditionParticipationsTab custom fields', () => {
             field_id: 10,
             label: 'Shirt size',
             value: 'Very long custom field value text',
+            recent_answers: [
+              {
+                value: 'M',
+                edition_name: 'Past Cup',
+                inserted_date: '2026-01-01',
+              },
+              {
+                value: 'Very long custom field value text',
+                edition_name: 'Current Cup',
+                inserted_date: '2026-06-15',
+              },
+            ],
           },
         ],
       },
@@ -667,6 +688,15 @@ describe('EditionParticipationsTab custom fields', () => {
       expect(valueNode.props.numberOfLines).toBe(1);
       expect(valueNode.props.className).toContain('truncate');
       expect(valueNode.props.title).toBeUndefined();
+      expect(getByTestId('participation-row-100')).toHaveTextContent(/^.* • /);
+
+      fireEvent.press(getByTestId('custom-field-value-100-10-tooltip'));
+      await waitFor(() => {
+        expect(getByTestId('tooltip-title')).toHaveTextContent('Shirt size');
+        expect(getByTestId('tooltip-body')).toHaveTextContent(
+          '(Past Cup) M\n(Current Cup) Very long custom field value text'
+        );
+      });
     } finally {
       Object.defineProperty(Platform, 'OS', { configurable: true, value: originalOs });
     }
@@ -922,6 +952,203 @@ describe('EditionParticipationsTab avatars', () => {
       expect(getByTestId('participation-avatar-100-error')).toHaveTextContent(
         'avatar boom'
       );
+    });
+  });
+});
+
+describe('EditionParticipationsTab row chrome and tooltips', () => {
+  afterEach(() => {
+    cleanup();
+    jest.clearAllMocks();
+  });
+
+  it('uses grey collecting checkbox and albums tip without stealing toggle', async () => {
+    const { getByTestId, UNSAFE_getAllByType } = renderTab({
+      editionFinalized: false,
+      selectedDivisionId: 9,
+    });
+    const { Ionicons } = require('@expo/vector-icons');
+    const icons = UNSAFE_getAllByType(Ionicons);
+    const checkbox = icons.find(
+      (node: { props: { name?: string } }) =>
+        node.props.name === 'checkbox' || node.props.name === 'square-outline'
+    );
+    const albums = icons.find(
+      (node: { props: { name?: string } }) => node.props.name === 'albums-outline'
+    );
+    expect(checkbox?.props.color).toBe('#6b7280');
+    expect(albums).toBeTruthy();
+
+    fireEvent.press(getByTestId('collecting-points-tip-100'));
+    await waitFor(() => {
+      expect(getByTestId('tooltip-body')).toHaveTextContent(
+        'If player is collecting points from the matches and they appear on the Ranking poster.'
+      );
+    });
+    expect(getByTestId('chrome-is-dirty')).toHaveTextContent('no');
+  });
+
+  it('places collecting control before flags', () => {
+    const withFlags = [
+      {
+        ...participations[0],
+        flags: ['duplicate'],
+      },
+    ];
+    const { getByTestId } = renderTab({
+      editionFinalized: false,
+      selectedDivisionId: 9,
+      participationsOverride: withFlags as any,
+    });
+    const collecting = getByTestId('collecting-points-100');
+    const flag = getByTestId('participation-flag-duplicate-100');
+    expect(collecting).toBeTruthy();
+    expect(flag).toBeTruthy();
+    // Both are under the same row; collecting is rendered before flags in JSX.
+    const row = getByTestId('participation-row-100');
+    expect(row).toContainElement(collecting);
+    expect(row).toContainElement(flag);
+  });
+
+  it('applies bg-gray-50 on even-numbered rows', () => {
+    const twoInSameEd = [
+      participations[0],
+      {
+        ...participations[0],
+        id_participation: 102,
+        player_id: 3,
+        sort_order: 1,
+        player: { id_player: 3, name: 'Cara' },
+      },
+    ];
+    const { getByTestId } = renderTab({
+      editionFinalized: false,
+      selectedDivisionId: 9,
+      participationsOverride: twoInSameEd as any,
+    });
+    expect(getByTestId('participation-row-100').props.className).not.toContain(
+      'bg-gray-50'
+    );
+    expect(getByTestId('participation-row-102').props.className).toContain(
+      'bg-gray-50'
+    );
+  });
+
+  it('shows history tooltips with titles and bodies', async () => {
+    const withHistory = [
+      {
+        ...participations[0],
+        player_history: {
+          last_played: {
+            division_title: 'Explorers',
+            rank: null,
+            participant_count: 12,
+          },
+          participated_count: 2,
+          banned_count: 1,
+          absented_count: 1,
+          played_recent: [
+            {
+              edition_name: 'Spring Cup',
+              division_title: 'Explorers',
+              rank: null,
+              participant_count: 12,
+              date: '2026-01-01',
+            },
+          ],
+          participated_tooltip: {
+            lines: [
+              { type: 'entry', edition_name: 'Winter Cup', date: '2025-01-01' },
+              { type: 'ellipsis' },
+              { type: 'entry', edition_name: 'Spring Cup', date: '2026-01-01' },
+            ],
+          },
+          banned_recent: [
+            {
+              edition_name: 'Ban Cup',
+              date: '2025-06-01',
+              ban_reason: 'AGGRESSIVE PLAYER',
+            },
+          ],
+          absented_recent: [
+            {
+              edition_name: 'Absent Cup',
+              date: '2025-03-01',
+              absence_reason: 'SICK',
+            },
+          ],
+        },
+      },
+    ];
+    const { getByTestId } = renderTab({
+      editionFinalized: false,
+      selectedDivisionId: 9,
+      participationsOverride: withHistory as any,
+    });
+
+    fireEvent.press(getByTestId('history-tooltip-played-100'));
+    await waitFor(() => {
+      expect(getByTestId('tooltip-title')).toHaveTextContent('Played');
+      expect(getByTestId('tooltip-body')).toHaveTextContent(
+        'Spring Cup: Played Explorers —/12'
+      );
+    });
+    fireEvent.press(getByTestId('tooltip-backdrop'));
+
+    fireEvent.press(getByTestId('history-tooltip-participated-100'));
+    await waitFor(() => {
+      expect(getByTestId('tooltip-title')).toHaveTextContent('Participated');
+      expect(getByTestId('tooltip-body').props.children).toContain('...');
+    });
+    fireEvent.press(getByTestId('tooltip-backdrop'));
+
+    fireEvent.press(getByTestId('history-tooltip-banned-100'));
+    await waitFor(() => {
+      expect(getByTestId('tooltip-title')).toHaveTextContent('Banned');
+      expect(getByTestId('tooltip-body')).toHaveTextContent(
+        'Ban Cup: Jun 1st, 2025 (AGGRESSIVE PLAYER)'
+      );
+    });
+    fireEvent.press(getByTestId('tooltip-backdrop'));
+
+    fireEvent.press(getByTestId('history-tooltip-absented-100'));
+    await waitFor(() => {
+      expect(getByTestId('tooltip-title')).toHaveTextContent('Absented');
+      expect(getByTestId('tooltip-body')).toHaveTextContent(
+        /Absent Cup:.*\(SICK\)/
+      );
+    });
+  });
+
+  it('renders global custom field tip with formatted inserted date', async () => {
+    const withGlobal = [
+      {
+        ...participations[0],
+        custom_field_values: [
+          {
+            field_id: 11,
+            label: 'Club',
+            value: 'Padel Club',
+            recent_answers: [
+              {
+                value: 'Padel Club',
+                edition_name: null,
+                inserted_date: '2026-01-10',
+              },
+            ],
+          },
+        ],
+      },
+    ];
+    const { getByTestId } = renderTab({
+      editionFinalized: false,
+      selectedDivisionId: 9,
+      participationsOverride: withGlobal as any,
+    });
+    fireEvent.press(getByTestId('custom-field-value-100-11-tooltip'));
+    await waitFor(() => {
+      expect(getByTestId('tooltip-title')).toHaveTextContent('Club');
+      expect(getByTestId('tooltip-body')).toHaveTextContent(/Padel Club/);
     });
   });
 });

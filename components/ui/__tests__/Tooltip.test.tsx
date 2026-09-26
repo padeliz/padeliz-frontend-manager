@@ -93,6 +93,62 @@ describe('Tooltip (native)', () => {
     );
   });
 
+  it('renders bold title above body when title is set', async () => {
+    const { getByTestId } = renderTooltip({
+      title: 'Played',
+      content: 'Spring: Played Intermediate 3/16',
+    });
+
+    fireEvent.press(getByTestId('tooltip-trigger'));
+
+    await waitFor(() => {
+      expect(getByTestId('tooltip-title')).toHaveTextContent('Played');
+      expect(getByTestId('tooltip-body')).toHaveTextContent(
+        'Spring: Played Intermediate 3/16'
+      );
+    });
+
+    expect(getByTestId('tooltip-title').props.style).toEqual(
+      expect.objectContaining({ fontWeight: '700', textAlign: 'left' })
+    );
+    expect(getByTestId('tooltip-body').props.style).toEqual(
+      expect.objectContaining({ textAlign: 'left' })
+    );
+  });
+
+  it('omits title node when title is absent', async () => {
+    const { getByTestId, queryByTestId } = renderTooltip();
+
+    fireEvent.press(getByTestId('tooltip-trigger'));
+
+    await waitFor(() => {
+      expect(getByTestId('tooltip-body')).toHaveTextContent('Native hint');
+    });
+    expect(queryByTestId('tooltip-title')).toBeNull();
+  });
+
+  it('preserves newlines in the body', async () => {
+    const { getByTestId } = renderTooltip({
+      content: 'Line one\nLine two',
+    });
+
+    fireEvent.press(getByTestId('tooltip-trigger'));
+
+    await waitFor(() => {
+      expect(getByTestId('tooltip-body')).toHaveTextContent('Line one\nLine two');
+    });
+  });
+
+  it('sets accessibilityHint to title and content when title is set', () => {
+    const { getByTestId } = renderTooltip({
+      title: 'Banned',
+      content: 'Hint A',
+    });
+    expect(getByTestId('tooltip-trigger').props.accessibilityHint).toBe(
+      'Banned\nHint A'
+    );
+  });
+
   it('does not open when disabled', () => {
     const { getByTestId, queryByTestId } = renderTooltip({ disabled: true });
     fireEvent.press(getByTestId('tooltip-trigger'));
