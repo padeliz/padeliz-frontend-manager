@@ -1,41 +1,15 @@
-/**
- * @jest-environment jsdom
- */
-
-jest.mock('react-dom', () => {
-  const actual = jest.requireActual('react-dom');
-  return {
-    ...actual,
-    createPortal: (node: React.ReactNode) => node,
-  };
-});
-
 jest.mock('@/utils/isWebPlatform', () => ({
   isWebPlatform: jest.fn(() => true),
 }));
 
 import EllipsisText from '@/components/ui/EllipsisText';
 import { isWebPlatform } from '@/utils/isWebPlatform';
-import { act, render, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
 const mockIsWebPlatform = isWebPlatform as jest.MockedFunction<typeof isWebPlatform>;
 
 describe('EllipsisText', () => {
-  beforeAll(() => {
-    Element.prototype.getBoundingClientRect = jest.fn(() => ({
-      x: 0,
-      y: 0,
-      width: 100,
-      height: 20,
-      top: 0,
-      left: 0,
-      bottom: 20,
-      right: 100,
-      toJSON: () => ({}),
-    }));
-  });
-
   beforeEach(() => {
     mockIsWebPlatform.mockReturnValue(true);
   });
@@ -58,17 +32,16 @@ describe('EllipsisText', () => {
   });
 
   it('uses floating tooltip instead of title when tooltip prop is set', async () => {
-    const { getByText, getByTestId } = render(
+    const { getByText, getByTestId, queryByTestId } = render(
       <EllipsisText tooltip="Shirt size: XL" testID="cf-value">
         XL
       </EllipsisText>
     );
     const node = getByText('XL');
     expect(node.props.title).toBeUndefined();
+    expect(queryByTestId('tooltip-content')).toBeNull();
 
-    await act(async () => {
-      getByTestId('cf-value-tooltip').props.onMouseEnter();
-    });
+    fireEvent.press(getByTestId('cf-value-tooltip'));
 
     await waitFor(() => {
       expect(getByTestId('tooltip-content')).toHaveTextContent('Shirt size: XL');

@@ -1,78 +1,84 @@
-/**
- * @jest-environment jsdom
- */
-
-jest.mock('react-dom', () => {
-  const actual = jest.requireActual('react-dom');
-  return {
-    ...actual,
-    createPortal: (node: React.ReactNode) => node,
-  };
-});
-
-jest.mock('@/utils/isWebPlatform', () => ({
-  isWebPlatform: jest.fn(() => true),
-}));
-
 import Tooltip from '@/components/ui/Tooltip';
-import { isWebPlatform } from '@/utils/isWebPlatform';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
-import { Alert, Text } from 'react-native';
+import { Alert, Modal, Text } from 'react-native';
 
-const mockIsWebPlatform = isWebPlatform as jest.MockedFunction<typeof isWebPlatform>;
-
-describe('Tooltip', () => {
-  beforeAll(() => {
-    Element.prototype.getBoundingClientRect = jest.fn(() => ({
-      x: 0,
-      y: 0,
-      width: 100,
-      height: 20,
-      top: 0,
-      left: 0,
-      bottom: 20,
-      right: 100,
-      toJSON: () => ({}),
-    }));
-  });
-
-  beforeEach(() => {
-    mockIsWebPlatform.mockReturnValue(true);
-  });
-
+describe('Tooltip (native)', () => {
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  it('renders children on web', () => {
-    const { getByText } = render(
-      <Tooltip content="Hint text">
+  function renderTooltip(
+    props: Partial<React.ComponentProps<typeof Tooltip>> = {}
+  ) {
+    return render(
+      <Tooltip content="Native hint" testID="tooltip-trigger" {...props}>
         <Text>Trigger</Text>
       </Tooltip>
     );
+  }
+
+  it('renders children', () => {
+    const { getByText } = renderTooltip();
     expect(getByText('Trigger')).toBeTruthy();
   });
 
-  it('shows floating tooltip content on web hover', async () => {
-    const { getByTestId, queryByTestId } = render(
-      <Tooltip content="Shirt size: XL" testID="tooltip-trigger">
-        <Text>XL</Text>
-      </Tooltip>
-    );
+  it('exposes testID on the trigger', () => {
+    const { getByTestId } = renderTooltip();
+    expect(getByTestId('tooltip-trigger')).toBeTruthy();
+  });
+
+  it('opens on press with content', async () => {
+    const { getByTestId, queryByTestId } = renderTooltip();
 
     expect(queryByTestId('tooltip-content')).toBeNull();
 
-    await act(async () => {
-      getByTestId('tooltip-trigger').props.onMouseEnter();
-    });
+    fireEvent.press(getByTestId('tooltip-trigger'));
 
     await waitFor(() => {
-      expect(getByTestId('tooltip-content')).toHaveTextContent('Shirt size: XL');
+      expect(getByTestId('tooltip-content')).toHaveTextContent('Native hint');
+    });
+  });
+
+  it('closes on second press (toggle)', async () => {
+    const { getByTestId, queryByTestId } = renderTooltip();
+
+    fireEvent.press(getByTestId('tooltip-trigger'));
+    await waitFor(() => {
+      expect(getByTestId('tooltip-content')).toBeTruthy();
     });
 
+    fireEvent.press(getByTestId('tooltip-trigger'));
+    await waitFor(() => {
+      expect(queryByTestId('tooltip-content')).toBeNull();
+    });
+  });
+
+  it('closes when backdrop is pressed', async () => {
+    const { getByTestId, queryByTestId } = renderTooltip();
+
+    fireEvent.press(getByTestId('tooltip-trigger'));
+    await waitFor(() => {
+      expect(getByTestId('tooltip-content')).toBeTruthy();
+    });
+
+    fireEvent.press(getByTestId('tooltip-backdrop'));
+    await waitFor(() => {
+      expect(queryByTestId('tooltip-content')).toBeNull();
+    });
+  });
+
+  it('closes on Modal onRequestClose (Android back)', async () => {
+    const { getByTestId, queryByTestId, UNSAFE_getAllByType } = renderTooltip();
+
+    fireEvent.press(getByTestId('tooltip-trigger'));
+    await waitFor(() => {
+      expect(getByTestId('tooltip-content')).toBeTruthy();
+    });
+
+    const modal = UNSAFE_getAllByType(Modal)[0];
     await act(async () => {
-      getByTestId('tooltip-trigger').props.onMouseLeave();
+      modal.props.onRequestClose?.();
     });
 
     await waitFor(() => {
@@ -80,34 +86,64 @@ describe('Tooltip', () => {
     });
   });
 
-  it('does not show tooltip when disabled', async () => {
-    const { getByTestId, queryByTestId } = render(
-      <Tooltip content="Hidden" disabled testID="tooltip-trigger">
-        <Text>Trigger</Text>
-      </Tooltip>
+  it('sets accessibilityHint to content', () => {
+    const { getByTestId } = renderTooltip({ content: 'Hint A' });
+    expect(getByTestId('tooltip-trigger').props.accessibilityHint).toBe(
+      'Hint A'
     );
+  });
 
-    await act(async () => {
-      getByTestId('tooltip-trigger').props.onMouseEnter();
-    });
-
+  it('does not open when disabled', () => {
+    const { getByTestId, queryByTestId } = renderTooltip({ disabled: true });
+    fireEvent.press(getByTestId('tooltip-trigger'));
     expect(queryByTestId('tooltip-content')).toBeNull();
   });
 
-  it('shows alert on native long press', () => {
-    mockIsWebPlatform.mockReturnValue(false);
+  it('does not open when content is empty and leaves hint unset', () => {
+    const { getByTestId, queryByTestId } = renderTooltip({ content: '' });
+    expect(getByTestId('tooltip-trigger').props.accessibilityHint).toBeUndefined();
+    fireEvent.press(getByTestId('tooltip-trigger'));
+    expect(queryByTestId('tooltip-content')).toBeNull();
+  });
 
-    jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-    const { getByTestId } = render(
-      <Tooltip content="Native hint" testID="tooltip-trigger">
-        <Text>Trigger</Text>
-      </Tooltip>
-    );
+  it('applies Floating UI positioning styles on the tip', async () => {
+    const { getByTestId } = renderTooltip();
 
-    act(() => {
-      fireEvent(getByTestId('tooltip-trigger'), 'longPress');
+    fireEvent.press(getByTestId('tooltip-trigger'));
+    await waitFor(() => {
+      expect(getByTestId('tooltip-content')).toBeTruthy();
     });
 
-    expect(Alert.alert).toHaveBeenCalledWith('', 'Native hint');
+    const style = getByTestId('tooltip-content').props.style;
+    const flat = Array.isArray(style)
+      ? Object.assign({}, ...style.filter(Boolean))
+      : style ?? {};
+    expect(flat.position).toBe('absolute');
+    expect(typeof flat.top === 'number' || flat.top != null).toBe(true);
+    expect(typeof flat.left === 'number' || flat.left != null).toBe(true);
+  });
+
+  it('sets pointerEvents none on the tip', async () => {
+    const { getByTestId } = renderTooltip();
+
+    fireEvent.press(getByTestId('tooltip-trigger'));
+    await waitFor(() => {
+      expect(getByTestId('tooltip-content')).toBeTruthy();
+    });
+
+    expect(getByTestId('tooltip-content').props.pointerEvents).toBe('none');
+  });
+
+  it('never calls Alert.alert', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const { getByTestId } = renderTooltip();
+
+    fireEvent.press(getByTestId('tooltip-trigger'));
+    await waitFor(() => {
+      expect(getByTestId('tooltip-content')).toBeTruthy();
+    });
+
+    expect(alertSpy).not.toHaveBeenCalled();
+    alertSpy.mockRestore();
   });
 });

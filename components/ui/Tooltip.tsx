@@ -1,128 +1,107 @@
 /**
- * Floating tooltip on web (hover/focus); long-press alert on native.
+ * Floating tooltip on iOS / Android (tap to toggle; tap outside / back to dismiss).
  */
 
 import {
-  autoUpdate,
   flip,
   offset,
   shift,
   useFloating,
-} from '@floating-ui/react-dom';
-import React, { useCallback, useId, useState } from 'react';
-import { createPortal } from 'react-dom';
+} from '@floating-ui/react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Modal, Pressable, Text, View } from 'react-native';
 import {
-  Alert,
-  Pressable,
-  Text,
-  View,
-} from 'react-native';
-import { isWebPlatform } from '@/utils/isWebPlatform';
+  tipChromeNative,
+  tipTextNative,
+  type TooltipProps,
+} from '@/components/ui/tooltipShared';
 
-/** Above FloatingDropdown modal z-index on web */
-const TOOLTIP_Z_INDEX = 200001;
-
-type Props = {
-  content: string;
-  children: React.ReactNode;
-  disabled?: boolean;
-  testID?: string;
-};
+export type { TooltipProps };
 
 export default function Tooltip({
   content,
   children,
   disabled = false,
   testID,
-}: Props) {
+}: TooltipProps) {
   const [open, setOpen] = useState(false);
-  const reactId = useId();
-  const tooltipId = `tooltip-${reactId.replace(/:/g, '')}`;
 
-  const isOpen = open && !disabled && content !== '';
+  const enabled = !disabled && content !== '';
 
-  const { refs, floatingStyles } = useFloating({
-    open: isOpen,
+  useEffect(() => {
+    if (!enabled) {
+      setOpen(false);
+    }
+  }, [enabled]);
+
+  const { refs, floatingStyles, update } = useFloating({
+    placement: 'top',
     middleware: [offset(6), flip(), shift({ padding: 8 })],
-    whileElementsMounted: autoUpdate,
+    sameScrollView: false,
   });
 
-  const show = useCallback(() => {
-    if (!disabled && content !== '') {
-      setOpen(true);
-    }
-  }, [content, disabled]);
+  const isOpen = open && enabled;
 
-  const hide = useCallback(() => {
+  useEffect(() => {
+    if (isOpen) {
+      update();
+    }
+  }, [isOpen, update]);
+
+  const close = useCallback(() => {
     setOpen(false);
   }, []);
 
-  const handleLongPress = useCallback(() => {
-    if (!disabled && content !== '') {
-      Alert.alert('', content);
+  const toggle = useCallback(() => {
+    if (!enabled) {
+      return;
     }
-  }, [content, disabled]);
-
-  if (!isWebPlatform()) {
-    return (
-      <Pressable
-        testID={testID}
-        onLongPress={handleLongPress}
-        accessibilityHint={content || undefined}
-      >
-        {children}
-      </Pressable>
-    );
-  }
+    setOpen(prev => !prev);
+  }, [enabled]);
 
   return (
     <>
-      <View
+      <Pressable
         testID={testID}
         collapsable={false}
-        ref={node => {
-          refs.setReference(node as unknown as HTMLElement);
-        }}
-        onFocus={show}
-        onBlur={hide}
-        // @ts-expect-error RN Web mouse events for hover tooltips
-        onMouseEnter={show}
-        // @ts-expect-error RN Web mouse events for hover tooltips
-        onMouseLeave={hide}
-        accessibilityDescribedBy={isOpen ? tooltipId : undefined}
+        ref={refs.setReference}
+        onPress={toggle}
+        accessibilityHint={content || undefined}
+        disabled={disabled}
       >
         {children}
-      </View>
-      {isOpen &&
-        typeof document !== 'undefined' &&
-        createPortal(
+      </Pressable>
+
+      <Modal
+        visible={isOpen}
+        transparent
+        animationType="none"
+        onRequestClose={close}
+        statusBarTranslucent
+      >
+        <View
+          ref={refs.setOffsetParent}
+          collapsable={false}
+          className="flex-1"
+        >
+          <Pressable
+            testID="tooltip-backdrop"
+            accessibilityRole="button"
+            className="absolute inset-0"
+            onPress={close}
+          />
           <View
             testID="tooltip-content"
-            accessibilityRole="tooltip"
-            nativeID={tooltipId}
-            style={{
-              position: 'absolute',
-              top: floatingStyles.top,
-              left: floatingStyles.left,
-              zIndex: TOOLTIP_Z_INDEX,
-              maxWidth: 320,
-              paddingHorizontal: 10,
-              paddingVertical: 6,
-              backgroundColor: '#ffffff',
-              borderWidth: 1,
-              borderColor: '#e5e7eb',
-              borderRadius: 6,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 6,
-              elevation: 4,
-            }}
+            accessibilityRole="text"
+            collapsable={false}
+            ref={refs.setFloating}
+            pointerEvents="none"
+            style={[floatingStyles, tipChromeNative]}
           >
-            <Text className="text-xs text-gray-900">{content}</Text>
-          </View>,
-          document.body
-        )}
+            <Text style={tipTextNative}>{content}</Text>
+          </View>
+        </View>
+      </Modal>
     </>
   );
 }
