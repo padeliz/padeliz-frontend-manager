@@ -23,7 +23,7 @@ export default function ParticipationFlagBadges({ flags, participationId }: Prop
   if (!flags?.length) return null;
 
   return (
-    <View className="flex-row flex-wrap gap-1 mr-2">
+    <View className="flex-row gap-1">
       {flags.map(flag => {
         const config = PARTICIPATION_FLAG_CONFIG[flag as FlagKey];
         if (!config) return null;
@@ -32,6 +32,7 @@ export default function ParticipationFlagBadges({ flags, participationId }: Prop
             key={`${flag}-${participationId}`}
             testID={`participation-flag-${flag}-${participationId}`}
             className={`text-xs px-2 py-0.5 rounded border ${config.chipClass}`}
+            numberOfLines={1}
           >
             {config.label}
           </Text>

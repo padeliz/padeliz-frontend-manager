@@ -9,13 +9,38 @@ import type { TextStyle, ViewStyle } from 'react-native';
 export const TOOLTIP_Z_INDEX = 200001;
 
 export type TooltipProps = {
-  content: string;
+  content: ReactNode;
   /** Optional bold title rendered above the body. */
   title?: string;
   children: ReactNode;
   disabled?: boolean;
   testID?: string;
+  /**
+   * Accessibility hint override. When omitted, string `content` (optionally
+   * prefixed with `title`) is used; ReactNode content leaves the hint unset.
+   */
+  accessibilityHint?: string;
 };
+
+export function hasTooltipContent(content: ReactNode): boolean {
+  if (content == null || content === false) {
+    return false;
+  }
+  if (typeof content === 'string') {
+    return content !== '';
+  }
+  return true;
+}
+
+export function defaultTooltipAccessibilityHint(
+  content: ReactNode,
+  title?: string
+): string | undefined {
+  if (typeof content !== 'string' || content === '') {
+    return undefined;
+  }
+  return title ? `${title}\n${content}` : content;
+}
 
 export const tipChromeNative: ViewStyle = {
   zIndex: TOOLTIP_Z_INDEX,

@@ -19,6 +19,7 @@ import {
 } from '@floating-ui/react';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
+  hasTooltipContent,
   tipBodyWeb,
   tipChromeWeb,
   tipTitleWeb,
@@ -37,7 +38,7 @@ export default function Tooltip({
   const [open, setOpen] = useState(false);
   const [pinned, setPinned] = useState(false);
 
-  const enabled = !disabled && content !== '';
+  const enabled = !disabled && hasTooltipContent(content);
 
   useEffect(() => {
     if (!enabled) {

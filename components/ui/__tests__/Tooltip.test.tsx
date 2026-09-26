@@ -162,6 +162,44 @@ describe('Tooltip (native)', () => {
     expect(queryByTestId('tooltip-content')).toBeNull();
   });
 
+  it('renders ReactNode content and leaves default accessibilityHint unset', async () => {
+    const { getByTestId, getByText } = render(
+      <Tooltip
+        content={
+          <Text>
+            Colored <Text style={{ color: '#ff0000' }}>Division</Text>
+          </Text>
+        }
+        testID="tooltip-trigger"
+      >
+        <Text>Trigger</Text>
+      </Tooltip>
+    );
+
+    expect(getByTestId('tooltip-trigger').props.accessibilityHint).toBeUndefined();
+
+    fireEvent.press(getByTestId('tooltip-trigger'));
+    await waitFor(() => {
+      expect(getByTestId('tooltip-body')).toBeTruthy();
+      expect(getByText('Division')).toBeTruthy();
+    });
+  });
+
+  it('uses accessibilityHint override for ReactNode content', () => {
+    const { getByTestId } = render(
+      <Tooltip
+        content={<Text>Rich</Text>}
+        accessibilityHint="Rich hint"
+        testID="tooltip-trigger"
+      >
+        <Text>Trigger</Text>
+      </Tooltip>
+    );
+    expect(getByTestId('tooltip-trigger').props.accessibilityHint).toBe(
+      'Rich hint'
+    );
+  });
+
   it('applies Floating UI positioning styles on the tip', async () => {
     const { getByTestId } = renderTooltip();
 

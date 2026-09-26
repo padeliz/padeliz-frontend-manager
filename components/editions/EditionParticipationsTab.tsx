@@ -20,7 +20,7 @@ import { confirmAction } from '@/utils/confirmAction';
 import { formatDisplayDate } from '@/utils/fieldFormatter';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import {
   applyDrop,
   EdListFrame,
@@ -35,6 +35,7 @@ import SortableRow, {
   SORTABLE_ROW_HEIGHT,
 } from './SortableRow';
 import Tooltip from '@/components/ui/Tooltip';
+import { tipBodyNative } from '@/components/ui/tooltipShared';
 
 const participationsApi = new EditionParticipationsApiService();
 
@@ -43,6 +44,36 @@ const ROW_HEIGHT = SORTABLE_ROW_HEIGHT;
 const COLLECTING_POINTS_TOOLTIP =
   'If player is collecting points from the matches and they appear on the Ranking poster.';
 
+const OVER_LIMIT_TOOLTIP =
+  'This division exceeds the participants limit.';
+
+/** Fixed column widths for the per-ED participations table. */
+const COL = {
+  handle: 28,
+  avatar: 36,
+  name: 160,
+  collecting: 44,
+  flags: 72,
+  played: 140,
+  participated: 180,
+  customField: 128,
+  arrows: 72,
+  exclude: 36,
+} as const;
+
+/** Shared gutter between every column (header + rows). */
+const COL_GUTTER = 8;
+
+const LEFT_COL_COUNT = 5;
+const LEFT_COLS_WIDTH =
+  COL.handle +
+  COL.avatar +
+  COL.name +
+  COL.collecting +
+  COL.flags +
+  (LEFT_COL_COUNT - 1) * COL_GUTTER;
+
+const TRAILING_COLS_WIDTH = COL.arrows + COL.exclude + COL_GUTTER;
 
 type Props = {
   editionId: number;
@@ -71,139 +102,223 @@ function timesLabel(n: number): string {
   return n === 1 ? '1 time' : `${n} times`;
 }
 
-function PlayerHistoryText({ p }: { p: ApiEditionParticipation }) {
+function divisionTitleStyle(color: string | undefined | null) {
+  const trimmed = color != null ? String(color).trim() : '';
+  return {
+    fontWeight: '700' as const,
+    ...(trimmed !== '' ? { color: trimmed } : {}),
+  };
+}
+
+function playedRankLabel(rank: number | null | undefined, count: number): string {
+  const rankText = rank == null ? '—' : String(rank);
+  return `${rankText}/${count}`;
+}
+
+function PlayedHistoryCell({ p }: { p: ApiEditionParticipation }) {
   const h = p.player_history;
-  if (!h) return null;
+  const last = h?.last_played ?? null;
 
-  const facts: Array<{ key: string; node: React.ReactNode; title: string; body: string }> = [];
-
-  if (h.last_played) {
-    const rank =
-      h.last_played.rank == null ? '—' : String(h.last_played.rank);
-    const playedBody = (h.played_recent || [])
+  const playedHint =
+    (h?.played_recent || [])
       .map(entry => {
         const entryRank = entry.rank == null ? '—' : String(entry.rank);
-        return `${entry.edition_name}: Played ${entry.division_title} ${entryRank}/${entry.participant_count}`;
+        return `${entry.edition_name}: ${entry.division_title} ${entryRank}/${entry.participant_count}`;
       })
-      .join('\n');
-    facts.push({
-      key: 'played',
-      title: 'Played',
-      body: playedBody,
-      node: (
-        <Text>
-          Played{' '}
-          <Text
-            testID={`history-division-title-${p.id_participation}`}
-            className="font-bold"
-          >
-            {h.last_played.division_title}
-          </Text>{' '}
-          {rank}/{h.last_played.participant_count}
-        </Text>
-      ),
-    });
-  }
+      .join('\n') || undefined;
 
-  if (h.participated_count > 0) {
-    const participatedBody = (h.participated_tooltip?.lines || [])
-      .map(line =>
-        line.type === 'ellipsis'
-          ? '...'
-          : `${line.edition_name}: ${formatDisplayDate(line.date)}`
-      )
-      .join('\n');
-    facts.push({
-      key: 'participated',
-      title: 'Participated',
-      body: participatedBody,
-      node: (
-        <Text>
-          Participated{' '}
-          <Text
-            testID={`history-times-participated-${p.id_participation}`}
-            className="font-bold"
-          >
-            {timesLabel(h.participated_count)}
-          </Text>
-        </Text>
-      ),
-    });
-  }
+  const playedBody =
+    (h?.played_recent || []).length > 0 ? (
+      <View>
+        {(h?.played_recent || []).map((entry, i) => {
+          const entryRank = entry.rank == null ? '—' : String(entry.rank);
+          return (
+            <Text key={`${entry.edition_name}-${i}`} style={tipBodyNative}>
+              {entry.edition_name}:{' '}
+              <Text style={divisionTitleStyle(entry.division_color)}>
+                {entry.division_title}
+              </Text>{' '}
+              {entryRank}/{entry.participant_count}
+            </Text>
+          );
+        })}
+      </View>
+    ) : null;
 
-  if (h.banned_count > 0) {
-    const bannedBody = (h.banned_recent || [])
-      .map(
-        entry =>
-          `${entry.edition_name}: ${formatDisplayDate(entry.date)} (${entry.ban_reason})`
-      )
-      .join('\n');
-    facts.push({
-      key: 'banned',
-      title: 'Banned',
-      body: bannedBody,
-      node: (
-        <Text>
-          Banned{' '}
-          <Text
-            testID={`history-times-banned-${p.id_participation}`}
-            className="font-bold"
-          >
-            {timesLabel(h.banned_count)}
-          </Text>
-        </Text>
-      ),
-    });
-  }
+  const cell = last ? (
+    <Text
+      numberOfLines={1}
+      ellipsizeMode="tail"
+      className="text-xs text-gray-500"
+    >
+      <Text
+        testID={`history-division-title-${p.id_participation}`}
+        className="font-bold"
+        style={divisionTitleStyle(last.division_color)}
+      >
+        {last.division_title}
+      </Text>{' '}
+      {playedRankLabel(last.rank, last.participant_count)}
+    </Text>
+  ) : (
+    <Text
+      testID={`history-played-empty-${p.id_participation}`}
+      className="text-xs text-gray-500"
+    >
+      —
+    </Text>
+  );
 
-  if (h.absented_count > 0) {
-    const absentedBody = (h.absented_recent || [])
-      .map(
-        entry =>
-          `${entry.edition_name}: ${formatDisplayDate(entry.date)} (${entry.absence_reason})`
-      )
-      .join('\n');
-    facts.push({
-      key: 'absented',
-      title: 'Absented',
-      body: absentedBody,
-      node: (
-        <Text>
-          Absented{' '}
-          <Text
-            testID={`history-times-absented-${p.id_participation}`}
-            className="font-bold"
-          >
-            {timesLabel(h.absented_count)}
-          </Text>
-        </Text>
-      ),
-    });
-  }
+  return (
+    <View
+      testID={`history-played-${p.id_participation}`}
+      style={{ width: COL.played }}
+      className="justify-center"
+    >
+      {playedBody ? (
+        <Tooltip
+          title="Played"
+          content={playedBody}
+          accessibilityHint={
+            playedHint ? `Played\n${playedHint}` : 'Played'
+          }
+          testID={`history-tooltip-played-${p.id_participation}`}
+        >
+          <View collapsable={false}>{cell}</View>
+        </Tooltip>
+      ) : (
+        cell
+      )}
+    </View>
+  );
+}
 
-  if (facts.length === 0) return null;
+function ParticipatedHistoryCell({ p }: { p: ApiEditionParticipation }) {
+  const h = p.player_history;
+  const participatedCount = h?.participated_count ?? 0;
+  const bannedCount = h?.banned_count ?? 0;
+  const absentedCount = h?.absented_count ?? 0;
+
+  const participatedBody = (h?.participated_tooltip?.lines || [])
+    .map(line =>
+      line.type === 'ellipsis'
+        ? '...'
+        : `${line.edition_name}: ${formatDisplayDate(line.date)}`
+    )
+    .join('\n');
+
+  const bannedBody = (h?.banned_recent || [])
+    .map(
+      entry =>
+        `${entry.edition_name}: ${formatDisplayDate(entry.date)} (${entry.ban_reason})`
+    )
+    .join('\n');
+
+  const absentedBody = (h?.absented_recent || [])
+    .map(
+      entry =>
+        `${entry.edition_name}: ${formatDisplayDate(entry.date)} (${entry.absence_reason})`
+    )
+    .join('\n');
+
+  const participatedNode =
+    participatedCount > 0 ? (
+      <Text
+        testID={`history-times-participated-${p.id_participation}`}
+        className="text-xs text-gray-500 font-bold"
+      >
+        {timesLabel(participatedCount)}
+      </Text>
+    ) : (
+      <Text
+        testID={`history-times-participated-${p.id_participation}`}
+        className="text-xs text-gray-500"
+      >
+        —
+      </Text>
+    );
 
   return (
     <View
       testID={`player-history-${p.id_participation}`}
-      className="flex-row flex-wrap items-center"
+      style={{ width: COL.participated }}
+      className="flex-row items-center"
     >
-      {facts.map((fact, i) => (
-        <React.Fragment key={fact.key}>
-          {i > 0 ? <Text className="text-xs text-gray-500">{' • '}</Text> : null}
-          {fact.body ? (
+      {participatedCount > 0 && participatedBody ? (
+        <Tooltip
+          title="Participated"
+          content={participatedBody}
+          testID={`history-tooltip-participated-${p.id_participation}`}
+        >
+          <View collapsable={false}>{participatedNode}</View>
+        </Tooltip>
+      ) : (
+        participatedNode
+      )}
+      {bannedCount > 0 ? (
+        <>
+          <Text className="text-xs text-gray-500">{' • '}</Text>
+          {bannedBody ? (
             <Tooltip
-              title={fact.title}
-              content={fact.body}
-              testID={`history-tooltip-${fact.key}-${p.id_participation}`}
+              title="Banned"
+              content={bannedBody}
+              testID={`history-tooltip-banned-${p.id_participation}`}
             >
-              <Text className="text-xs text-gray-500">{fact.node}</Text>
+              <Text className="text-xs text-gray-500">
+                Banned{' '}
+                <Text
+                  testID={`history-times-banned-${p.id_participation}`}
+                  className="font-bold"
+                >
+                  {timesLabel(bannedCount)}
+                </Text>
+              </Text>
             </Tooltip>
           ) : (
-            <Text className="text-xs text-gray-500">{fact.node}</Text>
+            <Text className="text-xs text-gray-500">
+              Banned{' '}
+              <Text
+                testID={`history-times-banned-${p.id_participation}`}
+                className="font-bold"
+              >
+                {timesLabel(bannedCount)}
+              </Text>
+            </Text>
           )}
-        </React.Fragment>
-      ))}
+        </>
+      ) : null}
+      {absentedCount > 0 ? (
+        <>
+          <Text className="text-xs text-gray-500">{' • '}</Text>
+          {absentedBody ? (
+            <Tooltip
+              title="Absented"
+              content={absentedBody}
+              testID={`history-tooltip-absented-${p.id_participation}`}
+            >
+              <Text className="text-xs text-gray-500">
+                Absented{' '}
+                <Text
+                  testID={`history-times-absented-${p.id_participation}`}
+                  className="font-bold"
+                >
+                  {timesLabel(absentedCount)}
+                </Text>
+              </Text>
+            </Tooltip>
+          ) : (
+            <Text className="text-xs text-gray-500">
+              Absented{' '}
+              <Text
+                testID={`history-times-absented-${p.id_participation}`}
+                className="font-bold"
+              >
+                {timesLabel(absentedCount)}
+              </Text>
+            </Text>
+          )}
+        </>
+      ) : null}
     </View>
   );
 }
@@ -222,31 +337,60 @@ function recentAnswersTooltipBody(
     .join('\n');
 }
 
-function ParticipationCustomFieldValues({ p }: { p: ApiEditionParticipation }) {
-  const values = p.custom_field_values || [];
-  if (values.length === 0) return null;
+function CustomFieldCell({
+  p,
+  fieldId,
+  label,
+}: {
+  p: ApiEditionParticipation;
+  fieldId: number;
+  label: string;
+}) {
+  const entry = (p.custom_field_values || []).find(v => v.field_id === fieldId);
+  const tipBody = entry
+    ? recentAnswersTooltipBody(entry.recent_answers || [])
+    : '';
 
   return (
-    <Text className="text-xs text-gray-500">
-      {values.map(entry => {
-        const tipBody = recentAnswersTooltipBody(entry.recent_answers || []);
-        return (
-          <React.Fragment key={entry.field_id}>
-            {' • '}
-            <EllipsisText
-              className="text-xs text-gray-500"
-              maxWidth={128}
-              tooltip={tipBody || undefined}
-              tooltipTitle={tipBody ? entry.label : undefined}
-              testID={`custom-field-value-${p.id_participation}-${entry.field_id}`}
-            >
-              {entry.value}
-            </EllipsisText>
-          </React.Fragment>
-        );
-      })}
-    </Text>
+    <View style={{ width: COL.customField }} className="justify-center">
+      {entry ? (
+        <EllipsisText
+          className="text-xs text-gray-500"
+          maxWidth={COL.customField}
+          tooltip={tipBody || undefined}
+          tooltipTitle={tipBody ? label : undefined}
+          testID={`custom-field-value-${p.id_participation}-${fieldId}`}
+        >
+          {entry.value}
+        </EllipsisText>
+      ) : (
+        <Text
+          testID={`custom-field-empty-${p.id_participation}-${fieldId}`}
+          className="text-xs text-gray-400"
+        />
+      )}
+    </View>
   );
+}
+
+function Cell({
+  width,
+  children,
+  className = '',
+}: {
+  width: number;
+  children?: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <View style={{ width }} className={`justify-center ${className}`.trim()}>
+      {children}
+    </View>
+  );
+}
+
+function TableColSpacer() {
+  return <View testID="ed-table-col-spacer" style={{ flex: 1, minWidth: 0 }} />;
 }
 
 function ExcludeParticipationButton({
@@ -631,6 +775,16 @@ export default function EditionParticipationsTab({
 
   const crossEdEnabled = selectedDivisionId == null && !editionFinalized;
 
+  const customFieldColumns = useMemo(() => {
+    return selectedCustomFieldIds.map(id => {
+      const opt = customFieldOptions.find(o => Number(o.value) === Number(id));
+      return {
+        fieldId: Number(id),
+        label: opt?.label ?? `Field #${id}`,
+      };
+    });
+  }, [customFieldOptions, selectedCustomFieldIds]);
+
   return (
     <View>
       <Text className="text-lg font-semibold text-gray-900 mb-3">
@@ -767,157 +921,268 @@ export default function EditionParticipationsTab({
         const locked = editionFinalized;
         const listFrame = frames.find(f => f.edId === ed.id_edition_division);
         const listY = listFrame?.y ?? 0;
+        const quantity = list.length;
+        const limitRaw = ed.players_limit;
+        const limitSet = limitRaw != null && Number.isFinite(Number(limitRaw));
+        const limitLabel = limitSet ? String(limitRaw) : '?';
+        const overLimit = limitSet && quantity > Number(limitRaw);
+        const divisionTitle =
+          ed.division_title || `ED #${ed.id_edition_division}`;
+
         return (
           <View
             key={ed.id_edition_division}
             testID={`ed-section-${ed.id_edition_division}`}
             className="mb-6 border border-gray-200 rounded-lg p-3 bg-white"
           >
-            <View className="flex-row items-center gap-2 mb-2">
-              {ed.division?.color &&
-              String(ed.division.color).trim() !== '' ? (
-                <View
-                  testID={`ed-color-${ed.id_edition_division}`}
-                  style={{
-                    width: 12,
-                    height: 12,
-                    backgroundColor: ed.division.color,
-                  }}
-                />
-              ) : (
-                <Text testID={`ed-color-missing-${ed.id_edition_division}`}>
-                  ⚠️
-                </Text>
-              )}
-              <Text className="font-semibold text-gray-900 flex-1">
-                {ed.division_title || `ED #${ed.id_edition_division}`}
-                {locked ? ' (locked)' : ''}
-              </Text>
-            </View>
-            {list.length > ed.players_limit && (
-              <Text
-                testID={`ed-over-limit-${ed.id_edition_division}`}
-                className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2 mb-2"
-              >
-                {list.length} participants (limit {ed.players_limit}).
-              </Text>
-            )}
-            <View
-              testID={`ed-list-${ed.id_edition_division}`}
-              ref={node => {
-                listHosts.current.set(ed.id_edition_division, node);
-              }}
-              onLayout={() => measureFrames()}
-              style={{ minHeight: list.length === 0 ? ROW_HEIGHT : undefined }}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator
+              contentContainerStyle={{ flexGrow: 1 }}
+              testID={`ed-table-scroll-${ed.id_edition_division}`}
             >
-              {list.map((p, index) => (
-                <ParticipationSortableRow
-                  key={p.id_participation}
-                  index={index}
-                  count={list.length}
-                  locked={locked}
-                  crossEdEnabled={crossEdEnabled}
-                  listY={listY}
-                  frames={frames}
-                  edId={ed.id_edition_division}
-                  onSameEdReorder={(from, to) =>
-                    reorderAt(ed.id_edition_division, from, to)
-                  }
-                  onCrossDrop={onDrop}
+              <View
+                testID={`ed-table-${ed.id_edition_division}`}
+                style={{ minWidth: '100%' }}
+              >
+                <View
+                  testID={`ed-table-header-${ed.id_edition_division}`}
+                  className="flex-row items-center border-b border-gray-200 pb-2 mb-1"
+                  style={{ gap: COL_GUTTER }}
                 >
                   <View
-                    testID={`participation-row-${p.id_participation}`}
-                    className={`flex-row flex-wrap items-center py-2 border-b border-gray-100${
-                      index % 2 === 1 ? ' bg-gray-50' : ''
-                    }`}
+                    style={{ width: LEFT_COLS_WIDTH }}
+                    className="flex-row items-center gap-2"
                   >
-                    {!locked && (
-                      <SortableDragHandle
-                        testID={`drag-handle-${p.id_participation}`}
+                    {ed.division?.color &&
+                    String(ed.division.color).trim() !== '' ? (
+                      <View
+                        testID={`ed-color-${ed.id_edition_division}`}
+                        style={{
+                          width: 12,
+                          height: 12,
+                          backgroundColor: ed.division.color,
+                        }}
                       />
+                    ) : (
+                      <Text
+                        testID={`ed-color-missing-${ed.id_edition_division}`}
+                      >
+                        ⚠️
+                      </Text>
                     )}
-                    <CachedPdfImageReload
-                      testIdPrefix={`participation-avatar-${p.id_participation}`}
-                      imageUrl={avatarUrlFor(
-                        p.id_participation,
-                        p.pdf_avatar_url ?? null
-                      )}
-                      size={28}
-                      spinning={Boolean(avatarSpinning[p.id_participation])}
-                      errorReason={avatarErrors[p.id_participation] || null}
-                      onReload={() =>
-                        void reloadAvatar({
-                          key: p.id_participation,
-                          playerId: Number(p.player_id),
-                          collecting: Boolean(p.is_collecting_points),
-                        })
-                      }
-                    />
-                    <Text className="text-gray-800 flex-1 mr-2 shrink ml-2">
-                      {playerLabel(p)}
+                    <Text
+                      className="font-semibold text-gray-900"
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                      style={{ flexShrink: 1 }}
+                    >
+                      {divisionTitle}
+                      {locked ? ' (locked)' : ''}
                     </Text>
-                    <View className="flex-row items-center mr-2">
-                      <Pressable
-                        testID={`collecting-points-${p.id_participation}`}
-                        accessibilityLabel="Collecting points"
-                        onPress={() => toggleCollecting(p)}
-                        className="flex-row items-center"
-                      >
-                        <Ionicons
-                          name={
-                            p.is_collecting_points
-                              ? 'checkbox'
-                              : 'square-outline'
-                          }
-                          size={18}
-                          color={locked ? '#9ca3af' : '#6b7280'}
-                        />
-                      </Pressable>
+                    <Text
+                      testID={`ed-capacity-${ed.id_edition_division}`}
+                      className="text-sm text-gray-600"
+                    >
+                      {quantity}/{limitLabel}
+                    </Text>
+                    {overLimit ? (
                       <Tooltip
-                        content={COLLECTING_POINTS_TOOLTIP}
-                        testID={`collecting-points-tip-${p.id_participation}`}
+                        content={OVER_LIMIT_TOOLTIP}
+                        testID={`ed-over-limit-${ed.id_edition_division}`}
                       >
                         <Ionicons
-                          name="albums-outline"
+                          name="warning"
                           size={16}
-                          color={locked ? '#9ca3af' : '#6b7280'}
-                          style={{ marginLeft: 4 }}
+                          color="#d97706"
                         />
                       </Tooltip>
-                    </View>
-                    <ParticipationFlagBadges
-                      flags={p.flags}
-                      participationId={p.id_participation}
-                    />
-                    <View className="flex-row flex-wrap items-center justify-end gap-1">
-                      <PlayerHistoryText p={p} />
-                      <ParticipationCustomFieldValues p={p} />
-                      {!locked && (
-                        <SortableArrows
-                          onUp={() =>
-                            moveWithin(ed.id_edition_division, index, -1)
-                          }
-                          onDown={() =>
-                            moveWithin(ed.id_edition_division, index, 1)
-                          }
-                          upTestID={`move-up-${p.id_participation}`}
-                          downTestID={`move-down-${p.id_participation}`}
-                        />
-                      )}
-                      {!locked && !participationsLocked && (
-                        <ExcludeParticipationButton
-                          p={p}
-                          onExcluded={onRefresh}
-                        />
-                      )}
-                    </View>
+                    ) : null}
                   </View>
-                </ParticipationSortableRow>
-              ))}
-              {list.length === 0 && (
-                <Text className="text-sm text-gray-500">No players</Text>
-              )}
-            </View>
+                  <TableColSpacer />
+                  <Cell width={COL.played}>
+                    <Text
+                      testID={`ed-col-played-${ed.id_edition_division}`}
+                      className="text-xs font-semibold text-gray-600"
+                    >
+                      Played
+                    </Text>
+                  </Cell>
+                  <Cell width={COL.participated}>
+                    <Text
+                      testID={`ed-col-participated-${ed.id_edition_division}`}
+                      className="text-xs font-semibold text-gray-600"
+                    >
+                      Participated
+                    </Text>
+                  </Cell>
+                  {customFieldColumns.map(col => (
+                    <Cell key={col.fieldId} width={COL.customField}>
+                      <Text
+                        testID={`ed-col-custom-${ed.id_edition_division}-${col.fieldId}`}
+                        className="text-xs font-semibold text-gray-600"
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        {col.label}
+                      </Text>
+                    </Cell>
+                  ))}
+                  <View style={{ width: TRAILING_COLS_WIDTH }} />
+                </View>
+
+                <View
+                  testID={`ed-list-${ed.id_edition_division}`}
+                  ref={node => {
+                    listHosts.current.set(ed.id_edition_division, node);
+                  }}
+                  onLayout={() => measureFrames()}
+                  style={{
+                    minHeight: list.length === 0 ? ROW_HEIGHT : undefined,
+                  }}
+                >
+                  {list.map((p, index) => (
+                    <ParticipationSortableRow
+                      key={p.id_participation}
+                      index={index}
+                      count={list.length}
+                      locked={locked}
+                      crossEdEnabled={crossEdEnabled}
+                      listY={listY}
+                      frames={frames}
+                      edId={ed.id_edition_division}
+                      onSameEdReorder={(from, to) =>
+                        reorderAt(ed.id_edition_division, from, to)
+                      }
+                      onCrossDrop={onDrop}
+                    >
+                      <View
+                        testID={`participation-row-${p.id_participation}`}
+                        className={`flex-row items-center border-b border-gray-100${
+                          index % 2 === 1 ? ' bg-gray-50' : ''
+                        }`}
+                        style={{ height: ROW_HEIGHT, gap: COL_GUTTER }}
+                      >
+                        <Cell width={COL.handle}>
+                          {!locked ? (
+                            <SortableDragHandle
+                              testID={`drag-handle-${p.id_participation}`}
+                            />
+                          ) : null}
+                        </Cell>
+                        <Cell width={COL.avatar} className="items-center">
+                          <CachedPdfImageReload
+                            testIdPrefix={`participation-avatar-${p.id_participation}`}
+                            imageUrl={avatarUrlFor(
+                              p.id_participation,
+                              p.pdf_avatar_url ?? null
+                            )}
+                            size={28}
+                            spinning={Boolean(
+                              avatarSpinning[p.id_participation]
+                            )}
+                            errorReason={
+                              avatarErrors[p.id_participation] || null
+                            }
+                            onReload={() =>
+                              void reloadAvatar({
+                                key: p.id_participation,
+                                playerId: Number(p.player_id),
+                                collecting: Boolean(p.is_collecting_points),
+                              })
+                            }
+                          />
+                        </Cell>
+                        <Cell width={COL.name}>
+                          <EllipsisText
+                            className="text-gray-800"
+                            maxWidth={COL.name}
+                            testID={`participation-name-${p.id_participation}`}
+                          >
+                            {playerLabel(p)}
+                          </EllipsisText>
+                        </Cell>
+                        <Cell width={COL.collecting}>
+                          <View className="flex-row items-center">
+                            <Pressable
+                              testID={`collecting-points-${p.id_participation}`}
+                              accessibilityLabel="Collecting points"
+                              onPress={() => toggleCollecting(p)}
+                              className="flex-row items-center"
+                            >
+                              <Ionicons
+                                name={
+                                  p.is_collecting_points
+                                    ? 'checkbox'
+                                    : 'square-outline'
+                                }
+                                size={18}
+                                color={locked ? '#9ca3af' : '#6b7280'}
+                              />
+                            </Pressable>
+                            <Tooltip
+                              content={COLLECTING_POINTS_TOOLTIP}
+                              testID={`collecting-points-tip-${p.id_participation}`}
+                            >
+                              <Ionicons
+                                name="albums-outline"
+                                size={16}
+                                color={locked ? '#9ca3af' : '#6b7280'}
+                                style={{ marginLeft: 4 }}
+                              />
+                            </Tooltip>
+                          </View>
+                        </Cell>
+                        <Cell width={COL.flags} className="overflow-hidden">
+                          <ParticipationFlagBadges
+                            flags={p.flags}
+                            participationId={p.id_participation}
+                          />
+                        </Cell>
+                        <TableColSpacer />
+                        <PlayedHistoryCell p={p} />
+                        <ParticipatedHistoryCell p={p} />
+                        {customFieldColumns.map(col => (
+                          <CustomFieldCell
+                            key={col.fieldId}
+                            p={p}
+                            fieldId={col.fieldId}
+                            label={col.label}
+                          />
+                        ))}
+                        <Cell width={COL.arrows} className="flex-row items-center">
+                          {!locked ? (
+                            <View className="flex-row items-center">
+                              <SortableArrows
+                                onUp={() =>
+                                  moveWithin(ed.id_edition_division, index, -1)
+                                }
+                                onDown={() =>
+                                  moveWithin(ed.id_edition_division, index, 1)
+                                }
+                                upTestID={`move-up-${p.id_participation}`}
+                                downTestID={`move-down-${p.id_participation}`}
+                              />
+                            </View>
+                          ) : null}
+                        </Cell>
+                        <Cell width={COL.exclude}>
+                          {!locked && !participationsLocked ? (
+                            <ExcludeParticipationButton
+                              p={p}
+                              onExcluded={onRefresh}
+                            />
+                          ) : null}
+                        </Cell>
+                      </View>
+                    </ParticipationSortableRow>
+                  ))}
+                  {list.length === 0 && (
+                    <Text className="text-sm text-gray-500 py-2">No players</Text>
+                  )}
+                </View>
+              </View>
+            </ScrollView>
           </View>
         );
       })}

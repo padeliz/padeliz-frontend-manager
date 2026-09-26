@@ -63,7 +63,7 @@ export interface ApiEditionDivision {
   edition_id: number;
   division_id: number;
   division_title?: string;
-  players_limit: number;
+  players_limit: number | null;
   skill_order?: number;
   playing_start_time: string;
   playing_end_time: string;
@@ -163,6 +163,7 @@ export interface ApiEditionParticipation {
     last_played: {
       division_id?: number;
       division_title: string;
+      division_color: string;
       rank: number | null;
       participant_count: number;
     } | null;
@@ -172,6 +173,7 @@ export interface ApiEditionParticipation {
     played_recent?: Array<{
       edition_name: string;
       division_title: string;
+      division_color: string;
       rank: number | null;
       participant_count: number;
       date: string;

@@ -11,6 +11,8 @@ import {
 import React, { useCallback, useEffect, useState } from 'react';
 import { Modal, Pressable, Text, View } from 'react-native';
 import {
+  defaultTooltipAccessibilityHint,
+  hasTooltipContent,
   tipBodyNative,
   tipChromeNative,
   tipTitleNative,
@@ -25,10 +27,11 @@ export default function Tooltip({
   children,
   disabled = false,
   testID,
+  accessibilityHint: accessibilityHintProp,
 }: TooltipProps) {
   const [open, setOpen] = useState(false);
 
-  const enabled = !disabled && content !== '';
+  const enabled = !disabled && hasTooltipContent(content);
 
   useEffect(() => {
     if (!enabled) {
@@ -62,7 +65,7 @@ export default function Tooltip({
   }, [enabled]);
 
   const accessibilityHint =
-    title && content ? `${title}\n${content}` : content || undefined;
+    accessibilityHintProp ?? defaultTooltipAccessibilityHint(content, title);
 
   return (
     <>
@@ -108,9 +111,13 @@ export default function Tooltip({
                 {title}
               </Text>
             ) : null}
-            <Text testID="tooltip-body" style={tipBodyNative}>
-              {content}
-            </Text>
+            {typeof content === 'string' ? (
+              <Text testID="tooltip-body" style={tipBodyNative}>
+                {content}
+              </Text>
+            ) : (
+              <View testID="tooltip-body">{content}</View>
+            )}
           </View>
         </View>
       </Modal>

@@ -154,6 +154,7 @@ function renderTab(opts: {
   selectedDivisionId: number | null;
   registeredNotParticipatingCount?: number;
   participationsLocked?: boolean;
+  divisionsOverride?: typeof divisions;
   participationsOverride?: typeof participations;
   customFieldOptions?: Array<{ label: string; value: number }>;
   selectedCustomFieldIds?: number[];
@@ -167,7 +168,7 @@ function renderTab(opts: {
         <EditionParticipationsTab
           editionId={1}
           editionFinalized={opts.editionFinalized}
-          divisions={divisions as any}
+          divisions={(opts.divisionsOverride ?? divisions) as any}
           participations={(opts.participationsOverride ?? participations) as any}
           selectedDivisionId={opts.selectedDivisionId}
           registeredNotParticipatingCount={
@@ -222,6 +223,19 @@ describe('EditionParticipationsTab finalized lock', () => {
     expect(queryByTestId('ed-color-missing-9')).toBeNull();
     expect(getByTestId('ed-color-missing-10')).toBeTruthy();
     expect(queryByTestId('ed-color-10')).toBeNull();
+  });
+
+  it('stretches the ED table ScrollView content to fill available width', () => {
+    const { getByTestId } = renderTab({
+      editionFinalized: false,
+      selectedDivisionId: 9,
+    });
+    expect(getByTestId('ed-table-scroll-9').props.contentContainerStyle).toEqual(
+      expect.objectContaining({ flexGrow: 1 })
+    );
+    expect(getByTestId('ed-table-9').props.style).toEqual(
+      expect.objectContaining({ minWidth: '100%' })
+    );
   });
 
   it('disables add/exclude when edition finalized', () => {
@@ -293,6 +307,7 @@ describe('EditionParticipationsTab player history', () => {
         player_history: {
           last_played: {
             division_title: 'Explorers',
+            division_color: '#112233',
             rank: 3,
             participant_count: 12,
           },
@@ -306,6 +321,7 @@ describe('EditionParticipationsTab player history', () => {
         player_history: {
           last_played: {
             division_title: 'Explorers',
+            division_color: '#445566',
             rank: null,
             participant_count: 12,
           },
@@ -331,13 +347,21 @@ describe('EditionParticipationsTab player history', () => {
       </QueryClientProvider>
     );
 
-    expect(getByTestId('player-history-100').props.children).toBeTruthy();
+    expect(getByTestId('history-played-100')).toBeTruthy();
+    expect(getByTestId('ed-col-played-9')).toHaveTextContent('Played');
+    expect(getByTestId('ed-col-participated-9')).toHaveTextContent(
+      'Participated'
+    );
     expect(getByTestId('history-division-title-100').props.className).toContain(
       'font-bold'
+    );
+    expect(getByTestId('history-division-title-100').props.style).toEqual(
+      expect.objectContaining({ color: '#112233' })
     );
     expect(getByTestId('history-division-title-100')).toHaveTextContent(
       'Explorers'
     );
+    expect(queryByText(/^Played /)).toBeNull();
     expect(getByTestId('history-times-participated-100')).toBeTruthy();
     expect(getByTestId('history-times-participated-101')).toBeTruthy();
     expect(getByTestId('history-times-banned-100')).toBeTruthy();
@@ -349,7 +373,7 @@ describe('EditionParticipationsTab player history', () => {
     expect(getByTestId('player-history-100')).toHaveTextContent(/ • /);
   });
 
-  it('omits history lines when empty', () => {
+  it('always shows Played and Participated columns when history is empty', () => {
     const emptyHistory = [
       {
         ...participations[0],
@@ -362,7 +386,7 @@ describe('EditionParticipationsTab player history', () => {
       },
     ];
     const client = createTestQueryClient();
-    const { queryByTestId, getByText } = render(
+    const { getByTestId, getByText } = render(
       <QueryClientProvider client={client}>
         <PageChromeProvider>
           <EditionParticipationsTab
@@ -377,7 +401,36 @@ describe('EditionParticipationsTab player history', () => {
       </QueryClientProvider>
     );
     expect(getByText('Alice')).toBeTruthy();
-    expect(queryByTestId('player-history-100')).toBeNull();
+    expect(getByTestId('history-played-empty-100')).toHaveTextContent('—');
+    expect(getByTestId('history-times-participated-100')).toHaveTextContent(
+      '—'
+    );
+  });
+
+  it('shows leading — in Participated when count is 0 but Banned exists', () => {
+    const withBannedOnly = [
+      {
+        ...participations[0],
+        player_history: {
+          last_played: null,
+          participated_count: 0,
+          banned_count: 1,
+          absented_count: 0,
+        },
+      },
+    ];
+    const { getByTestId } = renderTab({
+      editionFinalized: false,
+      selectedDivisionId: 9,
+      participationsOverride: withBannedOnly as any,
+    });
+    expect(getByTestId('history-times-participated-100')).toHaveTextContent(
+      '—'
+    );
+    expect(getByTestId('player-history-100')).toHaveTextContent(/—.*Banned/);
+    expect(getByTestId('history-times-banned-100')).toHaveTextContent(
+      '1 time'
+    );
   });
 });
 
@@ -515,7 +568,7 @@ describe('EditionParticipationsTab summary UX', () => {
     expect(queryByTestId('registered-not-participating-hint')).toBeNull();
   });
 
-  it('shows over-limit warning per ED header', () => {
+  it('shows capacity and warning icon when over limit', async () => {
     const overLimitDivision = {
       ...divisions[0],
       players_limit: 1,
@@ -531,7 +584,7 @@ describe('EditionParticipationsTab summary UX', () => {
       },
     ];
     const client = createTestQueryClient();
-    const { getByTestId } = render(
+    const { getByTestId, queryByText } = render(
       <QueryClientProvider client={client}>
         <PageChromeProvider>
           <EditionParticipationsTab
@@ -545,9 +598,28 @@ describe('EditionParticipationsTab summary UX', () => {
         </PageChromeProvider>
       </QueryClientProvider>
     );
-    expect(getByTestId('ed-over-limit-9')).toHaveTextContent(
-      '2 participants (limit 1).'
-    );
+    expect(getByTestId('ed-capacity-9')).toHaveTextContent('2/1');
+    expect(queryByText(/participants \(limit/)).toBeNull();
+    fireEvent.press(getByTestId('ed-over-limit-9'));
+    await waitFor(() => {
+      expect(getByTestId('tooltip-body')).toHaveTextContent(
+        'This division exceeds the participants limit.'
+      );
+    });
+  });
+
+  it('shows ? for capacity when players_limit is unset', () => {
+    const noLimitDivision = {
+      ...divisions[0],
+      players_limit: null,
+    };
+    const { getByTestId, queryByTestId } = renderTab({
+      editionFinalized: false,
+      selectedDivisionId: 9,
+      divisionsOverride: [noLimitDivision] as any,
+    });
+    expect(getByTestId('ed-capacity-9')).toHaveTextContent('1/?');
+    expect(queryByTestId('ed-over-limit-9')).toBeNull();
   });
 
   it('renders stackable flag badges without row tint', () => {
@@ -680,15 +752,17 @@ describe('EditionParticipationsTab custom fields', () => {
         editionFinalized: false,
         selectedDivisionId: 9,
         participationsOverride: withCustomFields as any,
+        customFieldOptions: [{ label: 'Shirt size', value: 10 }],
+        selectedCustomFieldIds: [10],
       });
       expect(getByTestId('player-history-100')).toBeTruthy();
+      expect(getByTestId('ed-col-custom-9-10')).toHaveTextContent('Shirt size');
       expect(queryByText('Shirt size:')).toBeNull();
       expect(getByTestId('custom-field-value-100-10-tooltip')).toBeTruthy();
       const valueNode = getByText('Very long custom field value text');
       expect(valueNode.props.numberOfLines).toBe(1);
       expect(valueNode.props.className).toContain('truncate');
       expect(valueNode.props.title).toBeUndefined();
-      expect(getByTestId('participation-row-100')).toHaveTextContent(/^.* • /);
 
       fireEvent.press(getByTestId('custom-field-value-100-10-tooltip'));
       await waitFor(() => {
@@ -702,17 +776,33 @@ describe('EditionParticipationsTab custom fields', () => {
     }
   });
 
+  it('renders empty custom field cells in selected column order', () => {
+    const { getByTestId } = renderTab({
+      editionFinalized: false,
+      selectedDivisionId: 9,
+      customFieldOptions: [
+        { label: 'Shirt size', value: 10 },
+        { label: 'Club', value: 11 },
+      ],
+      selectedCustomFieldIds: [11, 10],
+    });
+    expect(getByTestId('ed-col-custom-9-11')).toHaveTextContent('Club');
+    expect(getByTestId('ed-col-custom-9-10')).toHaveTextContent('Shirt size');
+    expect(getByTestId('custom-field-empty-100-11')).toBeTruthy();
+    expect(getByTestId('custom-field-empty-100-10')).toBeTruthy();
+  });
+
   it('reflects selectedCustomFieldIds and calls onCustomFieldSelectionChange from add form', () => {
     const onChange = jest.fn();
-    const { getByText } = renderTab({
+    const { getByText, getAllByText } = renderTab({
       editionFinalized: false,
       selectedDivisionId: 9,
       customFieldOptions,
       selectedCustomFieldIds: [10],
       onCustomFieldSelectionChange: onChange,
     });
-    expect(getByText('Shirt size')).toBeTruthy();
-    fireEvent.press(getByText('Shirt size'));
+    expect(getAllByText('Shirt size').length).toBeGreaterThan(0);
+    fireEvent.press(getAllByText('Shirt size')[0]);
     fireEvent.press(getByText('Club'));
     fireEvent.press(getByText('Apply'));
     expect(onChange).toHaveBeenCalledWith([10, 11]);
@@ -720,15 +810,15 @@ describe('EditionParticipationsTab custom fields', () => {
 
   it('reflects selectedCustomFieldIds and calls onCustomFieldSelectionChange when finalized', () => {
     const onChange = jest.fn();
-    const { getByText } = renderTab({
+    const { getByText, getAllByText } = renderTab({
       editionFinalized: true,
       selectedDivisionId: 9,
       customFieldOptions,
       selectedCustomFieldIds: [11],
       onCustomFieldSelectionChange: onChange,
     });
-    expect(getByText('Club')).toBeTruthy();
-    fireEvent.press(getByText('Club'));
+    expect(getAllByText('Club').length).toBeGreaterThan(0);
+    fireEvent.press(getAllByText('Club')[0]);
     fireEvent.press(getByText('Shirt size'));
     fireEvent.press(getByText('Apply'));
     expect(onChange).toHaveBeenCalledWith([11, 10]);
@@ -1041,6 +1131,7 @@ describe('EditionParticipationsTab row chrome and tooltips', () => {
         player_history: {
           last_played: {
             division_title: 'Explorers',
+            division_color: '#ab12cd',
             rank: null,
             participant_count: 12,
           },
@@ -1051,6 +1142,7 @@ describe('EditionParticipationsTab row chrome and tooltips', () => {
             {
               edition_name: 'Spring Cup',
               division_title: 'Explorers',
+              division_color: '#ab12cd',
               rank: null,
               participant_count: 12,
               date: '2026-01-01',
@@ -1090,7 +1182,7 @@ describe('EditionParticipationsTab row chrome and tooltips', () => {
     await waitFor(() => {
       expect(getByTestId('tooltip-title')).toHaveTextContent('Played');
       expect(getByTestId('tooltip-body')).toHaveTextContent(
-        'Spring Cup: Played Explorers —/12'
+        'Spring Cup: Explorers —/12'
       );
     });
     fireEvent.press(getByTestId('tooltip-backdrop'));
@@ -1144,6 +1236,8 @@ describe('EditionParticipationsTab row chrome and tooltips', () => {
       editionFinalized: false,
       selectedDivisionId: 9,
       participationsOverride: withGlobal as any,
+      customFieldOptions: [{ label: 'Club', value: 11 }],
+      selectedCustomFieldIds: [11],
     });
     fireEvent.press(getByTestId('custom-field-value-100-11-tooltip'));
     await waitFor(() => {

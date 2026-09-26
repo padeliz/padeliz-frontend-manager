@@ -285,6 +285,23 @@ describe('Tooltip (web)', () => {
     expect(tip()).toBeNull();
   });
 
+  it('renders ReactNode content with colored child', () => {
+    renderTooltip({
+      content: (
+        <span>
+          Line: <span style={{ color: '#ff0000' }}>Division</span>
+        </span>
+      ),
+    });
+    mouseEnter();
+    const bodyEl = document.querySelector(
+      '[data-testid="tooltip-body"]'
+    ) as HTMLElement;
+    expect(bodyEl?.textContent).toContain('Division');
+    const colored = bodyEl?.querySelector('span[style]') as HTMLElement;
+    expect(colored?.style.color).toBe('rgb(255, 0, 0)');
+  });
+
   it('applies Floating UI positioning styles including transform', () => {
     renderTooltip();
     mouseEnter();
