@@ -72,4 +72,68 @@ describe('formatField', () => {
     expect(result.formattedText).not.toBe('1700000000');
     expect(result.formattedText.length).toBeGreaterThan(0);
   });
+
+  it('maps string enum fields to select with constraints.enum in form mode', () => {
+    const metadata = {
+      ...playerMetadata,
+      swagger_schema: {
+        ...playerMetadata.swagger_schema,
+        properties: {
+          ...playerMetadata.swagger_schema.properties,
+          review_status: {
+            title: 'Review Status',
+            type: 'string',
+            enum: ['pending', 'approved', 'rejected', 'discarded'],
+          },
+        },
+      },
+    };
+
+    const result = formatField({
+      metadata,
+      fieldKey: 'review_status',
+      fieldValue: 'pending',
+      mode: 'form',
+    });
+
+    expect(result.inputType).toBe('select');
+    expect(result.constraints.enum).toEqual([
+      'pending',
+      'approved',
+      'rejected',
+      'discarded',
+    ]);
+    expect(result.inputValue).toBe('pending');
+    expect(result.apiValue).toBe('pending');
+  });
+
+  it('maps null enum fields to select with constraints.enum in form mode', () => {
+    const metadata = {
+      ...playerMetadata,
+      swagger_schema: {
+        ...playerMetadata.swagger_schema,
+        properties: {
+          ...playerMetadata.swagger_schema.properties,
+          gender: {
+            title: 'Gender',
+            type: 'string',
+            nullable: true,
+            enum: ['MALE', 'FEMALE'],
+          },
+        },
+      },
+    };
+
+    const result = formatField({
+      metadata,
+      fieldKey: 'gender',
+      fieldValue: null,
+      mode: 'form',
+    });
+
+    expect(result.inputType).toBe('select');
+    expect(result.constraints.enum).toEqual(['MALE', 'FEMALE']);
+    expect(result.inputValue).toBe('');
+    expect(result.apiValue).toBeNull();
+  });
 });

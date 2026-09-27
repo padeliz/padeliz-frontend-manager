@@ -17,6 +17,7 @@ import { Pressable, Text, View } from 'react-native';
 import DateTimeFormInput from './DateTimeFormInput';
 import ColorFormInput from './ColorFormInput';
 import YearFormInput from './YearFormInput';
+import SingleSelectDropdown from './SingleSelectDropdown';
 
 export default function ValidationField({
   field,
@@ -252,39 +253,34 @@ export default function ValidationField({
           />
         );
 
-      case 'select':
+      case 'select': {
+        const enumOptions = (fieldInfo.constraints.enum ?? []).map(v => ({
+          value: v,
+          label: String(v),
+        }));
+        const selectedValue =
+          fieldInfo.inputValue === null ||
+          fieldInfo.inputValue === undefined ||
+          fieldInfo.inputValue === ''
+            ? null
+            : fieldInfo.inputValue;
+
         return (
-          <View className="relative">
-            <Pressable
-              onPress={() => {
-                // TODO: Implement dropdown selection
-              }}
-              className={`
-                border rounded-lg px-3 py-2 flex-row items-center justify-between
-                ${isFocused ? 'border-blue-500' : 'border-gray-300'}
-                ${displayError ? 'border-red-500' : ''}
-                ${disabled ? 'bg-gray-100' : 'bg-white'}
-              `}
-            >
-              <Text
-                className={`
-                text-base
-                ${disabled ? 'text-gray-500' : 'text-gray-900'}
-                ${!fieldInfo.inputValue ? 'text-gray-400' : ''}
-              `}
-              >
-                {fieldInfo.inputValue
-                  ? String(fieldInfo.inputValue)
-                  : fieldPlaceholder}
-              </Text>
-              <Ionicons
-                name="chevron-down"
-                size={20}
-                className="text-gray-400"
-              />
-            </Pressable>
-          </View>
+          <SingleSelectDropdown
+            options={enumOptions}
+            selectedValue={selectedValue}
+            onSelectionChange={v => {
+              handleChange(v);
+              handleBlur();
+            }}
+            placeholder={fieldPlaceholder}
+            title={fieldPlaceholder}
+            disabled={disabled}
+            clearable={field.nullable === true}
+            minWidth={280}
+          />
         );
+      }
 
       case 'checkbox':
         return (

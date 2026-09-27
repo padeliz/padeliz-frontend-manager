@@ -144,6 +144,14 @@ export function formatField({
     if (mode === 'form' || mode === 'both') {
       result.inputValue = '';
       result.apiValue = null;
+      if (
+        fieldDefinition.enum?.length &&
+        fieldDefinition.type !== 'array' &&
+        !isForeignKey
+      ) {
+        result.inputType = 'select';
+        result.constraints.enum = fieldDefinition.enum;
+      }
     }
     if (isReadOnly) {
       result.inputType = 'readonly';
@@ -196,6 +204,18 @@ export function formatField({
       result.inputType = 'readonly';
       result.isEditable = false;
       finalResult = result;
+  }
+
+  // Enum → single-select (after type formatting; before readOnly so readOnly wins)
+  if (
+    fieldDefinition.enum?.length &&
+    fieldDefinition.type !== 'array' &&
+    finalResult.inputType !== 'foreign_key_selector'
+  ) {
+    if (mode === 'form' || mode === 'both') {
+      finalResult.inputType = 'select';
+      finalResult.constraints.enum = fieldDefinition.enum;
+    }
   }
 
   // Apply readOnly after type formatting (timestamps/booleans must still format)
@@ -516,13 +536,6 @@ function formatStringField(
       } else {
         result.inputType = 'text'; // Default to text input for regular strings
       }
-    }
-  }
-
-  // Handle enum fields
-  if (fieldDefinition.enum && fieldDefinition.enum.length > 0) {
-    if (mode === 'form' || mode === 'both') {
-      result.inputType = 'select';
     }
   }
 

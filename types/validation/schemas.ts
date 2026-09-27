@@ -23,6 +23,7 @@ export interface FormFieldSchema {
     | 'integer';
   required?: boolean;
   readOnly?: boolean;
+  nullable?: boolean;
   description?: string;
   example?: any;
   enum?: any[];

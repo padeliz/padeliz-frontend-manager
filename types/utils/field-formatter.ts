@@ -47,6 +47,7 @@ export interface FormFieldConstraints {
   maxLength?: number;
   minLength?: number;
   pattern?: string;
+  enum?: any[];
 }
 
 export interface LinkedResourceInfo {
