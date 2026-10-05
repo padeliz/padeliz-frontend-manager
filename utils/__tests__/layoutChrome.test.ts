@@ -78,10 +78,10 @@ describe('layoutChrome', () => {
 
   it('withLayoutChromeQuery preserves unrelated keys', () => {
     expect(
-      withLayoutChromeQuery('/editions/1/lottery/luckies?ed=2&lottery=3', {
+      withLayoutChromeQuery('/events/1/lottery/luckies?ed=2&lottery=3', {
         fs: true,
       })
-    ).toBe('/editions/1/lottery/luckies?ed=2&lottery=3&fs=1');
+    ).toBe('/events/1/lottery/luckies?ed=2&lottery=3&fs=1');
   });
 
   it('withLayoutChromeQuery sets hide list', () => {
@@ -93,11 +93,11 @@ describe('layoutChrome', () => {
   it('buildLayoutChromeHref merges pathname and params', () => {
     expect(
       buildLayoutChromeHref(
-        '/editions/1/lottery/luckies',
+        '/events/1/lottery/luckies',
         { ed: '2', lottery: '3' },
         { fs: true }
       )
-    ).toBe('/editions/1/lottery/luckies?ed=2&lottery=3&fs=1');
+    ).toBe('/events/1/lottery/luckies?ed=2&lottery=3&fs=1');
   });
 
   it('stripLayoutChromeQuery removes fs and hide from href', () => {

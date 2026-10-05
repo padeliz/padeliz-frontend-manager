@@ -6,9 +6,9 @@
  * registrars do not re-render when the trail entry updates.
  */
 
-import EditionTabsBar, {
-  type EditionTabLink,
-} from '@/components/editions/EditionTabsBar';
+import EventTabsBar, {
+  type EventTabLink,
+} from '@/components/events/EventTabsBar';
 import React, {
   createContext,
   useCallback,
@@ -45,7 +45,7 @@ type HandlerBox = {
 type SubTabBarCommands = {
   register: (
     id: string,
-    tabs: EditionTabLink[],
+    tabs: EventTabLink[],
     onBeforeNavigate?: () => Promise<boolean>
   ) => void;
   unregister: (id: string) => void;
@@ -64,7 +64,7 @@ function tabKey(tab: { label: string; href: string; variant?: string }): string 
   return tab.variant === 'live' ? `action-${tab.label}` : tab.href;
 }
 
-function toDescriptors(tabs: EditionTabLink[]): SubTabDescriptor[] {
+function toDescriptors(tabs: EventTabLink[]): SubTabDescriptor[] {
   return tabs.map(t => ({
     label: t.label,
     href: t.href,
@@ -78,7 +78,7 @@ function toDescriptors(tabs: EditionTabLink[]): SubTabDescriptor[] {
 }
 
 /** Stable content key for useLayoutEffect deps (ignore function identity). */
-function descriptorsSignature(tabs: EditionTabLink[]): string {
+function descriptorsSignature(tabs: EventTabLink[]): string {
   return toDescriptors(tabs)
     .map(
       t =>
@@ -111,7 +111,7 @@ export function SubTabBarProvider({ children }: { children: React.ReactNode }) {
   const register = useCallback(
     (
       id: string,
-      tabs: EditionTabLink[],
+      tabs: EventTabLink[],
       onBeforeNavigate?: () => Promise<boolean>
     ) => {
       handlers.current.onBeforeNavigate = onBeforeNavigate;
@@ -164,11 +164,11 @@ export function useSubTabBarTrail(): React.ReactNode {
   const entry = state?.entry;
   const handlers = commands?.handlers;
 
-  const tabs = useMemo((): EditionTabLink[] => {
+  const tabs = useMemo((): EventTabLink[] => {
     if (!entry?.tabs.length || !handlers) return [];
     return entry.tabs.map(t => {
       const key = tabKey(t);
-      const link: EditionTabLink = {
+      const link: EventTabLink = {
         label: t.label,
         href: t.href,
         match: t.match,
@@ -195,7 +195,7 @@ export function useSubTabBarTrail(): React.ReactNode {
 
   return (
     <View testID="app-sub-tab-bar">
-      <EditionTabsBar tabs={tabs} onBeforeNavigate={onBeforeNavigate} />
+      <EventTabsBar tabs={tabs} onBeforeNavigate={onBeforeNavigate} />
     </View>
   );
 }
@@ -207,7 +207,7 @@ export function useSubTabBarTrail(): React.ReactNode {
  */
 export function useSubTabBar(
   id: string,
-  tabs: EditionTabLink[],
+  tabs: EventTabLink[],
   onBeforeNavigate?: () => Promise<boolean>
 ) {
   const commands = useContext(SubTabBarCommandsContext);

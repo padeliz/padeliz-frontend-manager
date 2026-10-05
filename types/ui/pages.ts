@@ -29,6 +29,12 @@ export interface ResourceListPageConfig<
 
   // Table configuration
   excludeFields?: string[];
+  /** Drop these keys from metadata-driven filter definitions. */
+  excludeFilterFields?: string[];
+  /**
+   * Fixed list scope (e.g. queue=) merged into the React Query key and fetch params.
+   */
+  extraListParams?: Record<string, unknown>;
   /** When metadata is unavailable, use these columns instead. */
   staticColumns?: UiDataTableColumn<T>[];
   /** Primary key field when using staticColumns (defaults to id). */
@@ -102,6 +108,8 @@ export interface ResourceViewPageConfig<
 
   // Display configuration
   excludeFields?: string[];
+  /** Shown but never editable, even in edit mode (e.g. fees on a paid registration). */
+  readOnlyFields?: string[];
 
   // Page configuration
   title?: string;
@@ -109,15 +117,17 @@ export interface ResourceViewPageConfig<
   sectionLabel?: string;
   sectionHref?: string;
   subHeader?: ResourcePageSubHeaderConfig | null;
+  /** Extra content rendered below the field card and linked entities. */
+  footer?: React.ReactNode;
   onBack?: () => void;
 
-  /** When true, omit AppLayout (e.g. Editions Details tab) */
+  /** When true, omit AppLayout (e.g. Events Details tab) */
   embedded?: boolean;
   /** Query param id override when not using route [id] */
   resourceIdOverride?: number | null;
   /** Show linked entities even when embedded (default: !embedded) */
   showLinkedEntities?: boolean;
-  /** Linked entity keys to hide, e.g. editions own `divisions` in their own tab */
+  /** Linked entity keys to hide, e.g. events own `divisions` in their own tab */
   excludeLinkedEntities?: string[];
   /**
    * Parent owns Save/Refresh via onChromeStateChange.

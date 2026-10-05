@@ -1,0 +1,23 @@
+diff --git a/node_modules/react-native-pell-rich-editor/src/editor.js b/node_modules/react-native-pell-rich-editor/src/editor.js
+index 6559109..12444f3 100644
+--- a/node_modules/react-native-pell-rich-editor/src/editor.js
++++ b/node_modules/react-native-pell-rich-editor/src/editor.js
+@@ -72,7 +72,10 @@ function createHTML(options = {}) {
+ <body>
+ <div class="content"><div id="editor" class="pell"/></div>
+ <script>
+-    var __DEV__ = !!${window.__DEV__};
++    var __DEV__ = !!${Boolean(
++      (typeof globalThis !== 'undefined' && globalThis.__DEV__) ||
++      (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production')
++    )};
+     var _ = (function (exports) {
+         var anchorNode, focusNode, anchorOffset, focusOffset, _focusCollapse = false, cNode;
+         var _log = console.log;
+@@ -748,5 +751,4 @@ function createHTML(options = {}) {
+ `;
+ }
+ 
+-const HTML = createHTML();
+-export { HTML, createHTML, getContentCSS };
++export { createHTML, getContentCSS };

@@ -27,7 +27,7 @@ const divisionMetadata = {
   resource_path: 'divisions',
   display_field: 'name',
   swagger_schema: {
-    required: ['name', 'color', 'its_first_edition_id'],
+    required: ['name', 'color', 'its_first_event_id'],
     properties: {
       id_division: { type: 'integer', format: 'int64', readOnly: true },
       name: { type: 'string', title: 'Name' },
@@ -37,14 +37,14 @@ const divisionMetadata = {
         pattern: '^#[0-9A-Fa-f]{6}$',
         title: 'Color',
       },
-      its_first_edition_id: {
+      its_first_event_id: {
         type: 'integer',
         format: 'int64',
-        title: 'First Edition',
+        title: 'First Event',
       },
-      its_first_edition: {
-        oneOf: [{ $ref: '#/components/schemas/Edition' }],
-        title: 'First Edition',
+      its_first_event: {
+        oneOf: [{ $ref: '#/components/schemas/Event' }],
+        title: 'First Event',
       },
       location: {
         oneOf: [{ $ref: '#/components/schemas/Location' }],
@@ -52,9 +52,9 @@ const divisionMetadata = {
     },
   },
   filterable_fields: {
-    its_first_edition_id: {
+    its_first_event_id: {
       type: 'foreign_key',
-      related_schema_name: 'Edition',
+      related_schema_name: 'Event',
       related_schema_field: 'name',
     },
   },
@@ -132,8 +132,8 @@ describe('ResourceCreatePage nested relations + resource_path', () => {
 
     expect(screen.getByText('field:name')).toBeTruthy();
     expect(screen.getByText('field:color')).toBeTruthy();
-    expect(screen.getByText('field:its_first_edition_id')).toBeTruthy();
-    expect(screen.queryByText('field:its_first_edition')).toBeNull();
+    expect(screen.getByText('field:its_first_event_id')).toBeTruthy();
+    expect(screen.queryByText('field:its_first_event')).toBeNull();
     expect(screen.queryByText('field:location')).toBeNull();
   });
 

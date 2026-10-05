@@ -56,7 +56,7 @@ export const playerMetadata: ApiResourceMetadata = {
       },
       participations: {
         title: 'Participations',
-        description: 'Array of edition participations',
+        description: 'Array of event participations',
         type: 'array',
         items: {
           type: 'object',

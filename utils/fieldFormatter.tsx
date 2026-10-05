@@ -13,6 +13,7 @@ import React from 'react';
 import { Text } from 'react-native';
 import { ForeignKeyService } from './foreignKeyService';
 import { isNestedRelationProperty } from './nestedRelationProperty';
+import { isRichTextField } from './richtextMetadata';
 
 // Constants for better maintainability
 const NULL_DISPLAY = '-';
@@ -456,7 +457,23 @@ function formatStringField(
   result: FieldFormatterResult,
   mode: 'display' | 'form' | 'both'
 ): FieldFormatterResult {
-  const stringValue = String(fieldValue);
+  const stringValue =
+    fieldValue === null || fieldValue === undefined ? '' : String(fieldValue);
+
+  if (isRichTextField(fieldDefinition)) {
+    if (mode === 'form' || mode === 'both') {
+      result.inputType = 'richtext';
+      result.inputValue = stringValue;
+      result.apiValue = stringValue === '' ? null : stringValue;
+    }
+    if (mode === 'display' || mode === 'both') {
+      result.displayValue = (
+        <Text className={TEXT_STYLES.default}>{stringValue || NULL_DISPLAY}</Text>
+      );
+      result.formattedText = stringValue || NULL_DISPLAY;
+    }
+    return result;
+  }
 
   // Handle different string formats
   if (fieldDefinition.format) {
@@ -709,7 +726,7 @@ function formatDate(dateString: string): string {
 }
 
 /**
- * Format date strings for display (e.g. edition header, resource fields).
+ * Format date strings for display (e.g. event header, resource fields).
  */
 export function formatDisplayDate(dateString: string): string {
   return formatDate(dateString);

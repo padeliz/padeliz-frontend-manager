@@ -3,14 +3,14 @@
  */
 
 import { usePageChrome } from '@/components/chrome/PageChromeProvider';
-import EditionTabsBar, {
-  EditionTabLink,
-} from '@/components/editions/EditionTabsBar';
+import EventTabsBar, {
+  EventTabLink,
+} from '@/components/events/EventTabsBar';
 import AppLayout from '@/components/layout/AppLayout';
 import { useBreadcrumbSegments } from '@/components/layout/BreadcrumbProvider';
 import ActionButton from '@/components/ui/ActionButton';
 import { useActionButtonStatus } from '@/hooks/useActionButtonStatus';
-import { findActiveEditionTabLabel } from '@/utils/editionTabMatch';
+import { findActiveEventTabLabel } from '@/utils/eventTabMatch';
 import { confirmDiscardDirty } from '@/utils/softDirtyNav';
 import { Slot, usePathname } from 'expo-router';
 import React, { useCallback, useMemo } from 'react';
@@ -44,7 +44,7 @@ export function PlayersChrome() {
     resetKey: pathname,
   });
 
-  const tabs: EditionTabLink[] = useMemo(
+  const tabs: EventTabLink[] = useMemo(
     () => [
       { label: 'List', href: '/players/list', match: '/list' },
       {
@@ -66,7 +66,7 @@ export function PlayersChrome() {
     []
   );
 
-  const activeTabLabel = findActiveEditionTabLabel(pathname, tabs);
+  const activeTabLabel = findActiveEventTabLabel(pathname, tabs);
 
   const isListTab =
     pathname === '/players/list' || pathname.endsWith('/players/list');
@@ -133,7 +133,7 @@ export function PlayersChrome() {
       title="Players"
       headerActions={headerActions}
       tabBar={
-        <EditionTabsBar tabs={tabs} onBeforeNavigate={discardIfNeeded} />
+        <EventTabsBar tabs={tabs} onBeforeNavigate={discardIfNeeded} />
       }
     >
       <View className="flex-1">

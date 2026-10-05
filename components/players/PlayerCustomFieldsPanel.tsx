@@ -7,7 +7,7 @@ import AppTextInput from '@/components/ui/AppTextInput';
 import SingleSelectDropdown from '@/components/ui/SingleSelectDropdown';
 import { useToast } from '@/context/ToastContext';
 import { useActionButtonStatus } from '@/hooks/useActionButtonStatus';
-import { EditionsApiService } from '@/services/api/editionsApi';
+import { EventsApiService } from '@/services/api/eventsApi';
 import { PlayerCustomFieldsApiService } from '@/services/api/playerCustomFieldsApi';
 import {
   PlayerCustomFieldValuesApiService,
@@ -30,7 +30,7 @@ import {
 
 const valuesApi = new PlayerCustomFieldValuesApiService();
 const fieldsApi = new PlayerCustomFieldsApiService();
-const editionsApi = new EditionsApiService();
+const eventsApi = new EventsApiService();
 
 type Props = {
   playerId: number;
@@ -57,12 +57,12 @@ export default function PlayerCustomFieldsPanel({ playerId }: Props) {
   const { showSuccess, showError } = useToast();
   const [values, setValues] = useState<ApiPlayerCustomFieldValue[]>([]);
   const [fields, setFields] = useState<ApiPlayerCustomField[]>([]);
-  const [editionOptions, setEditionOptions] = useState<DropdownOption[]>([]);
+  const [eventOptions, setEventOptions] = useState<DropdownOption[]>([]);
   const [page, setPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [selectedFieldId, setSelectedFieldId] = useState<number | null>(null);
-  const [editionId, setEditionId] = useState<number | null>(null);
+  const [eventId, setEventId] = useState<number | null>(null);
   const [textValue, setTextValue] = useState('');
   const [intValue, setIntValue] = useState('');
   const [boolValue, setBoolValue] = useState(false);
@@ -103,12 +103,12 @@ export default function PlayerCustomFieldsPanel({ playerId }: Props) {
 
   const loadCatalog = useCallback(async () => {
     try {
-      const [fieldsRes, editionsRes] = await Promise.all([
+      const [fieldsRes, eventsRes] = await Promise.all([
         fieldsApi.getPlayerCustomFields({
           per_page: 100,
           sort_by: { sort_order: 'asc' },
         }),
-        editionsApi.getEditions({
+        eventsApi.getEvents({
           per_page: 100,
           sort_by: { name: 'asc' },
         }),
@@ -116,10 +116,10 @@ export default function PlayerCustomFieldsPanel({ playerId }: Props) {
       setFields(
         (fieldsRes.data ?? []).filter(field => field.archived_at == null)
       );
-      setEditionOptions(
-        (editionsRes.data ?? []).map(edition => ({
-          label: edition.name,
-          value: edition.id_edition,
+      setEventOptions(
+        (eventsRes.data ?? []).map(event => ({
+          label: event.name,
+          value: event.id_event,
         }))
       );
     } catch (err: any) {
@@ -165,7 +165,7 @@ export default function PlayerCustomFieldsPanel({ playerId }: Props) {
     if (!selectedField) return null;
     const payload: PlayerCustomFieldValueSubmitPayload = {
       player_custom_field_id: selectedField.id_player_custom_field,
-      edition_id: editionId,
+      event_id: eventId,
     };
     switch (selectedField.type) {
       case 'text':
@@ -349,15 +349,15 @@ export default function PlayerCustomFieldsPanel({ playerId }: Props) {
           />
         </View>
         <View className="mb-3">{renderValueInput()}</View>
-        <View className="mb-3" testID="custom-field-edition-select">
+        <View className="mb-3" testID="custom-field-event-select">
           <SingleSelectDropdown
-            options={editionOptions}
-            selectedValue={editionId}
+            options={eventOptions}
+            selectedValue={eventId}
             onSelectionChange={value =>
-              setEditionId(value == null ? null : Number(value))
+              setEventId(value == null ? null : Number(value))
             }
-            placeholder="Edition (optional)"
-            title="Edition"
+            placeholder="Event (optional)"
+            title="Event"
             clearable
           />
         </View>
@@ -400,7 +400,7 @@ export default function PlayerCustomFieldsPanel({ playerId }: Props) {
                 Value: {displayValue(row)}
               </Text>
               <Text className="text-xs text-gray-500">
-                Edition: {row.edition?.name ?? '—'}
+                Event: {row.event?.name ?? '—'}
               </Text>
               <Text className="text-xs text-gray-500">
                 Submitted: {formatTimestamp(row.inserted_at)}

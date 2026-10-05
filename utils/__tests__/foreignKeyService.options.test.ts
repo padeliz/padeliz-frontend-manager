@@ -28,13 +28,13 @@ describe('ForeignKeyService generic list options', () => {
     mockGetMetadata.mockResolvedValue({
       data: {
         version: 'v1',
-        schema_name: 'Edition',
-        resource_path: 'editions',
+        schema_name: 'Event',
+        resource_path: 'events',
         display_field: 'name',
         swagger_schema: {
           required: [],
           properties: {
-            id_edition: {
+            id_event: {
               type: 'integer',
               format: 'int64',
               readOnly: true,
@@ -51,13 +51,13 @@ describe('ForeignKeyService generic list options', () => {
     });
     mockListResource.mockResolvedValue({
       data: [
-        { id_edition: 1, name: 'Summer' },
-        { id_edition: 2, name: 'Winter' },
+        { id_event: 1, name: 'Summer' },
+        { id_event: 2, name: 'Winter' },
       ],
     });
 
     const first = await ForeignKeyService.fetchLinkedResourceOptions(
-      'Edition',
+      'Event',
       'name'
     );
     expect(first).toEqual([
@@ -65,11 +65,11 @@ describe('ForeignKeyService generic list options', () => {
       { id: 2, label: 'Winter' },
     ]);
     expect(mockListResource).toHaveBeenCalledTimes(1);
-    expect(mockListResource.mock.calls[0][0]).toMatch(/^\/editions\?/);
+    expect(mockListResource.mock.calls[0][0]).toMatch(/^\/events\?/);
     expect(mockListResource.mock.calls[0][0]).toContain('per_page=100');
 
     const second = await ForeignKeyService.fetchLinkedResourceOptions(
-      'Edition',
+      'Event',
       'name'
     );
     expect(second).toEqual(first);

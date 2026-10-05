@@ -2,16 +2,16 @@ import {
   ScheduleFormPayload,
   SchedulePreview,
   ScheduleState,
-} from '@/types/api/edition';
+} from '@/types/api/event';
 import { BaseApiService } from './baseApi';
 
 export class ScheduleApiService extends BaseApiService {
-  private base(editionDivisionId: number) {
-    return `/edition-divisions/${editionDivisionId}/schedule`;
+  private base(eventDivisionId: number) {
+    return `/event-divisions/${eventDivisionId}/schedule`;
   }
 
   async getSchedule(
-    editionDivisionId: number,
+    eventDivisionId: number,
     options?: { board?: boolean; scores?: boolean }
   ): Promise<{ data: ScheduleState; message?: string }> {
     const params = new URLSearchParams();
@@ -19,64 +19,64 @@ export class ScheduleApiService extends BaseApiService {
     if (options?.scores) params.set('scores', '1');
     const qs = params.toString() ? `?${params.toString()}` : '';
     return this.get<{ data: ScheduleState; message?: string }>(
-      `${this.base(editionDivisionId)}${qs}`
+      `${this.base(eventDivisionId)}${qs}`
     );
   }
 
   async updateForm(
-    editionDivisionId: number,
+    eventDivisionId: number,
     payload: ScheduleFormPayload
   ): Promise<{ data: any; message?: string }> {
     return this.put<{ data: any; message?: string }>(
-      `${this.base(editionDivisionId)}/form`,
+      `${this.base(eventDivisionId)}/form`,
       payload
     );
   }
 
   async patchForm(
-    editionDivisionId: number,
+    eventDivisionId: number,
     payload: ScheduleFormPayload
   ): Promise<{ data: any; message?: string }> {
     return this.patch<{ data: any; message?: string }>(
-      `${this.base(editionDivisionId)}/form`,
+      `${this.base(eventDivisionId)}/form`,
       payload
     );
   }
 
   async preview(
-    editionDivisionId: number,
+    eventDivisionId: number,
     payload: Partial<ScheduleFormPayload> = {}
   ): Promise<{ data: SchedulePreview; message?: string }> {
     return this.post<{ data: SchedulePreview; message?: string }>(
-      `${this.base(editionDivisionId)}/preview`,
+      `${this.base(eventDivisionId)}/preview`,
       payload
     );
   }
 
   async generate(
-    editionDivisionId: number,
+    eventDivisionId: number,
     payload: ScheduleFormPayload = {}
   ): Promise<{ data: any; message?: string }> {
     return this.post<{ data: any; message?: string }>(
-      `${this.base(editionDivisionId)}/generate`,
+      `${this.base(eventDivisionId)}/generate`,
       payload
     );
   }
 
   async destroySchedule(
-    editionDivisionId: number
+    eventDivisionId: number
   ): Promise<{ data: any; message?: string }> {
     return this.delete<{ data: any; message?: string }>(
-      this.base(editionDivisionId)
+      this.base(eventDivisionId)
     );
   }
 
   async reorderMatches(
-    editionDivisionId: number,
+    eventDivisionId: number,
     payload: { court: number; match_ids: number[] }
   ): Promise<{ data: any; message?: string }> {
     return this.post<{ data: any; message?: string }>(
-      `${this.base(editionDivisionId)}/matches/reorder`,
+      `${this.base(eventDivisionId)}/matches/reorder`,
       payload
     );
   }

@@ -1,6 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
+import { queryKeys } from '@/lib/queryClient';
+import {
+  EventRegistrationsApiService,
+  RegistrationOpsQueue,
+  RegistrationQueueCounts,
+} from '@/services/api/eventRegistrationsApi';
+import { useQuery } from '@tanstack/react-query';
 import { usePathname } from 'expo-router';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 interface SidebarProps {
@@ -13,7 +20,11 @@ interface NavigationItem {
   href: string;
   icon: keyof typeof Ionicons.glyphMap;
   description?: string;
+  /** When set, show a count badge from registration-queue-counts (hide when 0). */
+  queueKey?: RegistrationOpsQueue;
 }
+
+const registrationsApi = new EventRegistrationsApiService();
 
 export const managerNavigationItems: NavigationItem[] = [
   {
@@ -41,16 +52,16 @@ export const managerNavigationItems: NavigationItem[] = [
     description: 'Player skill divisions',
   },
   {
-    label: 'Editions',
-    href: '/editions',
+    label: 'Events',
+    href: '/events',
     icon: 'calendar',
-    description: 'Tournament editions',
+    description: 'Tournament events',
   },
   {
-    label: 'Edition Divisions',
-    href: '/edition-divisions',
+    label: 'Event Divisions',
+    href: '/event-divisions',
     icon: 'git-branch',
-    description: 'Edition–division pairings',
+    description: 'Event–division pairings',
   },
   {
     label: 'Players',
@@ -84,15 +95,42 @@ export const managerNavigationItems: NavigationItem[] = [
   },
   {
     label: 'Participations',
-    href: '/edition-participations',
+    href: '/event-participations',
     icon: 'person-add',
     description: 'Player participations',
   },
   {
     label: 'Registrations',
-    href: '/edition-registrations',
+    href: '/event-registrations',
     icon: 'ticket',
     description: 'Player registrations',
+  },
+  {
+    label: 'Payment proofs',
+    href: '/payment-proofs',
+    icon: 'document-attach',
+    description: 'Bank proofs awaiting review',
+    queueKey: 'awaiting_proof',
+  },
+  {
+    label: 'Refunds',
+    href: '/refunds',
+    icon: 'cash',
+    description: 'Checkouts pending refund',
+    queueKey: 'refund_pending',
+  },
+  {
+    label: 'Abandoned checkouts',
+    href: '/abandoned-checkouts',
+    icon: 'alert-circle',
+    description: 'Unpaid Netopia checkouts',
+    queueKey: 'abandoned_netopia',
+  },
+  {
+    label: 'Bank transfer',
+    href: '/bank-transfer-settings',
+    icon: 'card',
+    description: 'IBAN shown to paying players',
   },
   {
     label: 'Eligibilities',
@@ -105,6 +143,18 @@ export const managerNavigationItems: NavigationItem[] = [
     href: '/prizes',
     icon: 'trophy',
     description: 'Tournament prizes',
+  },
+  {
+    label: 'Benefits',
+    href: '/benefits',
+    icon: 'pricetag',
+    description: 'Discount & fee benefit catalog',
+  },
+  {
+    label: 'Entitlements',
+    href: '/benefit-entitlements',
+    icon: 'key',
+    description: 'Granted player benefits',
   },
   {
     label: 'Sponsors',
@@ -120,25 +170,25 @@ export const managerNavigationItems: NavigationItem[] = [
   },
   {
     label: 'Lotteries',
-    href: '/edition-lotteries',
+    href: '/event-lotteries',
     icon: 'shuffle',
     description: 'Tournament lotteries',
   },
   {
     label: 'Lottery Prizes',
-    href: '/edition-lottery-prizes',
+    href: '/event-lottery-prizes',
     icon: 'cube',
     description: 'Lottery prize lines',
   },
   {
     label: 'Lottery Rules',
-    href: '/edition-lottery-rules',
+    href: '/event-lottery-rules',
     icon: 'list',
     description: 'Lottery eligibility rules',
   },
   {
     label: 'Lucky Ones',
-    href: '/edition-lottery-luckies',
+    href: '/event-lottery-luckies',
     icon: 'star',
     description: 'Lottery winners',
   },
@@ -152,8 +202,27 @@ export const managerNavigationItems: NavigationItem[] = [
 
 const navigationItems = managerNavigationItems;
 
+const EMPTY_COUNTS: RegistrationQueueCounts = {
+  awaiting_proof: 0,
+  refund_pending: 0,
+  abandoned_netopia: 0,
+};
+
 export default function Sidebar({ currentPath, onNavigate }: SidebarProps) {
   const pathname = usePathname();
+
+  const countsQuery = useQuery({
+    queryKey: queryKeys.registrationQueueCounts(),
+    queryFn: async () => {
+      const res = await registrationsApi.getRegistrationQueueCounts();
+      return res.data;
+    },
+    refetchOnWindowFocus: true,
+  });
+
+  const counts = countsQuery.data ?? EMPTY_COUNTS;
+
+  const items = useMemo(() => navigationItems, []);
 
   const handleNavigation = (href: string) => {
     // Use the pathname from the hook instead of the prop
@@ -174,8 +243,10 @@ export default function Sidebar({ currentPath, onNavigate }: SidebarProps) {
       {/* Navigation Items */}
       <ScrollView className="flex-1">
         <View className="py-4">
-          {navigationItems.map(item => {
+          {items.map(item => {
             const active = isActive(item.href);
+            const badgeCount =
+              item.queueKey != null ? counts[item.queueKey] : 0;
             return (
               <Pressable
                 key={item.href}
@@ -193,13 +264,25 @@ export default function Sidebar({ currentPath, onNavigate }: SidebarProps) {
                     color={active ? '#2563eb' : '#6b7280'}
                   />
                   <View className="ml-3 flex-1">
-                    <Text
-                      className={`font-medium ${
-                        active ? 'text-blue-700' : 'text-gray-700'
-                      }`}
-                    >
-                      {item.label}
-                    </Text>
+                    <View className="flex-row items-center justify-between">
+                      <Text
+                        className={`font-medium ${
+                          active ? 'text-blue-700' : 'text-gray-700'
+                        }`}
+                      >
+                        {item.label}
+                      </Text>
+                      {badgeCount > 0 ? (
+                        <View
+                          testID={`sidebar-badge-${item.queueKey}`}
+                          className="bg-red-500 rounded-full min-w-[20px] px-1.5 py-0.5 items-center"
+                        >
+                          <Text className="text-white text-xs font-semibold">
+                            {badgeCount > 99 ? '99+' : badgeCount}
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
                     {item.description && (
                       <Text className="text-xs text-gray-500 mt-1">
                         {item.description}

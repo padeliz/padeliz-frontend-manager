@@ -1,5 +1,5 @@
 import { confirmAction } from '@/utils/confirmAction';
-import { confirmAction as confirmActionReexport } from '@/components/editions/editionLotteryUtils';
+import { confirmAction as confirmActionReexport } from '@/components/events/eventLotteryUtils';
 import { Alert } from 'react-native';
 
 describe('confirmAction', () => {
@@ -47,7 +47,7 @@ describe('confirmAction', () => {
     expect(onConfirm).toHaveBeenCalledTimes(1);
   });
 
-  it('re-exports from editionLotteryUtils', () => {
+  it('re-exports from eventLotteryUtils', () => {
     expect(confirmActionReexport).toBe(confirmAction);
   });
 });

@@ -1,4 +1,4 @@
-import { ApiCourt } from '@/types/api/edition';
+import { ApiCourt } from '@/types/api/event';
 import { ApiBulkDeleteResponse, ApiResponse } from '@/types/api/responses';
 import { BaseApiService } from './baseApi';
 

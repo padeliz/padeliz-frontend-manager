@@ -52,7 +52,7 @@ jest.mock('@/components/ui/Tooltip', () => {
   );
 });
 
-jest.mock('@/components/editions/SortableRow', () => {
+jest.mock('@/components/events/SortableRow', () => {
   const React = require('react');
   const { View } = require('react-native');
   const SortableRow = ({ children }: { children: React.ReactNode }) => (

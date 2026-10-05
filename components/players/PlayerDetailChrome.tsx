@@ -3,9 +3,9 @@
  */
 
 import { usePageChrome } from '@/components/chrome/PageChromeProvider';
-import EditionTabsBar, {
-  type EditionTabLink,
-} from '@/components/editions/EditionTabsBar';
+import EventTabsBar, {
+  type EventTabLink,
+} from '@/components/events/EventTabsBar';
 import AppLayout from '@/components/layout/AppLayout';
 import { useBreadcrumbSegments } from '@/components/layout/BreadcrumbProvider';
 import EditModeToggle from '@/components/pages/EditModeToggle';
@@ -14,7 +14,7 @@ import { useActionButtonStatus } from '@/hooks/useActionButtonStatus';
 import { useResourceMetadata } from '@/hooks/useResourceMetadata';
 import { queryKeys } from '@/lib/queryClient';
 import { PlayersApiService } from '@/services/api/playersApi';
-import { findActiveEditionTabLabel } from '@/utils/editionTabMatch';
+import { findActiveEventTabLabel } from '@/utils/eventTabMatch';
 import {
   formatResourceHeaderTitle,
   getResourceDisplayLabel,
@@ -61,7 +61,7 @@ export function PlayerDetailChrome() {
   }
 
   const tabs = useMemo(
-    (): EditionTabLink[] => [
+    (): EventTabLink[] => [
       {
         label: 'Details',
         href: `/players/${playerId}/details`,
@@ -87,7 +87,7 @@ export function PlayerDetailChrome() {
     numericPlayerId
   );
   const displayTitle = actions?.displayTitle || resolvedDisplayTitle || 'Player';
-  const activeTabLabel = findActiveEditionTabLabel(pathname, tabs);
+  const activeTabLabel = findActiveEventTabLabel(pathname, tabs);
 
   useBreadcrumbSegments('player-detail-chrome', [
     { label: 'Players', href: '/players/list' },
@@ -139,7 +139,7 @@ export function PlayerDetailChrome() {
     <AppLayout
       title={title}
       headerActions={headerActions}
-      tabBar={<EditionTabsBar tabs={tabs} />}
+      tabBar={<EventTabsBar tabs={tabs} />}
     >
       <View className="flex-1">
         <Slot />

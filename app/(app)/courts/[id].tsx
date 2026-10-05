@@ -1,7 +1,7 @@
 import ResourceViewPage from '@/components/pages/ResourceViewPage';
 import { useResourceViewPageConfig } from '@/hooks/useResourceViewPageConfig';
 import { CourtsApiService } from '@/services/api/courtsApi';
-import { ApiCourt } from '@/types/api/edition';
+import { ApiCourt } from '@/types/api/event';
 import React, { useCallback } from 'react';
 
 const api = new CourtsApiService();

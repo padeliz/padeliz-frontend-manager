@@ -2,7 +2,7 @@
  * Confirm leave/discard when page chrome is dirty.
  */
 
-import { formatUnixDateTime24h } from '@/components/editions/editionLotteryUtils';
+import { formatUnixDateTime24h } from '@/components/events/eventLotteryUtils';
 import { Alert, Platform } from 'react-native';
 
 export function confirmDiscardDirty(

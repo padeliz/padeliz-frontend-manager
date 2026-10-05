@@ -2,7 +2,7 @@
  * Single vertical page-body scroller owned by AppLayout.
  * Route content should be Views only — no nested vertical ScrollViews.
  *
- * Allowed scrollers elsewhere: sidebar nav, EditionTabsBar horizontal,
+ * Allowed scrollers elsewhere: sidebar nav, EventTabsBar horizontal,
  * AdvancedDataTable horizontal, dropdown overlays.
  */
 

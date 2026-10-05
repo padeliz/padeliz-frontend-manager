@@ -16,7 +16,7 @@ const relatedMetadataCache: Record<string, ApiResourceMetadata> = {};
 const optionsCache: Record<string, Array<{ id: number; label: string }>> = {};
 
 export class ForeignKeyService {
-  /** edition_division_id → editionDivision */
+  /** event_division_id → eventDivision */
   static toCamelLinkedKey(fieldKey: string): string {
     const withoutId = fieldKey.replace(/_id$/, '');
     return withoutId.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());

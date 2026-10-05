@@ -45,6 +45,8 @@ export default function ResourceViewPage<
     fetchResource,
     updateResource,
     excludeFields = [],
+    readOnlyFields,
+    footer,
     title,
     description,
     sectionLabel,
@@ -61,6 +63,11 @@ export default function ResourceViewPage<
 
   const resolvedExcludeLinked =
     excludeLinkedEntities ?? EMPTY_EXCLUDE_LINKED_ENTITIES;
+
+  const lockedFieldKeys = useMemo(
+    () => new Set(readOnlyFields ?? []),
+    [readOnlyFields]
+  );
 
   const showLinkedEntities =
     showLinkedEntitiesProp !== undefined
@@ -499,7 +506,7 @@ export default function ResourceViewPage<
         />
       );
     }
-    if (isEditing) {
+    if (isEditing && !lockedFieldKeys.has(fieldKey)) {
       return (
         <ResourceFieldEdit
           key={fieldKey}
@@ -558,17 +565,11 @@ export default function ResourceViewPage<
         </View>
       ) : null}
 
-      {embedded ? (
-        <View className="flex-1 p-4">
-          <View className="mb-8">{fieldCard}</View>
-          {linkedSections}
-        </View>
-      ) : (
-        <View className="flex-1 p-4">
-          <View className="mb-8">{fieldCard}</View>
-          {linkedSections}
-        </View>
-      )}
+      <View className="flex-1 p-4">
+        <View className="mb-8">{fieldCard}</View>
+        {footer}
+        {linkedSections}
+      </View>
     </View>
   );
 }

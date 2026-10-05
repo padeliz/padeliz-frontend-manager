@@ -7,7 +7,7 @@ describe('isNestedRelationProperty', () => {
     ).toBe(true);
     expect(
       isNestedRelationProperty({
-        oneOf: [{ $ref: '#/components/schemas/Edition' }],
+        oneOf: [{ $ref: '#/components/schemas/Event' }],
       })
     ).toBe(true);
   });

@@ -32,11 +32,11 @@ jest.mock('expo-router', () =>
 })
 );
 
-jest.mock('@/components/editions/EditionTabsBar', () => {
+jest.mock('@/components/events/EventTabsBar', () => {
   const { View, Text } = require('react-native');
-  return function EditionTabsBar({ tabs }: any) {
+  return function EventTabsBar({ tabs }: any) {
     return (
-      <View testID="edition-tabs-bar">
+      <View testID="event-tabs-bar">
         {tabs.map((t: any) => (
           <Text key={t.href}>{t.label}</Text>
         ))}
@@ -50,13 +50,13 @@ function SubTabChrome() {
 }
 
 describe('PlayerImportSectionLayout', () => {
-  it('uses useSubTabBar hook only, not a local EditionTabsBar', () => {
+  it('uses useSubTabBar hook only, not a local EventTabsBar', () => {
     const src = fs.readFileSync(
       path.join(__dirname, '..', 'PlayerImportSectionLayout.tsx'),
       'utf8'
     );
     expect(src).toContain('useSubTabBar');
-    expect(src).not.toContain('<EditionTabsBar');
+    expect(src).not.toContain('<EventTabsBar');
     expect(src).not.toMatch(/ScrollView/);
   });
 
@@ -72,7 +72,7 @@ describe('PlayerImportSectionLayout', () => {
         />
       </SubTabBarProvider>
     );
-    expect(getByTestId('edition-tabs-bar')).toBeTruthy();
+    expect(getByTestId('event-tabs-bar')).toBeTruthy();
     expect(getByText('Import')).toBeTruthy();
     expect(getByText('Imports History')).toBeTruthy();
     expect(getByTestId('slot')).toBeTruthy();

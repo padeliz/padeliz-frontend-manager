@@ -26,33 +26,34 @@ export const queryKeys = {
   ) => ['resourceList', resourceName, params] as const,
   resourceDetail: (resourceName: string, id: number | string) =>
     ['resourceDetail', resourceName, id] as const,
-  edition: (id: number | string) => ['edition', id] as const,
-  editionDivisions: (editionId: number | string) =>
-    ['editionDivisions', editionId] as const,
-  schedule: (editionDivisionId: number | string) =>
-    ['schedule', editionDivisionId] as const,
-  standings: (editionDivisionId: number | string) =>
-    ['standings', editionDivisionId] as const,
+  event: (id: number | string) => ['event', id] as const,
+  eventDivisions: (eventId: number | string) =>
+    ['eventDivisions', eventId] as const,
+  schedule: (eventDivisionId: number | string) =>
+    ['schedule', eventDivisionId] as const,
+  standings: (eventDivisionId: number | string) =>
+    ['standings', eventDivisionId] as const,
   organizers: () => ['organizers'] as const,
   clubsPicker: () => ['clubsPicker'] as const,
   lotteryLive: (lotteryId: number | string) =>
     ['lotteryLive', lotteryId] as const,
-  editionLotteries: (editionId: number | string) =>
-    ['editionLotteries', editionId] as const,
-  editionLotteryRules: (lotteryId: number | string) =>
-    ['editionLotteryRules', lotteryId] as const,
-  editionLotteryPrizes: (lotteryId: number | string) =>
-    ['editionLotteryPrizes', lotteryId] as const,
-  editionLotteryPrizesWithLuckies: (lotteryId: number | string) =>
-    ['editionLotteryPrizesWithLuckies', lotteryId] as const,
-  editionLotteryLuckies: (lotteryId: number | string) =>
-    ['editionLotteryLuckies', lotteryId] as const,
+  eventLotteries: (eventId: number | string) =>
+    ['eventLotteries', eventId] as const,
+  eventLotteryRules: (lotteryId: number | string) =>
+    ['eventLotteryRules', lotteryId] as const,
+  eventLotteryPrizes: (lotteryId: number | string) =>
+    ['eventLotteryPrizes', lotteryId] as const,
+  eventLotteryPrizesWithLuckies: (lotteryId: number | string) =>
+    ['eventLotteryPrizesWithLuckies', lotteryId] as const,
+  eventLotteryLuckies: (lotteryId: number | string) =>
+    ['eventLotteryLuckies', lotteryId] as const,
   lotteryPrizesBoard: (lotteryId: number | string) =>
     ['lotteryPrizesBoard', lotteryId] as const,
-  replacements: (editionDivisionId: number | string) =>
-    ['replacements', editionDivisionId] as const,
-  editionReplacements: (editionId: number | string) =>
-    ['editionReplacements', editionId] as const,
+  replacements: (eventDivisionId: number | string) =>
+    ['replacements', eventDivisionId] as const,
+  eventReplacements: (eventId: number | string) =>
+    ['eventReplacements', eventId] as const,
+  registrationQueueCounts: () => ['registrationQueueCounts'] as const,
   playersPicker: (params: {
     q?: string;
     page?: number;

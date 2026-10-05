@@ -136,4 +136,32 @@ describe('formatField', () => {
     expect(result.inputValue).toBe('');
     expect(result.apiValue).toBeNull();
   });
+
+  it('maps x-padeliz-richtext string fields to richtext inputType', () => {
+    const metadata = {
+      ...playerMetadata,
+      swagger_schema: {
+        ...playerMetadata.swagger_schema,
+        properties: {
+          ...playerMetadata.swagger_schema.properties,
+          description: {
+            title: 'Description',
+            type: 'string',
+            'x-padeliz-richtext': true,
+          },
+        },
+      },
+    };
+
+    const result = formatField({
+      metadata,
+      fieldKey: 'description',
+      fieldValue: '<p>Hello</p>',
+      mode: 'form',
+    });
+
+    expect(result.inputType).toBe('richtext');
+    expect(result.inputValue).toBe('<p>Hello</p>');
+    expect(result.apiValue).toBe('<p>Hello</p>');
+  });
 });

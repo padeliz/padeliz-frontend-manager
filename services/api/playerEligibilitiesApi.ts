@@ -12,11 +12,11 @@ export class PlayerEligibilitiesApiService extends BaseApiService {
       per_page?: number;
       q?: string;
       filters?: {
-        edition_id?: number;
+        event_id?: number;
         division_id?: number;
       };
       sort_by?: {
-        edition_id?: 'asc' | 'desc';
+        event_id?: 'asc' | 'desc';
         division_id?: 'asc' | 'desc';
         inserted_at?: 'asc' | 'desc';
         updated_at?: 'asc' | 'desc';

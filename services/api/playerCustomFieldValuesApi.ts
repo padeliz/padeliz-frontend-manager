@@ -4,7 +4,7 @@ import { BaseApiService } from './baseApi';
 
 export type PlayerCustomFieldValueSubmitPayload = {
   player_custom_field_id: number;
-  edition_id?: number | null;
+  event_id?: number | null;
   value?: string | number | boolean | null;
   option_id?: number;
   option_ids?: number[];

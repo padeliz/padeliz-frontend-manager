@@ -13,7 +13,7 @@ const mockGetValues = jest.fn();
 const mockCreateValue = jest.fn();
 const mockInvalidateValue = jest.fn();
 const mockGetFields = jest.fn();
-const mockGetEditions = jest.fn();
+const mockGetEvents = jest.fn();
 
 jest.mock('@/services/api/playerCustomFieldValuesApi', () => ({
   PlayerCustomFieldValuesApiService: jest.fn().mockImplementation(() => ({
@@ -29,9 +29,9 @@ jest.mock('@/services/api/playerCustomFieldsApi', () => ({
   })),
 }));
 
-jest.mock('@/services/api/editionsApi', () => ({
-  EditionsApiService: jest.fn().mockImplementation(() => ({
-    getEditions: (...args: unknown[]) => mockGetEditions(...args),
+jest.mock('@/services/api/eventsApi', () => ({
+  EventsApiService: jest.fn().mockImplementation(() => ({
+    getEvents: (...args: unknown[]) => mockGetEvents(...args),
   })),
 }));
 
@@ -118,7 +118,7 @@ describe('PlayerCustomFieldsPanel', () => {
         },
       ],
     });
-    mockGetEditions.mockResolvedValue({ data: [] });
+    mockGetEvents.mockResolvedValue({ data: [] });
     mockGetValues.mockResolvedValue({
       data: [
         {
@@ -160,7 +160,7 @@ describe('PlayerCustomFieldsPanel', () => {
     await waitFor(() =>
       expect(mockCreateValue).toHaveBeenCalledWith(42, {
         player_custom_field_id: 7,
-        edition_id: null,
+        event_id: null,
         value: 'L',
       })
     );

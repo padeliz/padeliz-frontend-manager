@@ -15,7 +15,7 @@ const mockAnnounce = jest.fn(async () => ({
     status: 'pending',
     logo: 'https://example.com/logo.png',
     background: 'https://example.com/bg.jpg',
-    edition: { name: 'Test Edition' },
+    event: { name: 'Test Event' },
     lucky: {
       id_lucky: 5,
       seconds_left: 0,
@@ -37,13 +37,13 @@ const mockAnnounce = jest.fn(async () => ({
     accepted: [],
   },
 }));
-const mockGetEdition = jest.fn(async () => ({
-  data: { id_edition: 1, name: 'Test Edition', finalized_at: null },
+const mockGetEvent = jest.fn(async () => ({
+  data: { id_event: 1, name: 'Test Event', finalized_at: null },
 }));
 
-jest.mock('@/services/api/editionsApi', () => ({
-  EditionsApiService: jest.fn().mockImplementation(() => ({
-    getEdition: (...args: unknown[]) => mockGetEdition(...args),
+jest.mock('@/services/api/eventsApi', () => ({
+  EventsApiService: jest.fn().mockImplementation(() => ({
+    getEvent: (...args: unknown[]) => mockGetEvent(...args),
   })),
 }));
 
@@ -60,7 +60,7 @@ function renderKiosk(lotteryId: number | null = 3) {
   const client = createTestQueryClient();
   return render(
     <QueryClientProvider client={client}>
-      <LotteryLiveKiosk editionId={1} lotteryId={lotteryId} />
+      <LotteryLiveKiosk eventId={1} lotteryId={lotteryId} />
     </QueryClientProvider>
   );
 }
@@ -89,15 +89,15 @@ describe('LotteryLiveKiosk', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
-    mockGetEdition.mockResolvedValue({
-      data: { id_edition: 1, name: 'Test Edition', finalized_at: null },
+    mockGetEvent.mockResolvedValue({
+      data: { id_event: 1, name: 'Test Event', finalized_at: null },
     });
     mockLive.mockResolvedValue({
       data: {
         status: 'pending',
         logo: 'https://example.com/logo.png',
         background: 'https://example.com/bg.jpg',
-        edition: { name: 'Test Edition' },
+        event: { name: 'Test Event' },
         lucky: { ...prizeLucky },
         accepted: [],
       },
@@ -125,7 +125,7 @@ describe('LotteryLiveKiosk', () => {
         status: 'pending',
         logo: 'https://example.com/logo.png',
         background: 'https://example.com/bg.jpg',
-        edition: { name: 'Test Edition' },
+        event: { name: 'Test Event' },
         lucky: { ...prizeLucky, seconds_left: 65, announced_at: null },
         accepted: [],
       },
@@ -158,10 +158,10 @@ describe('LotteryLiveKiosk', () => {
   });
 
   it('shows finalized read-only line without decide buttons', async () => {
-    mockGetEdition.mockResolvedValue({
+    mockGetEvent.mockResolvedValue({
       data: {
-        id_edition: 1,
-        name: 'Test Edition',
+        id_event: 1,
+        name: 'Test Event',
         finalized_at: 123,
       },
     });
@@ -170,32 +170,32 @@ describe('LotteryLiveKiosk', () => {
         status: 'pending',
         logo: 'https://example.com/logo.png',
         background: 'https://example.com/bg.jpg',
-        edition: { name: 'Test Edition' },
+        event: { name: 'Test Event' },
         lucky: { ...prizeLucky, seconds_left: 0, announced_at: 999 },
         accepted: [],
       },
     });
     const { findByText, queryByText } = renderKiosk();
-    expect(await findByText(/Edition finalized — view only/)).toBeTruthy();
+    expect(await findByText(/Event finalized — view only/)).toBeTruthy();
     expect(queryByText(/draw someone else/)).toBeNull();
     expect(queryByText(/great, I'll keep it/)).toBeNull();
   });
 
-  it('centers edition title without flex-end offset', async () => {
+  it('centers event title without flex-end offset', async () => {
     mockLive.mockResolvedValue({
       data: {
         status: 'pending',
         logo: 'https://example.com/logo.png',
         background: 'https://example.com/bg.jpg',
-        edition: { name: 'Test Edition' },
+        event: { name: 'Test Event' },
         lucky: { ...prizeLucky, seconds_left: 10 },
         accepted: [],
       },
     });
     const { findByTestId } = renderKiosk();
     await findByTestId('lottery-live-timer');
-    const title = await findByTestId('lottery-live-edition-title');
-    expect(title).toHaveTextContent(/Test Edition Lottery/);
+    const title = await findByTestId('lottery-live-event-title');
+    expect(title).toHaveTextContent(/Test Event Lottery/);
     const style = title.props.style;
     const flat = Array.isArray(style) ? Object.assign({}, ...style) : style;
     expect(flat.alignSelf).not.toBe('flex-end');
@@ -208,7 +208,7 @@ describe('LotteryLiveKiosk', () => {
         status: 'finished',
         logo: 'https://example.com/logo.png',
         background: 'https://example.com/bg.jpg',
-        edition: { name: 'Test Edition' },
+        event: { name: 'Test Event' },
         lucky: null,
         accepted: [
           {
@@ -217,7 +217,7 @@ describe('LotteryLiveKiosk', () => {
             division: { division_title: 'X', color: '#111' },
           },
         ],
-        next_edition: { name: 'Next', date: '2026-09-01' },
+        next_event: { name: 'Next', date: '2026-09-01' },
       },
     });
     const { findByText } = renderKiosk();
@@ -240,7 +240,7 @@ describe('LotteryLiveKiosk', () => {
         status: 'pending',
         logo: 'https://example.com/logo.png',
         background: 'https://example.com/bg.jpg',
-        edition: { name: 'Test Edition' },
+        event: { name: 'Test Event' },
         lucky: {
           ...prizeLucky,
           seconds_left: 30,
@@ -276,7 +276,7 @@ describe('LotteryLiveKiosk', () => {
         status: 'pending',
         logo: 'https://example.com/logo.png',
         background: 'https://example.com/bg.jpg',
-        edition: { name: 'Test Edition' },
+        event: { name: 'Test Event' },
         lucky: {
           ...prizeLucky,
           seconds_left: 30,

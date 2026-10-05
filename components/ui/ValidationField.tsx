@@ -18,6 +18,7 @@ import DateTimeFormInput from './DateTimeFormInput';
 import ColorFormInput from './ColorFormInput';
 import YearFormInput from './YearFormInput';
 import SingleSelectDropdown from './SingleSelectDropdown';
+import RichTextEditor from './RichTextEditor';
 
 export default function ValidationField({
   field,
@@ -250,6 +251,18 @@ export default function ValidationField({
               ${displayError ? 'border-red-500' : ''}
               ${disabled ? 'bg-gray-100 text-gray-500' : 'bg-white text-gray-900'}
             `}
+          />
+        );
+
+      case 'richtext':
+        return (
+          <RichTextEditor
+            value={String(fieldInfo.inputValue || '')}
+            onChange={html => handleChange(html)}
+            onBlur={handleBlur}
+            disabled={disabled}
+            placeholder={fieldPlaceholder}
+            error={displayError}
           />
         );
 

@@ -16,13 +16,13 @@ jest.mock('expo-router', () =>
 })
 );
 
-const editionMetadata = {
+const eventMetadata = {
   display_field: 'name',
-  resource_path: 'editions',
-  schema_name: 'Edition',
+  resource_path: 'events',
+  schema_name: 'Event',
   swagger_schema: {
     properties: {
-      id_edition: { type: 'integer', readOnly: true },
+      id_event: { type: 'integer', readOnly: true },
       name: { type: 'string', title: 'Name' },
     },
   },
@@ -33,7 +33,7 @@ const editionMetadata = {
 
 jest.mock('@/hooks/useResourceMetadata', () => ({
   useResourceMetadata: () => ({
-    getMetadata: () => editionMetadata,
+    getMetadata: () => eventMetadata,
     getError: () => null,
     isLoading: () => false,
     fetchMetadata: jest.fn(),
@@ -61,11 +61,11 @@ jest.mock('@/components/layout/AppLayout', () => {
 jest.mock('@/utils/linkedEntityService', () => ({
   LinkedEntityService: {
     detectLinkedEntities: jest.fn(async () => [
-      { key: 'divisions', label: 'Divisions', resourceName: 'EditionDivision' },
+      { key: 'divisions', label: 'Divisions', resourceName: 'EventDivision' },
       {
         key: 'participations',
         label: 'Participations',
-        resourceName: 'EditionParticipation',
+        resourceName: 'EventParticipation',
       },
     ]),
   },
@@ -98,17 +98,17 @@ jest.mock('@/utils/uploadMetadata', () => ({
 }));
 
 const fetchResource = jest.fn(async () => ({
-  data: { id_edition: 36, name: 'Edition 36' },
+  data: { id_event: 36, name: 'Event 36' },
 }));
 
 function renderView(excludeLinkedEntities?: string[]) {
   return render(
     <ResourceViewPage
       config={{
-        resourceName: 'Edition',
-        resourceDisplayName: 'Edition',
+        resourceName: 'Event',
+        resourceDisplayName: 'Event',
         fetchResource,
-        title: 'Edition Details',
+        title: 'Event Details',
         excludeLinkedEntities,
       }}
     />

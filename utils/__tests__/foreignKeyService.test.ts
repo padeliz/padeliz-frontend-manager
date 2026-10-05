@@ -8,9 +8,9 @@ describe('ForeignKeyService metadata-driven FK', () => {
   it('isForeignKeyField only when filterable_fields type is foreign_key', () => {
     const metadata: any = {
       filterable_fields: {
-        its_first_edition_id: {
+        its_first_event_id: {
           type: 'foreign_key',
-          related_schema_name: 'Edition',
+          related_schema_name: 'Event',
           related_schema_field: 'name',
         },
         location_id: { type: 'integer' },
@@ -19,7 +19,7 @@ describe('ForeignKeyService metadata-driven FK', () => {
     };
 
     expect(
-      ForeignKeyService.isForeignKeyField('its_first_edition_id', {}, metadata)
+      ForeignKeyService.isForeignKeyField('its_first_event_id', {}, metadata)
     ).toBe(true);
     expect(
       ForeignKeyService.isForeignKeyField('location_id', { type: 'integer' }, metadata)
@@ -32,19 +32,19 @@ describe('ForeignKeyService metadata-driven FK', () => {
   it('getLinkedResourceInfo uses related_schema_name', () => {
     const metadata: any = {
       filterable_fields: {
-        its_first_edition_id: {
+        its_first_event_id: {
           type: 'foreign_key',
-          related_schema_name: 'Edition',
+          related_schema_name: 'Event',
           related_schema_field: 'name',
         },
       },
       swagger_schema: { properties: {} },
     };
     const info = ForeignKeyService.getLinkedResourceInfo(
-      'its_first_edition_id',
+      'its_first_event_id',
       metadata
     );
-    expect(info?.resourceName).toBe('Edition');
+    expect(info?.resourceName).toBe('Event');
     expect(info?.displayField).toBe('name');
     expect(typeof info?.fetchOptions).toBe('function');
   });

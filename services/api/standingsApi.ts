@@ -1,20 +1,20 @@
-import { StandingRow } from '@/types/api/edition';
+import { StandingRow } from '@/types/api/event';
 import { BaseApiService } from './baseApi';
 
 export class StandingsApiService extends BaseApiService {
   async getStandings(
-    editionDivisionId: number
+    eventDivisionId: number
   ): Promise<{ data: StandingRow[]; message?: string }> {
     return this.get<{ data: StandingRow[]; message?: string }>(
-      `/edition-divisions/${editionDivisionId}/standings`
+      `/event-divisions/${eventDivisionId}/standings`
     );
   }
 
   async recalculate(
-    editionDivisionId: number
+    eventDivisionId: number
   ): Promise<{ data: StandingRow[]; message?: string }> {
     return this.post<{ data: StandingRow[]; message?: string }>(
-      `/edition-divisions/${editionDivisionId}/standings/recalculate`
+      `/event-divisions/${eventDivisionId}/standings/recalculate`
     );
   }
 
@@ -23,7 +23,7 @@ export class StandingsApiService extends BaseApiService {
     payload: { points_total: number; wins: number; rank: number }
   ): Promise<{ data: StandingRow; message?: string }> {
     return this.put<{ data: StandingRow; message?: string }>(
-      `/edition-division-standings/${standingId}`,
+      `/event-division-standings/${standingId}`,
       payload
     );
   }
@@ -33,7 +33,7 @@ export class StandingsApiService extends BaseApiService {
     payload: Partial<{ points_total: number; wins: number; rank: number }>
   ): Promise<{ data: StandingRow; message?: string }> {
     return this.patch<{ data: StandingRow; message?: string }>(
-      `/edition-division-standings/${standingId}`,
+      `/event-division-standings/${standingId}`,
       payload
     );
   }

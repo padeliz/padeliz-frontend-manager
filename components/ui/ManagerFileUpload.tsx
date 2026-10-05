@@ -36,7 +36,7 @@ type Props = {
   config: PadelizUploadConfig;
   /** Known parent id for live upload/delete; omit for create pending mode */
   parentId?: number | null;
-  /** Extra path vars e.g. editionDivision, poster */
+  /** Extra path vars e.g. eventDivision, poster */
   pathVars?: Record<string, string | number>;
   /** Current value: url string, or array of {id,url} */
   value?: ExistingItem | ExistingItem[];

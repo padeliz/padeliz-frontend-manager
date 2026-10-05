@@ -5,7 +5,7 @@ import { BaseApiService } from './baseApi';
 export class ApiResourceMetadataApiService extends BaseApiService {
   /**
    * Get resource metadata for a specific schema/model
-   * @param schema - Schema/Model name (e.g., "ApiPlayer", "Club", "ApiEdition")
+   * @param schema - Schema/Model name (e.g., "ApiPlayer", "Club", "ApiEvent")
    */
   async getApiResourceMetadata(
     schema: string

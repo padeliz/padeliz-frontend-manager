@@ -15,18 +15,18 @@ const baseMeta = (props: Record<string, any>, filterable: Record<string, any> = 
 describe('formatField color/year/FK/nests', () => {
   it('sets foreign_key_selector from filterable_fields', () => {
     const metadata = baseMeta(
-      { its_first_edition_id: { type: 'integer', format: 'int64' } },
+      { its_first_event_id: { type: 'integer', format: 'int64' } },
       {
-        its_first_edition_id: {
+        its_first_event_id: {
           type: 'foreign_key',
-          related_schema_name: 'Edition',
+          related_schema_name: 'Event',
           related_schema_field: 'name',
         },
       }
     );
     const result = formatField({
       metadata,
-      fieldKey: 'its_first_edition_id',
+      fieldKey: 'its_first_event_id',
       fieldValue: 3,
       mode: 'form',
     });
@@ -77,34 +77,34 @@ describe('formatField color/year/FK/nests', () => {
   it('uses nested BelongsTo object for FK display label and keeps id as apiValue in form', () => {
     const metadata = baseMeta(
       {
-        its_first_edition_id: { type: 'integer', format: 'int64' },
-        itsFirstEdition: {
-          oneOf: [{ $ref: '#/components/schemas/Edition' }],
+        its_first_event_id: { type: 'integer', format: 'int64' },
+        itsFirstEvent: {
+          oneOf: [{ $ref: '#/components/schemas/Event' }],
         },
       },
       {
-        its_first_edition_id: {
+        its_first_event_id: {
           type: 'foreign_key',
-          related_schema_name: 'Edition',
+          related_schema_name: 'Event',
           related_schema_field: 'name',
         },
       }
     );
     const display = formatField({
       metadata,
-      fieldKey: 'its_first_edition_id',
+      fieldKey: 'its_first_event_id',
       fieldValue: 3,
       mode: 'display',
-      record: { its_first_edition_id: 3, itsFirstEdition: { name: 'Spring 2026' } },
+      record: { its_first_event_id: 3, itsFirstEvent: { name: 'Spring 2026' } },
     });
     expect(display.formattedText).toBe('Spring 2026');
 
     const form = formatField({
       metadata,
-      fieldKey: 'its_first_edition_id',
+      fieldKey: 'its_first_event_id',
       fieldValue: 3,
       mode: 'form',
-      record: { its_first_edition_id: 3, itsFirstEdition: { name: 'Spring 2026' } },
+      record: { its_first_event_id: 3, itsFirstEvent: { name: 'Spring 2026' } },
     });
     expect(form.inputType).toBe('foreign_key_selector');
     expect(form.apiValue).toBe(3);
@@ -113,25 +113,25 @@ describe('formatField color/year/FK/nests', () => {
   it('falls back to raw id when nest is missing', () => {
     const metadata = baseMeta(
       {
-        its_first_edition_id: { type: 'integer', format: 'int64' },
-        itsFirstEdition: {
-          oneOf: [{ $ref: '#/components/schemas/Edition' }],
+        its_first_event_id: { type: 'integer', format: 'int64' },
+        itsFirstEvent: {
+          oneOf: [{ $ref: '#/components/schemas/Event' }],
         },
       },
       {
-        its_first_edition_id: {
+        its_first_event_id: {
           type: 'foreign_key',
-          related_schema_name: 'Edition',
+          related_schema_name: 'Event',
           related_schema_field: 'name',
         },
       }
     );
     const result = formatField({
       metadata,
-      fieldKey: 'its_first_edition_id',
+      fieldKey: 'its_first_event_id',
       fieldValue: 9,
       mode: 'display',
-      record: { its_first_edition_id: 9 },
+      record: { its_first_event_id: 9 },
     });
     expect(result.formattedText).toBe('9');
   });

@@ -1,4 +1,4 @@
-import { ScratchSchedulePayload, SchedulePreview } from '@/types/api/edition';
+import { ScratchSchedulePayload, SchedulePreview } from '@/types/api/event';
 import { BaseApiService } from './baseApi';
 
 export class ScratchScheduleApiService extends BaseApiService {

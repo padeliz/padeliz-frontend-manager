@@ -27,7 +27,26 @@ describe('uploadMetadata', () => {
     });
     expect(cfg?.form_field).toBe('file');
     expect(cfg?.mode).toBe('multi');
+    expect(cfg?.required).toBe(false);
     expect(acceptsPdf(cfg!)).toBe(true);
+  });
+
+  it('parses required upload flag and omits delete when absent', () => {
+    const cfg = getUploadConfig({
+      type: 'string',
+      'x-padeliz-upload': {
+        mode: 'single',
+        form_field: 'file',
+        required: true,
+        accept: ['image/png'],
+        upload: {
+          method: 'POST',
+          path: '/api/v1/manager/events/{id}/cover',
+        },
+      },
+    });
+    expect(cfg?.required).toBe(true);
+    expect(cfg?.delete).toBeNull();
   });
 
   it('resolves path placeholders and strips manager prefix', () => {

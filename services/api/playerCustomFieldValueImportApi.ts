@@ -36,7 +36,7 @@ export class PlayerCustomFieldValueImportApiService extends BaseApiService {
   async save(payload: {
     format: string;
     filename: string;
-    edition_id?: number | null;
+    event_id?: number | null;
     rows: PlayerCustomFieldValueImportSaveRow[];
   }): Promise<ApiResponse<ApiPlayerCustomFieldValueImport>> {
     return this.post('/players/custom-field-values/import', payload);

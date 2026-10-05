@@ -1,11 +1,11 @@
 import { usePageChrome } from '@/components/chrome/PageChromeProvider';
-import EditionTabsBar, {
-  EditionTabLink,
-} from '@/components/editions/EditionTabsBar';
+import EventTabsBar, {
+  EventTabLink,
+} from '@/components/events/EventTabsBar';
 import AppLayout from '@/components/layout/AppLayout';
 import ActionButton from '@/components/ui/ActionButton';
 import { useActionButtonStatus } from '@/hooks/useActionButtonStatus';
-import { findActiveEditionTabLabel } from '@/utils/editionTabMatch';
+import { findActiveEventTabLabel } from '@/utils/eventTabMatch';
 import { Slot, usePathname } from 'expo-router';
 import React, { useCallback, useMemo } from 'react';
 import { View } from 'react-native';
@@ -18,7 +18,7 @@ export function ChallengesChrome() {
     resetKey: pathname,
   });
 
-  const tabs: EditionTabLink[] = useMemo(
+  const tabs: EventTabLink[] = useMemo(
     () => [
       { label: 'All', href: '/challenges/all', match: '/all' },
       {
@@ -35,7 +35,7 @@ export function ChallengesChrome() {
     []
   );
 
-  const activeTabLabel = findActiveEditionTabLabel(pathname, tabs);
+  const activeTabLabel = findActiveEventTabLabel(pathname, tabs);
   const onRefresh = useCallback(async (): Promise<void> => {
     await actions?.refresh?.();
   }, [actions]);
@@ -62,7 +62,7 @@ export function ChallengesChrome() {
       title="Challenges"
       subtitle={activeTabLabel ?? undefined}
       headerActions={headerActions}
-      tabBar={<EditionTabsBar tabs={tabs} />}
+      tabBar={<EventTabsBar tabs={tabs} />}
     >
       <View className="flex-1">
         <Slot />

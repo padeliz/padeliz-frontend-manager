@@ -1,4 +1,4 @@
-import { GameMatch } from '@/types/api/edition';
+import { GameMatch } from '@/types/api/event';
 import { BaseApiService } from './baseApi';
 
 export type MatchScorePayload =

@@ -6,8 +6,8 @@ function metadata(
 ): ApiResourceMetadata {
   return {
     version: '1',
-    schema_name: 'EditionRegistration',
-    resource_path: 'edition-registrations',
+    schema_name: 'EventRegistration',
+    resource_path: 'event-registrations',
     swagger_schema: {
       required: [],
       properties,
@@ -21,7 +21,7 @@ function metadata(
 
 const baseProperties = {
   id_registration: { type: 'integer', format: 'int64', readOnly: true },
-  edition_id: { type: 'integer', format: 'int64' },
+  event_id: { type: 'integer', format: 'int64' },
   player_id: { type: 'integer', format: 'int64' },
   is_minor: { type: 'boolean' },
   note: { type: 'string', nullable: true },
@@ -46,34 +46,34 @@ describe('seedFormValuesFromQuery', () => {
   it('returns empty when seedFromQuery is off', () => {
     expect(
       seedFormValuesFromQuery(
-        { edition_id: '4' },
+        { event_id: '4' },
         metadata(baseProperties),
         { seedFromQuery: false }
       )
     ).toEqual({});
     expect(
-      seedFormValuesFromQuery({ edition_id: '4' }, metadata(baseProperties), {})
+      seedFormValuesFromQuery({ event_id: '4' }, metadata(baseProperties), {})
     ).toEqual({});
   });
 
   it('accepts writable schema fields when seedFromQuery is true', () => {
     expect(
       seedFormValuesFromQuery(
-        { edition_id: '4', player_id: '9', is_minor: '1' },
+        { event_id: '4', player_id: '9', is_minor: '1' },
         metadata(baseProperties),
         { seedFromQuery: true }
       )
-    ).toEqual({ edition_id: 4, player_id: 9, is_minor: true });
+    ).toEqual({ event_id: 4, player_id: 9, is_minor: true });
   });
 
   it('intersects a string[] allowlist with writable fields', () => {
     expect(
       seedFormValuesFromQuery(
-        { edition_id: '4', player_id: '9' },
+        { event_id: '4', player_id: '9' },
         metadata(baseProperties),
-        { seedFromQuery: ['edition_id'] }
+        { seedFromQuery: ['event_id'] }
       )
-    ).toEqual({ edition_id: 4 });
+    ).toEqual({ event_id: 4 });
   });
 
   it('ignores unknown, readOnly, PK, nested, and upload keys', () => {
@@ -86,19 +86,19 @@ describe('seedFormValuesFromQuery', () => {
           player: '1',
           tags: 'a',
           url: 'http://example',
-          edition_id: '4',
+          event_id: '4',
         },
         metadata(baseProperties),
         { seedFromQuery: true }
       )
-    ).toEqual({ edition_id: 4 });
+    ).toEqual({ event_id: 4 });
   });
 
   it('coerces int, bool, and nullable "null"', () => {
     expect(
       seedFormValuesFromQuery(
         {
-          edition_id: 'not-a-number',
+          event_id: 'not-a-number',
           is_minor: 'false',
           note: 'null',
         },
@@ -111,11 +111,11 @@ describe('seedFormValuesFromQuery', () => {
   it('does not overwrite a value already typed', () => {
     expect(
       seedFormValuesFromQuery(
-        { edition_id: '4', player_id: '9' },
+        { event_id: '4', player_id: '9' },
         metadata(baseProperties),
         {
           seedFromQuery: true,
-          currentValues: { edition_id: 99 },
+          currentValues: { event_id: 99 },
         }
       )
     ).toEqual({ player_id: 9 });

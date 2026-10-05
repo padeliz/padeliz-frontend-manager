@@ -77,12 +77,12 @@ describe('Players hub', () => {
         <PlayersChrome />
       </PageChromeProvider>
     );
-    expect(getByTestId('edition-tab-List')).toBeTruthy();
-    expect(getByTestId('edition-tab-Import Players')).toBeTruthy();
-    expect(getByTestId('edition-tab-Import Profile Images')).toBeTruthy();
-    expect(getByTestId('edition-tab-Import Custom Field Values')).toBeTruthy();
-    expect(queryByTestId('edition-tab-Import')).toBeNull();
-    expect(queryByTestId('edition-tab-Imports')).toBeNull();
+    expect(getByTestId('event-tab-List')).toBeTruthy();
+    expect(getByTestId('event-tab-Import Players')).toBeTruthy();
+    expect(getByTestId('event-tab-Import Profile Images')).toBeTruthy();
+    expect(getByTestId('event-tab-Import Custom Field Values')).toBeTruthy();
+    expect(queryByTestId('event-tab-Import')).toBeNull();
+    expect(queryByTestId('event-tab-Imports')).toBeNull();
     expect(queryByTestId('players-chrome-back')).toBeNull();
     expect(getByTestId('players-chrome-refresh')).toBeTruthy();
   });
@@ -153,7 +153,7 @@ describe('Players hub', () => {
         <PlayersChrome />
       </PageChromeProvider>
     );
-    fireEvent.press(getByTestId('edition-tab-Import Players'));
+    fireEvent.press(getByTestId('event-tab-Import Players'));
     await waitFor(() => expect(mockConfirm).toHaveBeenCalled());
     expect(mockPush).not.toHaveBeenCalled();
   });

@@ -19,7 +19,7 @@ export interface ApiOrganizer {
   name: string;
   logo_path?: string | null;
   url?: string | null;
-  show_edition_label?: boolean;
+  show_event_label?: boolean;
   inserted_at: number;
   updated_at?: number;
 }
@@ -29,61 +29,68 @@ export interface ApiDivision {
   name: string;
   color: string;
   is_students_only: boolean;
-  its_first_edition_id: number;
+  its_first_event_id: number;
   inserted_at: number;
   updated_at?: number;
 }
 
-export interface ApiEdition {
-  id_edition: number;
+export interface ApiEvent {
+  id_event: number;
   location_id: number;
   organizer_id?: number | null;
   include_club_host_on_pdf?: boolean;
   name: string;
+  /** Server-generated; read-only — never sent on create/update. */
+  slug?: string | null;
   date: string;
-  entry_fee?: number;
-  students_entry_fee?: number;
   arriving_time?: string;
   closing_time?: string;
   finalized_at?: number | null;
+  /** Unix timestamp until which players may register for this event. */
+  registration_allowed_until: number;
+  /** Unix timestamp until which players may self-cancel their registration. */
+  cancellation_allowed_until: number;
   inserted_at: number;
   updated_at?: number;
   location?: ApiLocation;
   organizer?: ApiOrganizer | null;
-  divisions?: ApiEditionDivision[];
-  edition_divisions?: ApiEditionDivision[];
-  participations?: ApiEditionParticipation[];
+  divisions?: ApiEventDivision[];
+  event_divisions?: ApiEventDivision[];
+  participations?: ApiEventParticipation[];
 }
 
 /**
- * Identity only. Schedule knobs live on ApiEditionDivisionSchedule.
+ * Identity only. Schedule knobs live on ApiEventDivisionSchedule.
  */
-export interface ApiEditionDivision {
-  id_edition_division: number;
-  edition_id: number;
+export interface ApiEventDivision {
+  id_event_division: number;
+  event_id: number;
   division_id: number;
   division_title?: string;
   players_limit: number | null;
+  /** Entry fee in RON for this event–division pairing. */
+  entry_fee?: number;
   skill_order?: number;
   playing_start_time: string;
   playing_end_time: string;
   inserted_at: number;
   updated_at?: number;
-  edition?: ApiEdition;
+  event?: ApiEvent;
   division?: ApiDivision;
   courts?: { id_court: number; name: string; location_id?: number }[];
-  schedule?: ApiEditionDivisionSchedule | null;
+  schedule?: ApiEventDivisionSchedule | null;
 }
 
-export interface ApiEditionDivisionSchedule {
-  id_edition_division_schedule: number;
-  edition_division_id: number;
+export interface ApiEventDivisionSchedule {
+  id_event_division_schedule: number;
+  event_division_id: number;
   player_opponents_nr?: number | null;
   player_matches_repeat?: number | null;
   include_scores: boolean;
   has_demonstrative_match: boolean;
   allow_replacements: boolean;
   points_per_match?: number | null;
+  points_per_match_print?: number | null;
   final_points_target?: number;
   include_final: boolean;
   template_version?: number | null;
@@ -141,14 +148,14 @@ export interface ApiPlayer {
     original_filename?: string | null;
   }[];
   uploaded_profile_urls?: string[];
-  participations?: ApiEditionParticipation[];
+  participations?: ApiEventParticipation[];
 }
 
-export interface ApiEditionParticipation {
+export interface ApiEventParticipation {
   id_participation: number;
-  edition_id: number;
+  event_id: number;
   player_id: number;
-  edition_division_id?: number;
+  event_division_id?: number;
   division_id: number;
   sort_order?: number;
   is_collecting_points?: boolean;
@@ -171,7 +178,7 @@ export interface ApiEditionParticipation {
     banned_count: number;
     absented_count: number;
     played_recent?: Array<{
-      edition_name: string;
+      event_name: string;
       division_title: string;
       division_color: string;
       rank: number | null;
@@ -180,17 +187,17 @@ export interface ApiEditionParticipation {
     }>;
     participated_tooltip?: {
       lines: Array<
-        | { type: 'entry'; edition_name: string; date: string }
+        | { type: 'entry'; event_name: string; date: string }
         | { type: 'ellipsis' }
       >;
     };
     banned_recent?: Array<{
-      edition_name: string;
+      event_name: string;
       date: string;
       ban_reason: string;
     }>;
     absented_recent?: Array<{
-      edition_name: string;
+      event_name: string;
       date: string;
       absence_reason: string;
     }>;
@@ -202,31 +209,304 @@ export interface ApiEditionParticipation {
     value: string;
     recent_answers?: Array<{
       value: string;
-      edition_name: string | null;
+      event_name: string | null;
       inserted_date: string;
     }>;
   }>;
 }
 
-export interface ApiEditionParticipationSummary {
+export interface ApiEventParticipationSummary {
   registered_not_participating_count: number;
   participations_locked: boolean;
 }
 
-export interface ApiEditionRegistration {
-  id_registration: number;
-  edition_id: number;
+export type ApiRegistrationLifecycleStatus =
+  | 'active'
+  | 'cancelled'
+  | 'declined';
+
+export type ApiRegistrationPaymentStatus =
+  | 'unpaid'
+  | 'awaiting_proof_review'
+  | 'paid'
+  | 'refund_pending'
+  | 'refunded';
+
+export type ApiRegistrationPaymentMethod = 'netopia' | 'bank_transfer';
+
+export type ApiRegistrationCancelReason =
+  | 'change_of_plans'
+  | 'schedule_conflict'
+  | 'injury_or_illness'
+  | 'travel_issue'
+  | 'personal_reasons'
+  | 'other';
+
+export type ApiRegistrationDeclineReason =
+  | 'payment_not_completed'
+  | 'invalid_payment'
+  | 'ineligible'
+  | 'skill_mismatch'
+  | 'false_information'
+  | 'misconduct'
+  | 'administrative'
+  | 'other';
+
+export type ApiPaymentProofReviewStatus = 'pending' | 'approved' | 'rejected';
+
+export interface ApiRegistrationPaymentProof {
+  id_payment_proof: number;
+  url: string;
+  review_status: ApiPaymentProofReviewStatus;
+  review_message?: string | null;
+  reviewed_at?: number | null;
+  inserted_at: number;
+}
+
+export interface ApiRegistrationPaymentAttempt {
+  id_payment_attempt: number;
+  amount: number;
+  currency: string;
+  status: string;
+  ntp_id?: string | null;
+  order_id?: string | null;
+  redirect_url?: string | null;
+  error_message?: string | null;
+  inserted_at: number;
+}
+
+export type ApiBenefitAmountType = 'fixed_ron' | 'percent';
+
+export type ApiBenefitScopeType =
+  | 'lifetime'
+  | 'date_range'
+  | 'event'
+  | 'club';
+
+export type ApiBenefitExclusivity =
+  | 'stackable'
+  | 'exclusive_in_group'
+  | 'exclusive_global';
+
+export type ApiBenefitConditionType =
+  | 'eligibility_flag'
+  | 'days_before_event_date'
+  | 'referrer_selected'
+  | 'no_prior_paid_registration_in_event';
+
+export type ApiBenefitEntitlementStatus =
+  | 'active'
+  | 'consumed'
+  | 'expired'
+  | 'revoked';
+
+export type ApiBenefitEntitlementSourceType =
+  | 'manager_grant'
+  | 'referral_reward'
+  | 'system';
+
+export type ApiBenefitSelectionSource =
+  | 'auto'
+  | 'player'
+  | 'manager'
+  | 'system';
+
+export interface ApiBenefitCondition {
+  id_benefit_condition?: number;
+  condition_type: ApiBenefitConditionType | string;
+  parameters?: Record<string, unknown> | null;
+}
+
+export interface ApiBenefitDefinition {
+  id_benefit: number;
+  slug: string;
+  name: string;
+  description?: string | null;
+  is_active: boolean;
+  is_system?: boolean;
+  amount_type: ApiBenefitAmountType | string;
+  amount_value: number;
+  max_discount_ron?: number | null;
+  scope_type: ApiBenefitScopeType | string;
+  club_id?: number | null;
+  valid_from?: number | null;
+  valid_until?: number | null;
+  player_optional?: boolean;
+  stack_group?: string | null;
+  exclusivity: ApiBenefitExclusivity | string;
+  priority?: number;
+  max_redemptions_per_player?: number | null;
+  max_redemptions_global?: number | null;
+  max_redemptions_per_event?: number | null;
+  conditions?: ApiBenefitCondition[];
+  event_ids?: number[];
+  inserted_at: number;
+  updated_at?: number;
+}
+
+export interface ApiBenefitEntitlement {
+  id_entitlement: number;
+  benefit_definition_id: number;
   player_id: number;
-  edition_division_id?: number | null;
+  remaining_uses?: number | null;
+  valid_from?: number | null;
+  valid_until?: number | null;
+  source_type: ApiBenefitEntitlementSourceType | string;
+  source_id?: number | null;
+  status: ApiBenefitEntitlementStatus | string;
+  benefit_definition?: ApiBenefitDefinition | null;
+  player?: ApiPlayer | null;
+  inserted_at: number;
+  updated_at?: number;
+}
+
+export interface ApiBenefitRedemption {
+  id_redemption: number;
+  benefit_definition_id?: number | null;
+  benefit_name?: string | null;
+  amount_ron: number;
+  selection_source?: ApiBenefitSelectionSource | string | null;
+  reason?: string | null;
+}
+
+export interface ApiEventReferralSetting {
+  id_event_referral_setting?: number | null;
+  event_id: number;
+  code_ttl_hours: number;
+  inserted_at?: number | null;
+  updated_at?: number | null;
+}
+
+export interface ApiReferralTouchpoint {
+  id_touchpoint: number;
+  event_id: number;
+  referred_player_id: number;
+  referrer_player_id: number;
+  referral_code_id?: number | null;
+  discount_eligible: boolean;
+  touched_at?: number | null;
+  client_metadata?: Record<string, unknown> | null;
+  referred_player?: ApiPlayer | null;
+  referrer_player?: ApiPlayer | null;
+  inserted_at: number;
+  updated_at?: number;
+}
+
+export type ApiReferralAttributionStatus =
+  | 'pending'
+  | 'confirmed'
+  | 'cancelled'
+  | 'expired';
+
+export interface ApiReferralAttribution {
+  id_attribution: number;
+  event_id: number;
+  referred_player_id: number;
+  referrer_player_id: number;
+  referral_code_id?: number | null;
+  checkout_id?: number | null;
+  status: ApiReferralAttributionStatus | string;
+  referred_player?: ApiPlayer | null;
+  referrer_player?: ApiPlayer | null;
+  inserted_at: number;
+  updated_at?: number;
+}
+
+export interface ApiPricingPreviewQuote {
+  payment?: number;
+  amount_due?: number;
+  redemptions?: ApiBenefitRedemption[];
+  [key: string]: unknown;
+}
+
+export interface ApiEventRegistration {
+  id_registration: number;
+  event_id: number;
+  player_id: number;
+  event_division_id?: number | null;
+  /** Latest checkout that includes this registration line. */
+  checkout_id?: number | null;
   is_minor: boolean;
   is_student: boolean;
-  discount?: number;
   payment: number;
+  /** Server-computed payable after redemptions, floored at 0. */
+  amount_due?: number;
+  payment_due_at?: number | null;
+  is_overdue?: boolean;
+  lifecycle_status?: ApiRegistrationLifecycleStatus;
+  payment_status?: ApiRegistrationPaymentStatus;
+  payment_method?: ApiRegistrationPaymentMethod | null;
+  paid_at?: number | null;
+  cancelled_at?: number | null;
+  declined_at?: number | null;
+  cancel_reason?: ApiRegistrationCancelReason | null;
+  decline_reason?: ApiRegistrationDeclineReason | null;
+  redemptions?: ApiBenefitRedemption[];
   inserted_at: number;
   updated_at?: number;
   player?: ApiPlayer;
-  edition?: ApiEdition;
-  edition_division?: ApiEditionDivision | null;
+  event?: ApiEvent;
+  event_division?: ApiEventDivision | null;
+  payment_proofs?: ApiRegistrationPaymentProof[];
+  payment_attempts?: ApiRegistrationPaymentAttempt[];
+}
+
+export type ApiCheckoutStatus = 'open' | 'awaiting_proof' | 'completed';
+
+export type ApiCheckoutItemStatus = 'active' | 'cancelled';
+
+export interface ApiEventRegistrationCheckoutItem {
+  id_checkout_item: number;
+  registration_id: number;
+  amount: number;
+  item_status: ApiCheckoutItemStatus | string;
+  registration?: ApiEventRegistration | null;
+}
+
+export interface ApiEventRegistrationCheckoutProof {
+  id_payment_proof: number;
+  url: string;
+  review_status: ApiPaymentProofReviewStatus | string;
+  review_message?: string | null;
+  reviewed_at?: number | null;
+}
+
+export interface ApiEventRegistrationCheckoutAttempt {
+  id_payment_attempt: number;
+  amount: number;
+  status: string;
+  order_id?: string | null;
+  ntp_id?: string | null;
+  redirect_url?: string | null;
+  inserted_at?: number;
+}
+
+/** Checkout-centric payment ops queue row (manager registration-checkouts). */
+export interface ApiEventRegistrationCheckout {
+  id_checkout: number;
+  event_id: number;
+  player_id: number;
+  status: ApiCheckoutStatus | string;
+  total_amount: number;
+  payment_method?: ApiRegistrationPaymentMethod | null;
+  paid_at?: number | null;
+  inserted_at: number;
+  updated_at?: number;
+  player?: ApiPlayer;
+  event?: ApiEvent;
+  items?: ApiEventRegistrationCheckoutItem[];
+  payment_attempts?: ApiEventRegistrationCheckoutAttempt[];
+  payment_proofs?: ApiEventRegistrationCheckoutProof[];
+  latest_attempt?: ApiEventRegistrationCheckoutAttempt | null;
+}
+
+export interface ApiBankTransferSettings {
+  id_bank_transfer_settings: number;
+  iban: string;
+  beneficiary_name: string;
+  bank_name?: string | null;
+  payment_reference_template?: string | null;
+  extra_instructions?: string | null;
 }
 
 export interface ApiPrize {
@@ -244,7 +524,7 @@ export interface ApiPrize {
   inserted_at: number;
   updated_at?: number;
   sponsor_prizes?: ApiSponsorPrize[];
-  lottery_prizes?: ApiEditionLotteryPrize[];
+  lottery_prizes?: ApiEventLotteryPrize[];
 }
 
 export interface ApiSponsor {
@@ -278,7 +558,7 @@ export interface ApiSponsorPrize {
   prize?: ApiPrize;
 }
 
-export interface ApiEditionLotteryPrize {
+export interface ApiEventLotteryPrize {
   id_lottery_prize: number;
   lottery_id: number;
   prize_id: number;
@@ -287,31 +567,31 @@ export interface ApiEditionLotteryPrize {
   display_order?: number | null;
   inserted_at: number;
   updated_at?: number;
-  lottery?: ApiEditionLottery;
+  lottery?: ApiEventLottery;
   prize?: ApiPrize;
   sponsor?: ApiSponsor | null;
   rules?: unknown[];
-  luckies?: ApiEditionLuckyOne[];
+  luckies?: ApiEventLuckyOne[];
   rules_count?: number;
   rule_prize_quantity_total?: number;
   activity_at?: number | null;
 }
 
-export interface ApiEditionLottery {
+export interface ApiEventLottery {
   id_lottery: number;
-  edition_id: number;
+  event_id: number;
   name: string;
   display_order?: number | null;
   inserted_at: number;
   updated_at?: number;
-  edition?: ApiEdition;
-  lottery_prizes?: ApiEditionLotteryPrize[];
+  event?: ApiEvent;
+  lottery_prizes?: ApiEventLotteryPrize[];
   rules?: unknown[];
-  luckies?: ApiEditionLuckyOne[];
+  luckies?: ApiEventLuckyOne[];
   has_luckies?: boolean;
 }
 
-export interface ApiEditionLuckyOne {
+export interface ApiEventLuckyOne {
   id_lucky: number;
   lottery_rule_id?: number | null;
   drawn_participation_id: number;
@@ -325,18 +605,18 @@ export interface ApiEditionLuckyOne {
   lotteryRule?: unknown;
   lottery_rule?: {
     id_lottery_rule?: number;
-    edition_division_id?: number | null;
+    event_division_id?: number | null;
     [key: string]: unknown;
   };
-  drawnParticipation?: ApiEditionParticipation;
-  drawn_participation?: ApiEditionParticipation;
+  drawnParticipation?: ApiEventParticipation;
+  drawn_participation?: ApiEventParticipation;
   short_name?: string | null;
   pdf_avatar_url?: string | null;
 }
 
 export interface ApiPlayerEligibility {
   id_eligibility: number;
-  edition_id: number;
+  event_id: number;
   player_id: number;
   name: string;
   phone?: string;
@@ -405,24 +685,24 @@ export interface ApiPlayerImportPreviewRow {
   mapping: ApiPlayerImportPreviewMapping;
 }
 
-export interface ApiEditionRegistrationImportPreviewRow
+export interface ApiEventRegistrationImportPreviewRow
   extends ApiPlayerImportPreviewRow {
   already_registered: boolean;
 }
 
-export interface ApiEditionRegistrationImportResultRow {
+export interface ApiEventRegistrationImportResultRow {
   index: number;
   player_id: number | null;
   action: string;
   registration_id: number | null;
 }
 
-export interface ApiEditionRegistrationImportResult {
+export interface ApiEventRegistrationImportResult {
   registered: number;
   skipped_already_registered: number;
   skipped_unmapped: number;
   skipped_conflict: number;
-  rows: ApiEditionRegistrationImportResultRow[];
+  rows: ApiEventRegistrationImportResultRow[];
 }
 
 export interface ApiPlayerProfileImageImportRow {
@@ -511,7 +791,7 @@ export interface ApiPlayerCustomFieldValue {
   id_player_custom_field_value: number;
   player_id: number;
   player_custom_field_id: number;
-  edition_id?: number | null;
+  event_id?: number | null;
   value_text?: string | null;
   value_integer?: number | null;
   value_boolean?: boolean | null;
@@ -526,7 +806,7 @@ export interface ApiPlayerCustomFieldValue {
   inserted_at: number;
   updated_at?: number;
   field?: ApiPlayerCustomField;
-  edition?: ApiEdition;
+  event?: ApiEvent;
   selected_options?: ApiPlayerCustomFieldValueOption[];
 }
 
@@ -550,14 +830,14 @@ export interface ApiPlayerCustomFieldValueImport {
   imported_by_player_id?: number | null;
   format: string;
   original_filename: string;
-  edition_id?: number | null;
+  event_id?: number | null;
   included_count: number;
   values_new_count: number;
   values_replaced_count: number;
   inserted_at: number;
   updated_at?: number;
   importedByPlayer?: ApiPlayer | null;
-  edition?: ApiEdition | null;
+  event?: ApiEvent | null;
   rows?: ApiPlayerCustomFieldValueImportRow[];
 }
 

@@ -3,6 +3,7 @@
  * Types for resource configuration hooks
  */
 
+import type { ReactNode } from 'react';
 import { UiBulkActionConfig, UiDataTableColumn } from '../ui/tables';
 
 export interface HookResourcePageConfigOptions<
@@ -22,6 +23,12 @@ export interface HookResourcePageConfigOptions<
 
   // Table configuration
   excludeFields?: string[];
+  /** Drop these keys from metadata-driven filter definitions. */
+  excludeFilterFields?: string[];
+  /**
+   * Fixed list scope (e.g. queue=) merged into the React Query key and fetch params.
+   */
+  extraListParams?: Record<string, unknown>;
   staticColumns?: UiDataTableColumn<T>[];
   primaryKeyField?: string;
 
@@ -73,6 +80,8 @@ export interface HookResourceViewPageConfigOptions<
 
   // Display configuration
   excludeFields?: string[];
+  readOnlyFields?: string[];
+  footer?: ReactNode;
 
   // Page configuration
   title?: string;

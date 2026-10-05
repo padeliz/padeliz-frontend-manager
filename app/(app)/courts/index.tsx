@@ -1,7 +1,7 @@
 import ResourceListPage from '@/components/pages/ResourceListPage';
 import { useResourcePageConfig } from '@/hooks/useResourcePageConfig';
 import { CourtsApiService } from '@/services/api/courtsApi';
-import { ApiCourt } from '@/types/api/edition';
+import { ApiCourt } from '@/types/api/event';
 import { useRouter } from 'expo-router';
 import React, { useCallback } from 'react';
 

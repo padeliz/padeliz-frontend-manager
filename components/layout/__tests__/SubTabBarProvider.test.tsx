@@ -9,18 +9,18 @@ import { Text, View } from 'react-native';
 
 const mockNavigated = jest.fn();
 
-jest.mock('@/components/editions/EditionTabsBar', () => {
+jest.mock('@/components/events/EventTabsBar', () => {
   const { View, Text, Pressable } = require('react-native');
-  return function EditionTabsBar({ tabs, onBeforeNavigate }: any) {
+  return function EventTabsBar({ tabs, onBeforeNavigate }: any) {
     return (
-      <View testID="edition-tabs-bar">
+      <View testID="event-tabs-bar">
         {tabs.map((t: any) => (
           <Pressable
             key={t.href}
             testID={
               t.variant === 'live'
                 ? 'open-live-lottery'
-                : `edition-tab-${t.label}`
+                : `event-tab-${t.label}`
             }
             disabled={!!t.disabled}
             accessibilityState={{ disabled: !!t.disabled }}
@@ -93,8 +93,8 @@ describe('SubTabBarProvider', () => {
     );
 
     await waitFor(() => {
-      expect(getByTestId('edition-tabs-bar')).toBeTruthy();
-      expect(getByTestId('edition-tabs-bar').props.children).toBeTruthy();
+      expect(getByTestId('event-tabs-bar')).toBeTruthy();
+      expect(getByTestId('event-tabs-bar').props.children).toBeTruthy();
     });
   });
 
@@ -229,14 +229,14 @@ describe('SubTabBarProvider', () => {
     );
 
     await waitFor(() => {
-      expect(getByTestId('edition-tab-Flip0')).toBeTruthy();
+      expect(getByTestId('event-tab-Flip0')).toBeTruthy();
     });
     const afterMount = Number(getByTestId('stable-renders').props.children);
 
     fireEvent.press(getByTestId('flip-tabs'));
 
     await waitFor(() => {
-      expect(getByTestId('edition-tab-Flip1')).toBeTruthy();
+      expect(getByTestId('event-tab-Flip1')).toBeTruthy();
     });
     expect(Number(getByTestId('stable-renders').props.children)).toBe(
       afterMount
@@ -375,14 +375,14 @@ describe('SubTabBarProvider', () => {
     );
 
     await waitFor(() => {
-      expect(getByTestId('edition-tab-Prizes')).toBeTruthy();
+      expect(getByTestId('event-tab-Prizes')).toBeTruthy();
     });
 
     fireEvent.press(getByTestId('bump-identity'));
     fireEvent.press(getByTestId('bump-identity'));
 
     await waitFor(() => {
-      expect(getByTestId('edition-tab-Prizes')).toBeTruthy();
+      expect(getByTestId('event-tab-Prizes')).toBeTruthy();
       expect(getByTestId('bump-identity').props.children).toBe('2');
     });
   });
@@ -416,7 +416,7 @@ describe('SubTabBarProvider', () => {
       expect(getByTestId('app-sub-tab-bar')).toBeTruthy();
     });
 
-    fireEvent.press(getByTestId('edition-tab-List'));
+    fireEvent.press(getByTestId('event-tab-List'));
     await waitFor(() => expect(mockNavigated).toHaveBeenCalledWith(true));
 
     mockNavigated.mockClear();
@@ -425,7 +425,7 @@ describe('SubTabBarProvider', () => {
     });
 
     expect(queryByTestId('app-sub-tab-bar')).toBeTruthy();
-    fireEvent.press(getByTestId('edition-tab-List'));
+    fireEvent.press(getByTestId('event-tab-List'));
     await waitFor(() => expect(mockNavigated).toHaveBeenCalledWith(false));
   });
 });

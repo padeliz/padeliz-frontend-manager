@@ -29,37 +29,41 @@ jest.mock('expo-router', () =>
 })
 );
 
-jest.mock('@/hooks/useResourceMetadata', () => ({
-  useResourceMetadata: () => ({
-    getMetadata: () => ({
-      display_field: 'name',
-      resource_path: 'prizes',
-      swagger_schema: {
-        properties: {
-          id_prize: { type: 'integer', format: 'int64', readOnly: true },
-          name: { type: 'string', title: 'Name' },
-          url: {
-            type: 'string',
-            readOnly: true,
-            title: 'Media',
-            'x-padeliz-upload': {
-              mode: 'single',
-              max_files: 1,
-              max_size_kb: 30720,
-              accept: ['image/png'],
-              form_field: 'file',
-              upload: {
-                method: 'POST',
-                path: '/api/v1/manager/prizes/{id}/media',
-              },
-            },
+const prizeMetadata = {
+  display_field: 'name',
+  resource_path: 'prizes',
+  swagger_schema: {
+    properties: {
+      id_prize: { type: 'integer', format: 'int64', readOnly: true },
+      name: { type: 'string', title: 'Name' },
+      url: {
+        type: 'string',
+        readOnly: true,
+        title: 'Media',
+        'x-padeliz-upload': {
+          mode: 'single',
+          max_files: 1,
+          max_size_kb: 30720,
+          accept: ['image/png'],
+          form_field: 'file',
+          upload: {
+            method: 'POST',
+            path: '/api/v1/manager/prizes/{id}/media',
           },
         },
       },
-      filterable_fields: {},
-      searchable_fields: ['name'],
-      sortable_fields: ['name'],
-    }),
+    },
+  },
+  filterable_fields: {},
+  searchable_fields: ['name'],
+  sortable_fields: ['name'],
+};
+
+let mockMetadata: any = prizeMetadata;
+
+jest.mock('@/hooks/useResourceMetadata', () => ({
+  useResourceMetadata: () => ({
+    getMetadata: () => mockMetadata,
     getError: () => null,
     isLoading: () => false,
     fetchMetadata: jest.fn(),
@@ -103,9 +107,10 @@ jest.mock('@/components/ui/ManagerFileUpload', () => {
   const { Text, View } = require('react-native');
   return {
     __esModule: true,
-    default: ({ label }: any) => (
+    default: ({ label, error }: any) => (
       <View testID="create-upload">
         <Text>{label}</Text>
+        {error ? <Text>{error}</Text> : null}
       </View>
     ),
     uploadPendingFiles: jest.fn(async () => undefined),
@@ -117,6 +122,7 @@ describe('ResourceCreatePage', () => {
     mockReplace.mockClear();
     mockValidate.mockReturnValue({ isValid: true, errors: [] });
     mockSearchParams = {};
+    mockMetadata = prizeMetadata;
   });
 
   it(
@@ -189,6 +195,64 @@ describe('ResourceCreatePage', () => {
     await waitFor(() => {
       expect(screen.getByText('Name is required')).toBeTruthy();
       expect(screen.getByTestId('resource-create-save-error')).toBeTruthy();
+    });
+  });
+});
+
+describe('ResourceCreatePage required upload gate', () => {
+  beforeEach(() => {
+    mockReplace.mockClear();
+    mockValidate.mockReturnValue({ isValid: true, errors: [] });
+    mockSearchParams = {};
+    mockMetadata = {
+      display_field: 'name',
+      resource_path: 'events',
+      swagger_schema: {
+        properties: {
+          id_event: { type: 'integer', readOnly: true },
+          name: { type: 'string', title: 'Name' },
+          cover_url: {
+            type: 'string',
+            readOnly: true,
+            title: 'Cover',
+            'x-padeliz-upload': {
+              mode: 'single',
+              max_files: 1,
+              form_field: 'file',
+              required: true,
+              accept: ['image/png'],
+              upload: {
+                method: 'POST',
+                path: '/api/v1/manager/events/{id}/cover',
+              },
+            },
+          },
+        },
+      },
+      filterable_fields: {},
+      searchable_fields: ['name'],
+      sortable_fields: ['name'],
+    };
+  });
+
+  it('blocks create when required upload has no pending file', async () => {
+    const createResource = jest.fn();
+    render(
+      <ResourceCreatePage
+        config={{
+          resourceName: 'Event',
+          resourceDisplayName: 'Event',
+          createResource,
+          title: 'Add Event',
+          getViewPath: id => `/events/${id}`,
+        }}
+      />
+    );
+
+    fireEvent.press(screen.getByTestId('resource-create-save'));
+    await waitFor(() => {
+      expect(createResource).not.toHaveBeenCalled();
+      expect(screen.getByText('cover_url is required')).toBeTruthy();
     });
   });
 });

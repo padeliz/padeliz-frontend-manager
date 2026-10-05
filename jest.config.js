@@ -18,6 +18,7 @@ module.exports = {
     ...(expoPreset.moduleNameMapper || {}),
     '^@/(.*)$': '<rootDir>/$1',
     '\\.(wav)$': '<rootDir>/testing/fileMock.js',
+    '^react-native-webview$': '<rootDir>/testing/reactNativeWebViewMock.js',
   },
   testMatch: ['**/__tests__/**/*.test.[jt]s?(x)', '**/?(*.)+(spec|test).[jt]s?(x)'],
   testPathIgnorePatterns: ['/node_modules/', '/android/', '/ios/'],

@@ -36,6 +36,8 @@ export default function ResourceListPage<
     fetchData,
     bulkDelete,
     excludeFields = [],
+    excludeFilterFields = [],
+    extraListParams,
     staticColumns,
     primaryKeyField: staticPrimaryKeyField,
     bulkActions = [],
@@ -96,6 +98,8 @@ export default function ResourceListPage<
     initialPage,
     initialPerPage,
     debounceMs,
+    excludeFilterFields,
+    extraListParams,
   });
 
   const linkedSchemaNames = useMemo(

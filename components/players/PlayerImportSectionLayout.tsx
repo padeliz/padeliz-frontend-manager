@@ -3,10 +3,10 @@
  */
 
 import { usePageChrome } from '@/components/chrome/PageChromeProvider';
-import type { EditionTabLink } from '@/components/editions/EditionTabsBar';
+import type { EventTabLink } from '@/components/events/EventTabsBar';
 import { useBreadcrumbSegments } from '@/components/layout/BreadcrumbProvider';
 import { useSubTabBar } from '@/components/layout/SubTabBarProvider';
-import { findActiveEditionTabLabel } from '@/utils/editionTabMatch';
+import { findActiveEventTabLabel } from '@/utils/eventTabMatch';
 import { confirmDiscardDirty } from '@/utils/softDirtyNav';
 import { Slot, usePathname } from 'expo-router';
 import React, { useCallback, useMemo } from 'react';
@@ -38,7 +38,7 @@ export default function PlayerImportSectionLayout({
     return true;
   }, [actions]);
 
-  const tabs = useMemo((): EditionTabLink[] => {
+  const tabs = useMemo((): EventTabLink[] => {
     return [
       {
         label: 'Import',
@@ -55,7 +55,7 @@ export default function PlayerImportSectionLayout({
   }, [importHref, importsHref, sectionSegment]);
 
   const subTabLabel =
-    findActiveEditionTabLabel(pathname, tabs) ??
+    findActiveEventTabLabel(pathname, tabs) ??
     (onHistory ? 'Imports History' : 'Import');
   useBreadcrumbSegments(
     `player-import-${sectionSegment}`,

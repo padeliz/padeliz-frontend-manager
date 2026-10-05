@@ -23,12 +23,12 @@ describe('ScheduleApiService', () => {
     (storageUtils.get as jest.Mock).mockResolvedValue('test-token');
   });
 
-  it('builds GET schedule URL with edition division id', async () => {
+  it('builds GET schedule URL with event division id', async () => {
     fetchMock.mockResolvedValue({
       ok: true,
       json: async () => ({
         data: {
-          edition_division: { id_edition_division: 7 },
+          event_division: { id_event_division: 7 },
           courts: [],
           participations: [],
           matches: [],
@@ -46,7 +46,7 @@ describe('ScheduleApiService', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, options] = fetchMock.mock.calls[0];
     expect(url).toBe(
-      'http://localhost:8000/api/v1/manager/edition-divisions/7/schedule'
+      'http://localhost:8000/api/v1/manager/event-divisions/7/schedule'
     );
     expect(options.method).toBe('GET');
     expect(options.headers.Authorization).toBe('Bearer test-token');
@@ -62,10 +62,10 @@ describe('ScheduleApiService', () => {
     await api.reorderMatches(7, { court: 3, match_ids: [1, 2] });
 
     expect(fetchMock.mock.calls[0][0]).toBe(
-      'http://localhost:8000/api/v1/manager/edition-divisions/7/schedule?board=1'
+      'http://localhost:8000/api/v1/manager/event-divisions/7/schedule?board=1'
     );
     expect(fetchMock.mock.calls[1][0]).toBe(
-      'http://localhost:8000/api/v1/manager/edition-divisions/7/schedule/matches/reorder'
+      'http://localhost:8000/api/v1/manager/event-divisions/7/schedule/matches/reorder'
     );
     expect(fetchMock.mock.calls[1][1].method).toBe('POST');
   });
@@ -78,7 +78,7 @@ describe('ScheduleApiService', () => {
     const api = new ScheduleApiService();
     await api.getSchedule(7, { scores: true });
     expect(fetchMock.mock.calls[0][0]).toBe(
-      'http://localhost:8000/api/v1/manager/edition-divisions/7/schedule?scores=1'
+      'http://localhost:8000/api/v1/manager/event-divisions/7/schedule?scores=1'
     );
   });
 
@@ -96,10 +96,10 @@ describe('ScheduleApiService', () => {
 
     const urls = fetchMock.mock.calls.map(c => c[0]);
     expect(urls).toEqual([
-      'http://localhost:8000/api/v1/manager/edition-divisions/12/schedule/preview',
-      'http://localhost:8000/api/v1/manager/edition-divisions/12/schedule/generate',
-      'http://localhost:8000/api/v1/manager/edition-divisions/12/schedule/form',
-      'http://localhost:8000/api/v1/manager/edition-divisions/12/schedule',
+      'http://localhost:8000/api/v1/manager/event-divisions/12/schedule/preview',
+      'http://localhost:8000/api/v1/manager/event-divisions/12/schedule/generate',
+      'http://localhost:8000/api/v1/manager/event-divisions/12/schedule/form',
+      'http://localhost:8000/api/v1/manager/event-divisions/12/schedule',
     ]);
 
     expect(fetchMock.mock.calls[0][1].method).toBe('POST');

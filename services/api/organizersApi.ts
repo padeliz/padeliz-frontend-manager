@@ -1,6 +1,6 @@
 /**
  * Organizers API Service
- * Organizers own the logo used to brand edition posters.
+ * Organizers own the logo used to brand event posters.
  */
 
 import { ApiOrganizer } from '@/types/api/entities';
@@ -18,12 +18,12 @@ export class OrganizersApiService extends BaseApiService {
       per_page?: number;
       q?: string;
       filters?: {
-        show_edition_label?: boolean | number;
+        show_event_label?: boolean | number;
       };
       sort_by?: {
         id_organizer?: 'asc' | 'desc';
         name?: 'asc' | 'desc';
-        show_edition_label?: 'asc' | 'desc';
+        show_event_label?: 'asc' | 'desc';
         inserted_at?: 'asc' | 'desc';
         updated_at?: 'asc' | 'desc';
       };

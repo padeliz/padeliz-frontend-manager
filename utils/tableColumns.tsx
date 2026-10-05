@@ -422,7 +422,7 @@ function createViewLinkRenderer(
  * `linkedResourcesMetadata` lets foreign-key columns resolve their display
  * value from the linked resource's own metadata (display_field / primary key)
  * instead of the parent table's. Keys must be the original-case schema names
- * (e.g. `Player`, `Division`, `Edition`) matching the `$ref` of each FK.
+ * (e.g. `Player`, `Division`, `Event`) matching the `$ref` of each FK.
  *
  * When `metadata.list_fields` is non-empty: PK first, then those fields in
  * order, then remaining columns (required then alpha). Otherwise legacy sort.

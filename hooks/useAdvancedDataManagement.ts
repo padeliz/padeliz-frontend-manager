@@ -25,6 +25,8 @@ export function useAdvancedDataManagement<T extends { [key: string]: any }>({
   initialPage = 1,
   initialPerPage = 25,
   debounceMs = 300,
+  excludeFilterFields = [],
+  extraListParams,
 }: UseAdvancedDataManagementOptions<T>): UseAdvancedDataManagementReturn<T> {
   // State
   const [currentPage, setCurrentPage] = useState(initialPage);
@@ -64,21 +66,22 @@ export function useAdvancedDataManagement<T extends { [key: string]: any }>({
       sort_by: Object.keys(sortConfig).length > 0 ? sortConfig : undefined,
       filters:
         Object.keys(activeFilters).length > 0 ? activeFilters : undefined,
+      ...(extraListParams ?? {}),
     }),
-    [currentPage, perPage, searchQuery, sortConfig, activeFilters]
+    [
+      currentPage,
+      perPage,
+      searchQuery,
+      sortConfig,
+      activeFilters,
+      extraListParams,
+    ]
   );
 
   const listQuery = useQuery({
     queryKey: queryKeys.resourceList(resourceName, listParams),
     queryFn: async () => {
-      const params: ApiAdvancedPaginationParams = {
-        page: listParams.page,
-        per_page: listParams.per_page,
-        q: listParams.q,
-        sort_by: listParams.sort_by,
-        filters: listParams.filters,
-      };
-      return fetchDataRef.current(params);
+      return fetchDataRef.current(listParams as ApiAdvancedPaginationParams);
     },
   });
 
@@ -356,8 +359,13 @@ export function useAdvancedDataManagement<T extends { [key: string]: any }>({
     }
 
     try {
+      const excluded = new Set(excludeFilterFields);
       const definitions = Object.entries(metadata.filterable_fields)
         .map(([field, definition]) => {
+          if (excluded.has(field)) {
+            return null;
+          }
+
           // Handle different types of values
           let options = undefined;
           if (definition.values) {
@@ -422,7 +430,7 @@ export function useAdvancedDataManagement<T extends { [key: string]: any }>({
     } catch (error) {
       return [];
     }
-  }, [metadata]);
+  }, [metadata, excludeFilterFields]);
 
   return {
     // Data

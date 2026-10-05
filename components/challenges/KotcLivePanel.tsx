@@ -3,7 +3,7 @@ import ChallengeBrandingSection from '@/components/challenges/ChallengeBrandingS
 import ChallengeSyncStatusBadge from '@/components/challenges/ChallengeSyncStatusBadge';
 import SortableRow, {
   SortableDragHandle,
-} from '@/components/editions/SortableRow';
+} from '@/components/events/SortableRow';
 import ActionButton from '@/components/ui/ActionButton';
 import Tooltip from '@/components/ui/Tooltip';
 import {

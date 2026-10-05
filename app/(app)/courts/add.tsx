@@ -1,7 +1,7 @@
 import ResourceCreatePage from '@/components/pages/ResourceCreatePage';
 import { useResourceCreatePageConfig } from '@/hooks/useResourceCreatePageConfig';
 import { CourtsApiService } from '@/services/api/courtsApi';
-import { ApiCourt } from '@/types/api/edition';
+import { ApiCourt } from '@/types/api/event';
 import React, { useCallback } from 'react';
 
 const api = new CourtsApiService();

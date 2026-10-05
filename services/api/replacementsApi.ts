@@ -1,4 +1,4 @@
-import { ReplacementRow } from '@/types/api/edition';
+import { ReplacementRow } from '@/types/api/event';
 import { BaseApiService } from './baseApi';
 
 export type CreateReplacementPayload = {
@@ -17,27 +17,27 @@ export type PatchReplacementPayload = {
 
 export class ReplacementsApiService extends BaseApiService {
   async list(
-    editionDivisionId: number
+    eventDivisionId: number
   ): Promise<{ data: ReplacementRow[]; message?: string }> {
     return this.get<{ data: ReplacementRow[]; message?: string }>(
-      `/edition-divisions/${editionDivisionId}/replacements`
+      `/event-divisions/${eventDivisionId}/replacements`
     );
   }
 
-  async listForEdition(
-    editionId: number
+  async listForEvent(
+    eventId: number
   ): Promise<{ data: ReplacementRow[]; message?: string }> {
     return this.get<{ data: ReplacementRow[]; message?: string }>(
-      `/editions/${editionId}/replacements`
+      `/events/${eventId}/replacements`
     );
   }
 
   async create(
-    editionDivisionId: number,
+    eventDivisionId: number,
     payload: CreateReplacementPayload
   ): Promise<{ data: ReplacementRow; message?: string }> {
     return this.post<{ data: ReplacementRow; message?: string }>(
-      `/edition-divisions/${editionDivisionId}/replacements`,
+      `/event-divisions/${eventDivisionId}/replacements`,
       payload
     );
   }
@@ -46,7 +46,7 @@ export class ReplacementsApiService extends BaseApiService {
     replacementId: number
   ): Promise<{ data?: any; message?: string }> {
     return this.delete<{ data?: any; message?: string }>(
-      `/edition-division-replacements/${replacementId}`
+      `/event-division-replacements/${replacementId}`
     );
   }
 
@@ -55,7 +55,7 @@ export class ReplacementsApiService extends BaseApiService {
     payload: PatchReplacementPayload
   ): Promise<{ data: ReplacementRow; message?: string }> {
     return super.patch<{ data: ReplacementRow; message?: string }>(
-      `/edition-division-replacements/${replacementId}`,
+      `/event-division-replacements/${replacementId}`,
       payload
     );
   }

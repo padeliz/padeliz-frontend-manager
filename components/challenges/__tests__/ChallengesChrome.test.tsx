@@ -15,7 +15,7 @@ jest.mock('expo-router', () =>
 
 jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
 
-jest.mock('@/components/editions/EditionTabsBar', () => {
+jest.mock('@/components/events/EventTabsBar', () => {
   const React = require('react');
   const { Text } = require('react-native');
   return ({ tabs }: { tabs: { label: string }[] }) => (

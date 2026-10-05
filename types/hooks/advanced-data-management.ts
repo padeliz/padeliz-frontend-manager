@@ -20,6 +20,13 @@ export interface UseAdvancedDataManagementOptions<T> {
   initialPage?: number;
   initialPerPage?: number;
   debounceMs?: number;
+  /** Keys omitted from metadata-driven filter definitions. */
+  excludeFilterFields?: string[];
+  /**
+   * Fixed list scope (e.g. queue=) merged into the React Query key and fetch params
+   * so scoped lists do not share cache with unscoped siblings.
+   */
+  extraListParams?: Record<string, unknown>;
 }
 
 export interface UseAdvancedDataManagementReturn<T> {

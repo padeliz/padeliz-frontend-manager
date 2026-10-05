@@ -62,6 +62,7 @@ export type FormInputType =
   | 'email'
   | 'url'
   | 'textarea'
+  | 'richtext' // HTML editor (x-padeliz-richtext)
   | 'date'
   | 'datetime'
   | 'time'

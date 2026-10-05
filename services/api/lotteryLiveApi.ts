@@ -1,4 +1,4 @@
-import { LotteryLiveState } from '@/types/api/edition';
+import { LotteryLiveState } from '@/types/api/event';
 import { BaseApiService } from './baseApi';
 
 export class LotteryLiveApiService extends BaseApiService {
@@ -6,13 +6,13 @@ export class LotteryLiveApiService extends BaseApiService {
     lotteryId: number
   ): Promise<{ data: LotteryLiveState }> {
     return this.get<{ data: LotteryLiveState }>(
-      `/edition-lotteries/${lotteryId}/live`
+      `/event-lotteries/${lotteryId}/live`
     );
   }
 
   async draw(lotteryId: number): Promise<{ data: LotteryLiveState }> {
     return this.post<{ data: LotteryLiveState }>(
-      `/edition-lotteries/${lotteryId}/draw`
+      `/event-lotteries/${lotteryId}/draw`
     );
   }
 
@@ -21,7 +21,7 @@ export class LotteryLiveApiService extends BaseApiService {
     idLucky: number
   ): Promise<{ data: LotteryLiveState }> {
     return this.post<{ data: LotteryLiveState }>(
-      `/edition-lotteries/${lotteryId}/announce`,
+      `/event-lotteries/${lotteryId}/announce`,
       { id_lucky: idLucky }
     );
   }
@@ -31,7 +31,7 @@ export class LotteryLiveApiService extends BaseApiService {
     idLucky: number
   ): Promise<{ data: LotteryLiveState }> {
     return this.post<{ data: LotteryLiveState }>(
-      `/edition-lotteries/${lotteryId}/accept`,
+      `/event-lotteries/${lotteryId}/accept`,
       { id_lucky: idLucky }
     );
   }
@@ -41,14 +41,14 @@ export class LotteryLiveApiService extends BaseApiService {
     idLucky: number
   ): Promise<{ data: LotteryLiveState }> {
     return this.post<{ data: LotteryLiveState }>(
-      `/edition-lotteries/${lotteryId}/reject`,
+      `/event-lotteries/${lotteryId}/reject`,
       { id_lucky: idLucky }
     );
   }
 
   async prizesBoard(lotteryId: number): Promise<{ data: any }> {
     return this.get<{ data: any }>(
-      `/edition-lotteries/${lotteryId}/prizes-board`
+      `/event-lotteries/${lotteryId}/prizes-board`
     );
   }
 }

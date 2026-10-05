@@ -8,6 +8,8 @@ export type PadelizUploadConfig = {
   max_size_kb: number;
   accept: string[];
   form_field: string;
+  /** When true, create flow must have a pending file before submit. */
+  required: boolean;
   upload: { method: string; path: string };
   delete?: { method: string; path: string } | null;
 };
@@ -35,6 +37,7 @@ export function getUploadConfig(fieldDefinition: any): PadelizUploadConfig | nul
     max_size_kb: Number(raw.max_size_kb) || 5120,
     accept,
     form_field: String(raw.form_field),
+    required: raw.required === true || raw.required === 1 || raw.required === 'true',
     upload: {
       method: String(raw.upload.method || 'POST'),
       path: String(raw.upload.path),

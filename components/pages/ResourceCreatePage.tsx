@@ -154,6 +154,21 @@ export default function ResourceCreatePage<
         throw new Error('Validation failed');
       }
 
+      const missingUploadErrors: Record<string, string> = {};
+      for (const fieldKey of fieldKeys) {
+        const def = metadata.swagger_schema.properties[fieldKey];
+        const cfg = getUploadConfig(def);
+        if (!cfg?.required) continue;
+        const pending = pendingByField[fieldKey] ?? [];
+        if (pending.length === 0) {
+          missingUploadErrors[fieldKey] = `${fieldKey} is required`;
+        }
+      }
+      if (Object.keys(missingUploadErrors).length > 0) {
+        setErrors(missingUploadErrors);
+        throw new Error('Validation failed');
+      }
+
       const response = await createResource(formattedValues as Partial<T>);
       const created = response.data;
       const newId = PrimaryKeyService.extractId(created, metadata);
@@ -162,21 +177,23 @@ export default function ResourceCreatePage<
         const uploadEntries = Object.entries(pendingByField).filter(
           ([, files]) => files.length > 0
         );
-        if (uploadEntries.length > 0) {
-          try {
-            for (const [fieldKey, files] of uploadEntries) {
-              const cfg = getUploadConfig(
-                metadata.swagger_schema.properties[fieldKey]
-              );
-              if (!cfg) continue;
-              await uploadPendingFiles(cfg, newId, files);
-            }
-          } catch (uploadErr: any) {
-            setMediaWarning(
-              uploadErr?.message ||
-                'Created but media incomplete — retry uploads on this page.'
+        try {
+          for (const [fieldKey, files] of uploadEntries) {
+            const cfg = getUploadConfig(
+              metadata.swagger_schema.properties[fieldKey]
             );
+            if (!cfg) continue;
+            await uploadPendingFiles(cfg, newId, files);
           }
+        } catch (uploadErr: any) {
+          const message =
+            uploadErr?.message ||
+            'Created but media incomplete — fix uploads on this page before leaving.';
+          setError(message);
+          setMediaWarning(message);
+          throw uploadErr instanceof Error
+            ? uploadErr
+            : new Error(message);
         }
 
         const path =

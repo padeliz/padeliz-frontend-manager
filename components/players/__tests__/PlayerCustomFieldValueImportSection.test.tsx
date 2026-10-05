@@ -56,12 +56,12 @@ describe('PlayerImportSectionLayout custom field values', () => {
       </SubTabBarProvider>
     );
 
-    expect(getByTestId('edition-tab-Import')).toBeTruthy();
-    expect(getByTestId('edition-tab-Imports History')).toBeTruthy();
+    expect(getByTestId('event-tab-Import')).toBeTruthy();
+    expect(getByTestId('event-tab-Imports History')).toBeTruthy();
     expect(getByTestId('import-section-slot')).toBeTruthy();
 
     pathnameState.value = '/players/import-custom-field-values/imports';
-    fireEvent.press(getByTestId('edition-tab-Imports History'));
+    fireEvent.press(getByTestId('event-tab-Imports History'));
 
     await waitFor(() =>
       expect(mockPush).toHaveBeenCalledWith(

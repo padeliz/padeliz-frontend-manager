@@ -26,11 +26,11 @@ jest.mock('@/hooks/useResourceMetadata', () => ({
   useResourceMetadata: () => ({
     getMetadata: () => ({
       display_field: 'id_registration',
-      resource_path: 'edition-registrations',
+      resource_path: 'event-registrations',
       swagger_schema: {
         properties: {
           id_registration: { type: 'integer', format: 'int64', readOnly: true },
-          edition_id: { type: 'integer', format: 'int64', title: 'Edition' },
+          event_id: { type: 'integer', format: 'int64', title: 'Event' },
           player_id: { type: 'integer', format: 'int64', title: 'Player' },
         },
       },
@@ -76,11 +76,11 @@ describe('ResourceCreatePage seedFromQuery', () => {
   });
 
   it('leaves the form empty when seedFromQuery is off even with query params', async () => {
-    mockSearchParams = { edition_id: '4' };
+    mockSearchParams = { event_id: '4' };
     render(
       <ResourceCreatePage
         config={{
-          resourceName: 'EditionRegistration',
+          resourceName: 'EventRegistration',
           resourceDisplayName: 'Registration',
           createResource: jest.fn(),
           title: 'Add Registration',
@@ -88,18 +88,18 @@ describe('ResourceCreatePage seedFromQuery', () => {
       />
     );
     await waitFor(() => {
-      expect(screen.getByTestId('field-edition_id')).toHaveTextContent(
-        'field:edition_id:'
+      expect(screen.getByTestId('field-event_id')).toHaveTextContent(
+        'field:event_id:'
       );
     });
   });
 
   it('seeds writable fields from the query when seedFromQuery is true', async () => {
-    mockSearchParams = { edition_id: '4' };
+    mockSearchParams = { event_id: '4' };
     render(
       <ResourceCreatePage
         config={{
-          resourceName: 'EditionRegistration',
+          resourceName: 'EventRegistration',
           resourceDisplayName: 'Registration',
           createResource: jest.fn(),
           title: 'Add Registration',
@@ -108,8 +108,8 @@ describe('ResourceCreatePage seedFromQuery', () => {
       />
     );
     await waitFor(() => {
-      expect(screen.getByTestId('field-edition_id')).toHaveTextContent(
-        'field:edition_id:4'
+      expect(screen.getByTestId('field-event_id')).toHaveTextContent(
+        'field:event_id:4'
       );
     });
   });
@@ -119,7 +119,7 @@ describe('ResourceCreatePage seedFromQuery', () => {
     render(
       <ResourceCreatePage
         config={{
-          resourceName: 'EditionRegistration',
+          resourceName: 'EventRegistration',
           resourceDisplayName: 'Registration',
           createResource: jest.fn(),
           title: 'Add Registration',
@@ -128,8 +128,8 @@ describe('ResourceCreatePage seedFromQuery', () => {
       />
     );
     await waitFor(() => {
-      expect(screen.getByTestId('field-edition_id')).toHaveTextContent(
-        'field:edition_id:'
+      expect(screen.getByTestId('field-event_id')).toHaveTextContent(
+        'field:event_id:'
       );
     });
   });

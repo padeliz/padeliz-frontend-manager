@@ -8,10 +8,10 @@ describe('tableColumns list_fields and images', () => {
     list_fields: [
       'player.profile_image_url',
       'player_id',
-      'edition_division_id',
+      'event_division_id',
     ],
     swagger_schema: {
-      required: ['edition_id', 'player_id', 'payment'],
+      required: ['event_id', 'player_id', 'payment'],
       properties: {
         id_registration: {
           type: 'integer',
@@ -19,9 +19,9 @@ describe('tableColumns list_fields and images', () => {
           readOnly: true,
           title: 'ID',
         },
-        edition_id: {
+        event_id: {
           type: 'integer',
-          title: 'Edition',
+          title: 'Event',
         },
         player_id: {
           type: 'integer',
@@ -30,14 +30,14 @@ describe('tableColumns list_fields and images', () => {
         player: {
           oneOf: [{ $ref: '#/components/schemas/Player' }, { type: 'null' }],
         },
-        edition_division_id: {
+        event_division_id: {
           type: 'integer',
           nullable: true,
-          title: 'Edition Division',
+          title: 'Event Division',
         },
-        edition_division: {
+        event_division: {
           oneOf: [
-            { $ref: '#/components/schemas/EditionDivision' },
+            { $ref: '#/components/schemas/EventDivision' },
             { type: 'null' },
           ],
         },
@@ -50,9 +50,9 @@ describe('tableColumns list_fields and images', () => {
         type: 'foreign_key',
         related_schema_name: 'Player',
       },
-      edition_division_id: {
+      event_division_id: {
         type: 'foreign_key',
-        related_schema_name: 'EditionDivision',
+        related_schema_name: 'EventDivision',
       },
     },
     sortable_fields: ['id_registration', 'player_id', 'payment'],
@@ -83,14 +83,14 @@ describe('tableColumns list_fields and images', () => {
 
   it('orders PK then list_fields then leftovers', () => {
     const columns = generateColumnsFromMetadata(registrationMetadata, {
-      excludeFields: ['edition_id'],
+      excludeFields: ['event_id'],
       linkedResourcesMetadata: {
         Player: playerMetadata,
-        EditionDivision: {
+        EventDivision: {
           display_field: 'division_title',
           swagger_schema: {
             properties: {
-              id_edition_division: { type: 'integer', readOnly: true },
+              id_event_division: { type: 'integer', readOnly: true },
               division_title: { type: 'string' },
             },
           },
@@ -106,7 +106,7 @@ describe('tableColumns list_fields and images', () => {
       'id_registration',
       'player.profile_image_url',
       'player',
-      'edition_division',
+      'event_division',
       'payment',
       'is_minor',
     ]);
@@ -180,7 +180,7 @@ describe('tableColumns list_fields and images', () => {
 
   it('excludeFields drops columns under list_fields ordering', () => {
     const columns = generateColumnsFromMetadata(registrationMetadata, {
-      excludeFields: ['edition_id', 'player.profile_image_url'],
+      excludeFields: ['event_id', 'player.profile_image_url'],
       linkedResourcesMetadata: { Player: playerMetadata },
     });
     expect(columns.map(c => c.key)).not.toContain('player.profile_image_url');

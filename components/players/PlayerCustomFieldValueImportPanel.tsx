@@ -7,7 +7,7 @@ import CsvFilePicker from '@/components/players/CsvFilePicker';
 import SingleSelectDropdown from '@/components/ui/SingleSelectDropdown';
 import { useToast } from '@/context/ToastContext';
 import { playerToDropdownOption, usePlayerPicker } from '@/hooks/usePlayerPicker';
-import { EditionsApiService } from '@/services/api/editionsApi';
+import { EventsApiService } from '@/services/api/eventsApi';
 import { ApiError } from '@/services/api/baseApi';
 import {
   PlayerCustomFieldValueImportApiService,
@@ -24,7 +24,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Switch, Text, View } from 'react-native';
 
 const api = new PlayerCustomFieldValueImportApiService();
-const editionsApi = new EditionsApiService();
+const eventsApi = new EventsApiService();
 
 type DraftRow = ApiPlayerCustomFieldValueImportPreviewRow & {
   player_id: number | null;
@@ -87,8 +87,8 @@ export default function PlayerCustomFieldValueImportPanel() {
   const [file, setFile] = useState<File | null>(null);
   const [format, setFormat] = useState<string | null>(null);
   const [rows, setRows] = useState<DraftRow[]>([]);
-  const [editionId, setEditionId] = useState<number | null>(null);
-  const [editionOptions, setEditionOptions] = useState<DropdownOption[]>([]);
+  const [eventId, setEventId] = useState<number | null>(null);
+  const [eventOptions, setEventOptions] = useState<DropdownOption[]>([]);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -98,18 +98,18 @@ export default function PlayerCustomFieldValueImportPanel() {
   useEffect(() => {
     void (async () => {
       try {
-        const response = await editionsApi.getEditions({
+        const response = await eventsApi.getEvents({
           per_page: 100,
           sort_by: { name: 'asc' },
         });
-        setEditionOptions(
-          (response.data ?? []).map(edition => ({
-            label: edition.name,
-            value: edition.id_edition,
+        setEventOptions(
+          (response.data ?? []).map(event => ({
+            label: event.name,
+            value: event.id_event,
           }))
         );
       } catch {
-        setEditionOptions([]);
+        setEventOptions([]);
       }
     })();
   }, []);
@@ -200,7 +200,7 @@ export default function PlayerCustomFieldValueImportPanel() {
       const response = await api.save({
         format,
         filename: file.name,
-        edition_id: editionId,
+        event_id: eventId,
         rows: payloadRows,
       });
       setDirty(false);
@@ -222,7 +222,7 @@ export default function PlayerCustomFieldValueImportPanel() {
     } finally {
       setSaving(false);
     }
-  }, [editionId, file, format, queryClient, rows, showError, showSuccess]);
+  }, [eventId, file, format, queryClient, rows, showError, showSuccess]);
 
   const refresh = useCallback(async () => {
     if (!file) return;
@@ -263,15 +263,15 @@ export default function PlayerCustomFieldValueImportPanel() {
         ) : null}
       </View>
 
-      <View className="mb-4 max-w-md" testID="import-edition-select">
+      <View className="mb-4 max-w-md" testID="import-event-select">
         <SingleSelectDropdown
-          options={editionOptions}
-          selectedValue={editionId}
+          options={eventOptions}
+          selectedValue={eventId}
           onSelectionChange={value =>
-            setEditionId(value == null ? null : Number(value))
+            setEventId(value == null ? null : Number(value))
           }
-          placeholder="Edition (optional)"
-          title="Edition"
+          placeholder="Event (optional)"
+          title="Event"
           clearable
         />
       </View>

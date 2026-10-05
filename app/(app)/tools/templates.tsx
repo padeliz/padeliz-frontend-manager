@@ -4,25 +4,28 @@
 
 import AppLayout from '@/components/layout/AppLayout';
 import { useBreadcrumbSegments } from '@/components/layout/BreadcrumbProvider';
+import CachedPdfImageReload from '@/components/events/CachedPdfImageReload';
+import SortableRow, {
+  reorderList,
+  SORTABLE_ROW_HEIGHT,
+  SortableDragHandle,
+} from '@/components/events/SortableRow';
 import AppTextInput from '@/components/ui/AppTextInput';
 import AdvancedDataTable from '@/components/ui/AdvancedDataTable';
 import ActionButton from '@/components/ui/ActionButton';
 import SingleSelectDropdown from '@/components/ui/SingleSelectDropdown';
+import Tooltip from '@/components/ui/Tooltip';
 import { useActionButtonStatus } from '@/hooks/useActionButtonStatus';
+import { useCachedPdfAvatarReload } from '@/hooks/useCachedPdfAvatarReload';
+import { usePlayerPicker } from '@/hooks/usePlayerPicker';
 import { queryKeys } from '@/lib/queryClient';
 import { ClubsApiService } from '@/services/api/clubsApi';
 import { DivisionsApiService } from '@/services/api/divisionsApi';
 import { organizersApi } from '@/services/api/organizersApi';
-import { PlayersApiService } from '@/services/api/playersApi';
 import { scratchScheduleApi } from '@/services/api/scratchScheduleApi';
 import { templatesToolsApi } from '@/services/api/templatesToolsApi';
 import { ApiDivision, ApiPlayer } from '@/types/api/entities';
 import { SchedulePreview } from '@/types/api/edition';
-import {
-  filterPlayersLocally,
-  loadAllPlayersPages,
-} from '@/utils/edition/playerCache';
-import { flattenMatchesByCourt } from '@/utils/edition/schedulePreview';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -34,25 +37,67 @@ import {
   View,
 } from 'react-native';
 
-const playersApi = new PlayersApiService();
 const divisionsApi = new DivisionsApiService();
 const clubsApi = new ClubsApiService();
 
 const NO_CLUB = 0;
+const NO_ORGANIZER = 0;
+const MAX_COURTS = 4;
+
+const COLLECTING_POINTS_TOOLTIP =
+  'If player is collecting points from the matches and they appear on the Ranking poster.';
 
 /** Downloads flash a checkmark and fall back to idle; other actions stay sticky. */
 const DOWNLOAD_SUCCESS_HOLD_MS = 4000;
 
+function playerDisplayName(player: ApiPlayer): string {
+  return (
+    player.name ||
+    [player.first_name, player.last_name].filter(Boolean).join(' ') ||
+    `Player #${player.id_player}`
+  );
+}
+
+function CourtMatchesPdfButton({
+  courtIndex,
+  courtName,
+  onDownload,
+}: {
+  courtIndex: number;
+  courtName: string;
+  onDownload: (courtIndex: number) => Promise<void>;
+}) {
+  const status = useActionButtonStatus({
+    successHoldMs: DOWNLOAD_SUCCESS_HOLD_MS,
+  });
+
+  return (
+    <ActionButton
+      testID={`tools-pdf-matches-${courtIndex}`}
+      label={`PDF · ${courtName}`}
+      startIcon="download"
+      variant="positive"
+      size="sm"
+      status={status.status}
+      errorMessage={status.errorMessage ?? undefined}
+      onPress={() => void status.run(() => onDownload(courtIndex))}
+    />
+  );
+}
+
 export default function ToolsTemplatesPage() {
   const reloadStatus = useActionButtonStatus({ successHoldMs: 4000 });
   const previewStatus = useActionButtonStatus();
-  const pdfMatchesStatus = useActionButtonStatus({
-    successHoldMs: DOWNLOAD_SUCCESS_HOLD_MS,
-  });
   const pdfRankingStatus = useActionButtonStatus({
     successHoldMs: DOWNLOAD_SUCCESS_HOLD_MS,
   });
-  const demoStatus = useActionButtonStatus({ auditoryFeedback: true });
+  const {
+    spinning: avatarSpinning,
+    errors: avatarErrors,
+    urlFor: avatarUrlFor,
+    reload: reloadAvatar,
+  } = useCachedPdfAvatarReload();
+
   const organizersQuery = useQuery({
     queryKey: queryKeys.organizers(),
     queryFn: async () => {
@@ -68,11 +113,13 @@ export default function ToolsTemplatesPage() {
     },
   });
   const organizerOptions = useMemo(
-    () =>
-      (organizersQuery.data || []).map(o => ({
+    () => [
+      { label: 'No organizer', value: NO_ORGANIZER },
+      ...(organizersQuery.data || []).map(o => ({
         label: `${o.id_organizer}. ${o.name}`,
         value: o.id_organizer,
       })),
+    ],
     [organizersQuery.data]
   );
   const clubOptions = useMemo(
@@ -87,40 +134,47 @@ export default function ToolsTemplatesPage() {
   );
   const [catalog, setCatalog] = useState<any>(null);
   const [metrics, setMetrics] = useState<any>(null);
-  const [demo, setDemo] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const [playerCache, setPlayerCache] = useState<ApiPlayer[]>([]);
-  const [playersLoading, setPlayersLoading] = useState(false);
-  const [playerQuery, setPlayerQuery] = useState('');
+  const [pendingPlayerId, setPendingPlayerId] = useState<number | null>(null);
   const [selectedPlayers, setSelectedPlayers] = useState<ApiPlayer[]>([]);
   const [collectingPlayerIds, setCollectingPlayerIds] = useState<number[]>([]);
-  const [courtNames, setCourtNames] = useState('Court 1, Court 2');
+  const [courts, setCourts] = useState<string[]>(['Court 1', 'Court 2']);
+  const [courtDraft, setCourtDraft] = useState('');
   const [timeStart, setTimeStart] = useState('10:00');
   const [timeEnd, setTimeEnd] = useState('16:00');
   const [opponents, setOpponents] = useState('3');
   const [repeat, setRepeat] = useState('1');
   const [preview, setPreview] = useState<SchedulePreview | null>(null);
-  const [pdfTitle, setPdfTitle] = useState('Scratch MiniTour');
-  const [courtIndex, setCourtIndex] = useState('0');
-  const [organizerId, setOrganizerId] = useState(1);
+  const [editionName, setEditionName] = useState('');
+  const [divisionNamePdf, setDivisionNamePdf] = useState('');
+  const [organizerId, setOrganizerId] = useState<number>(NO_ORGANIZER);
   const [clubId, setClubId] = useState<number>(NO_CLUB);
   const [divisions, setDivisions] = useState<ApiDivision[]>([]);
-  const [color, setColor] = useState('#2563eb');
+  const [selectedDivisionId, setSelectedDivisionId] = useState<number | null>(
+    null
+  );
   const [includeFinal, setIncludeFinal] = useState(false);
   const [hasDemonstrative, setHasDemonstrative] = useState(false);
   const [adjust, setAdjust] = useState(0);
-  const [activeTab, setActiveTab] = useState<'catalog' | 'modeB'>('catalog');
+  const [activeTab, setActiveTab] = useState<'catalog' | 'modeB'>('modeB');
 
-  const previewMatches = useMemo(
-    () => flattenMatchesByCourt(preview?.matches_by_court),
-    [preview]
+  const playerPicker = usePlayerPicker({ selectedValue: pendingPlayerId });
+
+  const selectedDivision = useMemo(
+    () => divisions.find(d => d.id_division === selectedDivisionId) ?? null,
+    [divisions, selectedDivisionId]
   );
+  const selectedColor = selectedDivision?.color ?? '#2563eb';
 
-  const filteredPlayers = useMemo(
-    () => filterPlayersLocally(playerCache, playerQuery),
-    [playerCache, playerQuery]
+  const divisionOptions = useMemo(
+    () =>
+      divisions.map(d => ({
+        label: `${d.name} (${d.color})`,
+        value: d.id_division,
+      })),
+    [divisions]
   );
 
   const catalogRows = useMemo(() => {
@@ -146,25 +200,6 @@ export default function ToolsTemplatesPage() {
     }));
   }, [metrics]);
 
-  const loadPlayersCache = useCallback(async () => {
-    setPlayersLoading(true);
-    try {
-      const all = await loadAllPlayersPages(
-        async (page, perPage) => {
-          const res = await playersApi.getPlayers({ page, per_page: perPage });
-          return { data: res.data || [], meta: res.meta as any };
-        },
-        100,
-        partial => setPlayerCache(partial as ApiPlayer[])
-      );
-      setPlayerCache(all as ApiPlayer[]);
-    } catch (e: any) {
-      setError(e?.message || 'Failed to preload players');
-    } finally {
-      setPlayersLoading(false);
-    }
-  }, []);
-
   const loadTools = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -178,7 +213,10 @@ export default function ToolsTemplatesPage() {
       setMetrics(met.data);
       const list = divs.data || [];
       setDivisions(list);
-      if (list[0]?.color) setColor(list[0].color);
+      if (list[0]) {
+        setSelectedDivisionId(list[0].id_division);
+        setDivisionNamePdf(list[0].name);
+      }
     } catch (e: any) {
       setError(e?.message || 'Failed to load templates tools');
       throw e;
@@ -189,22 +227,63 @@ export default function ToolsTemplatesPage() {
 
   useEffect(() => {
     void loadTools().catch(() => {});
-    void loadPlayersCache();
-  }, [loadTools, loadPlayersCache]);
+  }, [loadTools]);
 
-  const togglePlayer = (player: ApiPlayer) => {
+  const applyDivisionSelection = (divisionId: number) => {
+    setSelectedDivisionId(divisionId);
+    const division = divisions.find(d => d.id_division === divisionId);
+    if (division) {
+      setDivisionNamePdf(division.name);
+    }
+  };
+
+  const addCourt = () => {
+    const name = courtDraft.trim();
+    if (!name || courts.length >= MAX_COURTS) return;
+    if (courts.some(c => c.toLowerCase() === name.toLowerCase())) {
+      setCourtDraft('');
+      return;
+    }
+    setCourts(prev => [...prev, name]);
+    setCourtDraft('');
+  };
+
+  const removeCourt = (index: number) => {
+    setCourts(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const addPlayerFromPicker = (value: string | number | boolean | null) => {
+    if (value == null || value === '') {
+      setPendingPlayerId(null);
+      return;
+    }
+    const id = Number(value);
+    if (!Number.isFinite(id)) return;
+
     setSelectedPlayers(prev => {
-      if (prev.some(p => p.id_player === player.id_player)) {
-        setCollectingPlayerIds(ids =>
-          ids.filter(id => id !== player.id_player)
-        );
-        return prev.filter(p => p.id_player !== player.id_player);
+      if (prev.some(p => p.id_player === id)) {
+        return prev;
       }
+      const option = playerPicker.options.find(o => Number(o.value) === id);
+      const player: ApiPlayer = {
+        id_player: id,
+        name: option?.label ?? `Player #${id}`,
+        first_name: option?.label ?? '',
+        last_name: '',
+        being_student: false,
+        pdf_avatar_url: option?.imageUrl ?? null,
+      };
       setCollectingPlayerIds(ids =>
-        ids.includes(player.id_player) ? ids : [...ids, player.id_player]
+        ids.includes(id) ? ids : [...ids, id]
       );
       return [...prev, player];
     });
+    setPendingPlayerId(null);
+  };
+
+  const removePlayer = (playerId: number) => {
+    setSelectedPlayers(prev => prev.filter(p => p.id_player !== playerId));
+    setCollectingPlayerIds(ids => ids.filter(id => id !== playerId));
   };
 
   const toggleCollecting = (playerId: number) => {
@@ -215,25 +294,25 @@ export default function ToolsTemplatesPage() {
     );
   };
 
-  const parseCourts = () =>
-    courtNames
-      .split(',')
-      .map(s => s.trim())
-      .filter(Boolean)
-      .slice(0, 4);
+  const reorderPlayers = (from: number, to: number) => {
+    setSelectedPlayers(prev => {
+      const next = reorderList(prev, from, to);
+      return next ?? prev;
+    });
+  };
 
   const scratchPayload = () => ({
     player_ids: selectedPlayers.map(p => p.id_player),
-    court_names: parseCourts(),
+    court_names: courts,
     time_start: timeStart,
     time_end: timeEnd,
     opponents_per_player: Number(opponents) || undefined,
     repeat_partners: Number(repeat) || undefined,
     include_final: includeFinal,
     has_demonstrative_match: hasDemonstrative,
-    adjust: adjust || undefined,
-    color,
-    organizer_id: organizerId,
+    adjust: adjust,
+    color: selectedColor,
+    organizer_id: organizerId === NO_ORGANIZER ? null : organizerId,
     club_id: clubId === NO_CLUB ? null : clubId,
     collecting_player_ids: collectingPlayerIds,
   });
@@ -243,32 +322,438 @@ export default function ToolsTemplatesPage() {
     setPreview(res.data);
   };
 
-  const downloadPdf = async (kind: 'matches' | 'ranking') => {
+  const downloadMatchesPdf = async (courtIndex: number) => {
     if (Platform.OS !== 'web') {
       throw new Error('PDF download is web-only.');
     }
-    const base = {
-      ...scratchPayload(),
-      title: pdfTitle,
-    };
-    if (kind === 'matches') {
-      await scratchScheduleApi.downloadMatchesPdf(
-        { ...base, court_index: Number(courtIndex) || 0 },
-        'scratch-matches.pdf'
-      );
-    } else {
-      await scratchScheduleApi.downloadRankingPdf(base, 'scratch-ranking.pdf');
-    }
+    await scratchScheduleApi.downloadMatchesPdf(
+      {
+        ...scratchPayload(),
+        title: divisionNamePdf,
+        edition_label: editionName,
+        court_index: courtIndex,
+      },
+      `scratch-matches-court-${courtIndex + 1}.pdf`
+    );
   };
 
-  const runDemo = async () => {
-    const players = selectedPlayers.length || 8;
-    const partners = Number(opponents) || 3;
-    const rep = Number(repeat) || 1;
-    const courts = parseCourts().length || 2;
-    const res = await templatesToolsApi.demo(players, partners, rep, courts);
-    setDemo(res.data);
+  const downloadRankingPdf = async () => {
+    if (Platform.OS !== 'web') {
+      throw new Error('PDF download is web-only.');
+    }
+    await scratchScheduleApi.downloadRankingPdf(
+      {
+        ...scratchPayload(),
+        title: divisionNamePdf,
+        edition_label: editionName,
+      },
+      'scratch-ranking.pdf'
+    );
   };
+
+  const formColumn = (
+    <View className="flex-1 bg-white border border-gray-200 rounded-lg p-4 mb-4 gap-2 min-w-0">
+      <Text className="font-semibold text-gray-900">
+        Mode B — Scratch schedule
+      </Text>
+
+      <View
+        testID="tools-branding-row"
+        className="flex-row flex-wrap gap-3 items-end"
+      >
+        <View className="flex-1" style={{ minWidth: 140 }}>
+          <Text className="text-xs text-gray-500 mb-1">Edition name</Text>
+          <AppTextInput
+            className="border border-gray-300 rounded px-3 py-2"
+            placeholder="Edition name"
+            value={editionName}
+            onChangeText={setEditionName}
+            maxLength={25}
+            testID="tools-edition-name"
+          />
+        </View>
+        <View
+          testID="tools-organizer-picker"
+          className="flex-1"
+          style={{ minWidth: 160 }}
+        >
+          <Text className="text-xs text-gray-500 mb-1">Organizer branding</Text>
+          <SingleSelectDropdown
+            options={organizerOptions}
+            selectedValue={organizerId}
+            onSelectionChange={v => setOrganizerId(Number(v))}
+            placeholder="Organizer"
+            title="Organizer branding"
+            minWidth={160}
+          />
+        </View>
+        <View
+          testID="tools-club-picker"
+          className="flex-1"
+          style={{ minWidth: 160 }}
+        >
+          <Text className="text-xs text-gray-500 mb-1">Club host branding</Text>
+          <SingleSelectDropdown
+            options={clubOptions}
+            selectedValue={clubId}
+            onSelectionChange={v => setClubId(Number(v))}
+            placeholder="Club host"
+            title="Club host branding"
+            minWidth={160}
+          />
+        </View>
+      </View>
+
+      <View
+        testID="tools-division-row"
+        className="flex-row flex-wrap gap-3 items-end"
+      >
+        <View
+          className="flex-1"
+          style={{ minWidth: 160 }}
+          testID="tools-division-picker"
+        >
+          <Text className="text-xs text-gray-500 mb-1">Division</Text>
+          <SingleSelectDropdown
+            options={
+              divisionOptions.length
+                ? divisionOptions
+                : selectedDivisionId != null
+                  ? [
+                      {
+                        label: selectedColor,
+                        value: selectedDivisionId,
+                      },
+                    ]
+                  : []
+            }
+            selectedValue={selectedDivisionId}
+            onSelectionChange={v => applyDivisionSelection(Number(v))}
+            placeholder="Select division"
+            title="Division"
+            minWidth={160}
+          />
+        </View>
+        <View className="flex-1" style={{ minWidth: 160 }}>
+          <Text className="text-xs text-gray-500 mb-1">Division name (PDF)</Text>
+          <AppTextInput
+            className="border border-gray-300 rounded px-3 py-2"
+            placeholder="Division name for PDF"
+            value={divisionNamePdf}
+            onChangeText={setDivisionNamePdf}
+            testID="tools-division-name-pdf"
+          />
+        </View>
+      </View>
+
+      <View testID="tools-players-field">
+        <Text className="text-xs text-gray-500 mb-1">Players</Text>
+        <View testID="tools-player-picker">
+          <SingleSelectDropdown
+            options={playerPicker.options}
+            selectedValue={pendingPlayerId}
+            onSelectionChange={addPlayerFromPicker}
+            placeholder="Select player"
+            title="Players"
+            minWidth={220}
+            searchable
+            onSearch={playerPicker.onSearch}
+            loading={playerPicker.loading}
+            clearable
+          />
+        </View>
+      </View>
+
+      <View testID="tools-courts-field">
+        <Text className="text-xs text-gray-500 mb-1">Courts</Text>
+        <View
+          testID="tools-courts-row"
+          className="flex-row flex-wrap items-center gap-2"
+        >
+          {courts.map((name, i) => (
+            <View
+              key={`${i}-${name}`}
+              testID={`tools-court-badge-${i}`}
+              className="flex-row items-center bg-gray-100 border border-gray-300 rounded px-2 py-1"
+            >
+              <Text className="text-sm text-gray-800 mr-1">{name}</Text>
+              <Pressable
+                onPress={() => removeCourt(i)}
+                testID={`tools-court-remove-${i}`}
+                accessibilityLabel={`Remove ${name}`}
+              >
+                <Ionicons name="close-circle" size={16} color="#9ca3af" />
+              </Pressable>
+            </View>
+          ))}
+          <AppTextInput
+            className="border border-gray-300 rounded px-3 py-2 min-w-[120px] flex-1"
+            placeholder={
+              courts.length >= MAX_COURTS
+                ? 'Max 4 courts'
+                : 'Court name'
+            }
+            value={courtDraft}
+            onChangeText={setCourtDraft}
+            onSubmitEditing={addCourt}
+            editable={courts.length < MAX_COURTS}
+            testID="tools-court-draft"
+          />
+          <ActionButton
+            testID="tools-court-add"
+            label="Add"
+            variant="secondary"
+            size="sm"
+            disabled={courts.length >= MAX_COURTS}
+            onPress={addCourt}
+          />
+        </View>
+      </View>
+
+      <View className="flex-row gap-2">
+        <View className="flex-1">
+          <Text className="text-xs text-gray-500 mb-1">Start</Text>
+          <AppTextInput
+            className="border border-gray-300 rounded px-3 py-2"
+            placeholder="Start"
+            value={timeStart}
+            onChangeText={setTimeStart}
+            testID="tools-time-start"
+          />
+        </View>
+        <View className="flex-1">
+          <Text className="text-xs text-gray-500 mb-1">End</Text>
+          <AppTextInput
+            className="border border-gray-300 rounded px-3 py-2"
+            placeholder="End"
+            value={timeEnd}
+            onChangeText={setTimeEnd}
+            testID="tools-time-end"
+          />
+        </View>
+      </View>
+      <View className="flex-row gap-2">
+        <View className="flex-1">
+          <Text className="text-xs text-gray-500 mb-1">Opponents</Text>
+          <AppTextInput
+            className="border border-gray-300 rounded px-3 py-2"
+            placeholder="Opponents"
+            value={opponents}
+            onChangeText={setOpponents}
+            keyboardType="numeric"
+            testID="tools-opponents"
+          />
+        </View>
+        <View className="flex-1">
+          <Text className="text-xs text-gray-500 mb-1">Repeat</Text>
+          <AppTextInput
+            className="border border-gray-300 rounded px-3 py-2"
+            placeholder="Repeat"
+            value={repeat}
+            onChangeText={setRepeat}
+            keyboardType="numeric"
+            testID="tools-repeat"
+          />
+        </View>
+      </View>
+
+      <Pressable
+        onPress={() => setIncludeFinal(v => !v)}
+        className="flex-row items-center"
+      >
+        <Ionicons
+          name={includeFinal ? 'checkbox' : 'square-outline'}
+          size={20}
+          color="#2563eb"
+        />
+        <Text className="ml-2 text-sm text-gray-800">Include final</Text>
+      </Pressable>
+      <Pressable
+        onPress={() => setHasDemonstrative(v => !v)}
+        className="flex-row items-center"
+      >
+        <Ionicons
+          name={hasDemonstrative ? 'checkbox' : 'square-outline'}
+          size={20}
+          color="#2563eb"
+        />
+        <Text className="ml-2 text-sm text-gray-800">Demonstrative match</Text>
+      </Pressable>
+
+      <Text className="text-xs text-gray-500">Adjust (±2 / ±4 / ±6)</Text>
+      <View className="flex-row flex-wrap gap-2">
+        {[-6, -4, -2, 0, 2, 4, 6].map(n => (
+          <Pressable
+            key={n}
+            onPress={() => setAdjust(n)}
+            className={`px-3 py-1 rounded border ${
+              adjust === n
+                ? 'bg-blue-600 border-blue-600'
+                : 'bg-white border-gray-300'
+            }`}
+          >
+            <Text
+              className={
+                adjust === n ? 'text-white text-sm' : 'text-gray-700 text-sm'
+              }
+            >
+              {n > 0 ? `+${n}` : String(n)}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
+      <View className="flex-row flex-wrap gap-2 mt-2">
+        <ActionButton
+          testID="tools-preview"
+          label="Preview"
+          variant="primary"
+          size="sm"
+          status={previewStatus.status}
+          errorMessage={previewStatus.errorMessage ?? undefined}
+          onPress={() => void previewStatus.run(runPreview)}
+        />
+        {courts.map((name, i) => (
+          <CourtMatchesPdfButton
+            key={`${i}-${name}`}
+            courtIndex={i}
+            courtName={name}
+            onDownload={downloadMatchesPdf}
+          />
+        ))}
+        <ActionButton
+          testID="tools-pdf-ranking"
+          label="PDF Ranking"
+          startIcon="download"
+          variant="positive"
+          size="sm"
+          status={pdfRankingStatus.status}
+          errorMessage={pdfRankingStatus.errorMessage ?? undefined}
+          onPress={() => void pdfRankingStatus.run(downloadRankingPdf)}
+        />
+      </View>
+
+      {preview && (
+        <View className="mt-2" testID="tools-preview-summary">
+          <Text className="text-xs text-gray-600">
+            Template file: {String(preview.template_file ?? '—')}
+          </Text>
+          <Text className="text-xs text-gray-600">
+            Template version: {String(preview.template_version ?? '—')}
+          </Text>
+          <Text className="text-xs text-gray-600">
+            Average playing time / match:{' '}
+            {preview.average_playing_time_minutes != null
+              ? `${preview.average_playing_time_minutes} min`
+              : '—'}
+          </Text>
+          <Text className="text-xs text-gray-600">
+            Matches: {String(preview.matches_count ?? '—')}
+          </Text>
+          <Text className="text-xs text-gray-600">
+            Points per match:{' '}
+            {preview.points_per_match_print != null
+              ? String(preview.points_per_match_print)
+              : '—'}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+
+  const selectedColumn =
+    selectedPlayers.length > 0 ? (
+      <View
+        testID="tools-selected-players"
+        className="w-80 mb-4 ml-3 bg-white border border-gray-200 rounded-lg p-4 gap-1"
+        style={
+          Platform.OS === 'web'
+            ? ({ position: 'sticky', top: 0 } as any)
+            : undefined
+        }
+      >
+        <Text className="font-semibold text-gray-900 mb-1">
+          Selected players ({selectedPlayers.length})
+        </Text>
+        {selectedPlayers.map((p, index) => {
+          const collecting = collectingPlayerIds.includes(p.id_player);
+          return (
+            <SortableRow
+              key={`sel-${p.id_player}`}
+              index={index}
+              count={selectedPlayers.length}
+              locked={false}
+              rowHeight={SORTABLE_ROW_HEIGHT}
+              activationMode="handle"
+              onReorder={reorderPlayers}
+              testID={`tools-player-row-${p.id_player}`}
+            >
+              <View
+                className="flex-row items-center"
+                style={{ height: SORTABLE_ROW_HEIGHT, gap: 6 }}
+              >
+                <SortableDragHandle
+                  testID={`tools-player-drag-${p.id_player}`}
+                />
+                <CachedPdfImageReload
+                  testIdPrefix={`tools-player-avatar-${p.id_player}`}
+                  imageUrl={avatarUrlFor(
+                    p.id_player,
+                    p.pdf_avatar_url ?? null
+                  )}
+                  size={28}
+                  spinning={Boolean(avatarSpinning[p.id_player])}
+                  errorReason={avatarErrors[p.id_player] || null}
+                  onReload={() =>
+                    void reloadAvatar({
+                      key: p.id_player,
+                      playerId: p.id_player,
+                      collecting,
+                    })
+                  }
+                />
+                <View className="flex-row items-center">
+                  <Pressable
+                    onPress={() => toggleCollecting(p.id_player)}
+                    className="flex-row items-center"
+                    testID={`tools-collecting-${p.id_player}`}
+                    accessibilityLabel="Collecting points"
+                  >
+                    <Ionicons
+                      name={collecting ? 'checkbox' : 'square-outline'}
+                      size={18}
+                      color="#6b7280"
+                    />
+                  </Pressable>
+                  <Tooltip
+                    content={COLLECTING_POINTS_TOOLTIP}
+                    testID={`tools-collecting-tip-${p.id_player}`}
+                  >
+                    <Ionicons
+                      name="albums-outline"
+                      size={16}
+                      color="#6b7280"
+                      style={{ marginLeft: 4 }}
+                    />
+                  </Tooltip>
+                </View>
+                <Text className="ml-1 text-sm text-gray-800 flex-1" numberOfLines={1}>
+                  {playerDisplayName(p)}
+                </Text>
+                <Pressable
+                  onPress={() => removePlayer(p.id_player)}
+                  className="p-1"
+                  testID={`tools-remove-player-${p.id_player}`}
+                  accessibilityLabel={`Remove ${playerDisplayName(p)}`}
+                >
+                  <Ionicons name="close-circle" size={20} color="#9ca3af" />
+                </Pressable>
+              </View>
+            </SortableRow>
+          );
+        })}
+      </View>
+    ) : null;
 
   return (
     <AppLayout
@@ -290,358 +775,123 @@ export default function ToolsTemplatesPage() {
     >
       <TemplatesBreadcrumbs />
       <View className="p-4">
-          {error && (
-            <Text className="text-sm text-red-600 bg-red-50 p-2 rounded mb-3">
-              {error}
-            </Text>
-          )}
-          {loading && <ActivityIndicator />}
+        {error && (
+          <Text className="text-sm text-red-600 bg-red-50 p-2 rounded mb-3">
+            {error}
+          </Text>
+        )}
+        {loading && <ActivityIndicator />}
 
-          <View className="flex-row mb-4 border-b border-gray-200">
-            <Pressable
-              onPress={() => setActiveTab('catalog')}
-              className={`px-4 py-2 mr-2 border-b-2 ${
-                activeTab === 'catalog'
-                  ? 'border-blue-600'
-                  : 'border-transparent'
-              }`}
-              testID="tools-tab-catalog"
+        <View className="flex-row mb-4 border-b border-gray-200">
+          <Pressable
+            onPress={() => setActiveTab('modeB')}
+            className={`px-4 py-2 mr-2 border-b-2 ${
+              activeTab === 'modeB' ? 'border-blue-600' : 'border-transparent'
+            }`}
+            testID="tools-tab-mode-b"
+          >
+            <Text
+              className={
+                activeTab === 'modeB'
+                  ? 'text-blue-600 font-semibold'
+                  : 'text-gray-600'
+              }
             >
-              <Text
-                className={
-                  activeTab === 'catalog'
-                    ? 'text-blue-600 font-semibold'
-                    : 'text-gray-600'
-                }
-              >
-                Schedule Templates
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => setActiveTab('modeB')}
-              className={`px-4 py-2 border-b-2 ${
-                activeTab === 'modeB' ? 'border-blue-600' : 'border-transparent'
-              }`}
-              testID="tools-tab-mode-b"
-            >
-              <Text
-                className={
-                  activeTab === 'modeB'
-                    ? 'text-blue-600 font-semibold'
-                    : 'text-gray-600'
-                }
-              >
-                Mode B — Scratch schedule
-              </Text>
-            </Pressable>
-          </View>
-
-          {activeTab === 'catalog' && (
-            <>
-          <View className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
-            <Text className="font-semibold text-gray-900 mb-2">
-              Template catalog
-            </Text>
-            <AdvancedDataTable
-              data={catalogRows}
-              primaryKeyField="id"
-              columns={[
-                { key: 'players', label: 'Players', sortable: false, width: 80 },
-                { key: 'partners', label: 'Partners', sortable: false, width: 80 },
-                { key: 'repeat', label: 'Repeat', sortable: false, width: 80 },
-                { key: 'courts', label: 'Courts', sortable: false, width: 80 },
-                { key: 'fixed_teams', label: 'Fixed', sortable: false, width: 80 },
-              ]}
-              emptyMessage="No catalog rows"
-            />
-          </View>
-
-          <View className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
-            <Text className="font-semibold text-gray-900 mb-2">Metrics</Text>
-            {metrics?.summary != null && (
-              <Text className="text-sm text-gray-700 mb-2">
-                Summary: {String(metrics.summary)}
-              </Text>
-            )}
-            <AdvancedDataTable
-              data={metricsRows}
-              primaryKeyField="id"
-              columns={[
-                { key: 'key', label: 'Metric', sortable: false, width: 160 },
-                { key: 'value', label: 'Value', sortable: false, width: 240 },
-              ]}
-              emptyMessage="No metrics"
-            />
-          </View>
-            </>
-          )}
-
-          {activeTab === 'modeB' && (
-          <View className="bg-white border border-gray-200 rounded-lg p-4 mb-4 gap-2">
-            <Text className="font-semibold text-gray-900">
               Mode B — Scratch schedule
             </Text>
-            <Text className="text-xs text-gray-500">
-              Players cached locally
-              {playersLoading
-                ? ` (loading… ${playerCache.length})`
-                : ` (${playerCache.length})`}
-              . Type ≥2 characters to filter.
-            </Text>
-            <AppTextInput
-              className="border border-gray-300 rounded px-3 py-2"
-              placeholder="Filter players (min 2 chars)"
-              value={playerQuery}
-              onChangeText={setPlayerQuery}
-              testID="tools-player-filter"
-            />
-            {filteredPlayers.slice(0, 40).map(p => (
-              <Pressable
-                key={p.id_player}
-                onPress={() => togglePlayer(p)}
-                className="py-1"
-              >
-                <Text className="text-sm text-gray-800">
-                  {selectedPlayers.some(s => s.id_player === p.id_player)
-                    ? '✓ '
-                    : '○ '}
-                  {p.name || `${p.first_name} ${p.last_name}`} (#{p.id_player})
-                </Text>
-              </Pressable>
-            ))}
-
-            <Text className="text-xs text-gray-500 mt-1">
-              Selected players / collecting points
-            </Text>
-            {selectedPlayers.map(p => {
-              const collecting = collectingPlayerIds.includes(p.id_player);
-              return (
-                <Pressable
-                  key={`sel-${p.id_player}`}
-                  onPress={() => toggleCollecting(p.id_player)}
-                  className="flex-row items-center py-1"
-                >
-                  <Ionicons
-                    name={collecting ? 'checkbox' : 'square-outline'}
-                    size={18}
-                    color="#2563eb"
-                  />
-                  <Text className="ml-2 text-sm text-gray-800">
-                    {p.name || `${p.first_name} ${p.last_name}`} collecting
-                  </Text>
-                </Pressable>
-              );
-            })}
-
-            <AppTextInput
-              className="border border-gray-300 rounded px-3 py-2"
-              placeholder="Courts (comma, max 4)"
-              value={courtNames}
-              onChangeText={setCourtNames}
-            />
-            <View className="flex-row gap-2">
-              <AppTextInput
-                className="flex-1 border border-gray-300 rounded px-3 py-2"
-                placeholder="Start"
-                value={timeStart}
-                onChangeText={setTimeStart}
-              />
-              <AppTextInput
-                className="flex-1 border border-gray-300 rounded px-3 py-2"
-                placeholder="End"
-                value={timeEnd}
-                onChangeText={setTimeEnd}
-              />
-            </View>
-            <View className="flex-row gap-2">
-              <AppTextInput
-                className="flex-1 border border-gray-300 rounded px-3 py-2"
-                placeholder="Opponents"
-                value={opponents}
-                onChangeText={setOpponents}
-                keyboardType="numeric"
-              />
-              <AppTextInput
-                className="flex-1 border border-gray-300 rounded px-3 py-2"
-                placeholder="Repeat"
-                value={repeat}
-                onChangeText={setRepeat}
-                keyboardType="numeric"
-              />
-            </View>
-
-            <Pressable
-              onPress={() => setIncludeFinal(v => !v)}
-              className="flex-row items-center"
-            >
-              <Ionicons
-                name={includeFinal ? 'checkbox' : 'square-outline'}
-                size={20}
-                color="#2563eb"
-              />
-              <Text className="ml-2 text-sm text-gray-800">Include final</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => setHasDemonstrative(v => !v)}
-              className="flex-row items-center"
-            >
-              <Ionicons
-                name={hasDemonstrative ? 'checkbox' : 'square-outline'}
-                size={20}
-                color="#2563eb"
-              />
-              <Text className="ml-2 text-sm text-gray-800">
-                Demonstrative match
-              </Text>
-            </Pressable>
-
-            <Text className="text-xs text-gray-500">Adjust (±2 / ±4 / ±6)</Text>
-            <View className="flex-row flex-wrap gap-2">
-              {[-6, -4, -2, 0, 2, 4, 6].map(n => (
-                <Pressable
-                  key={n}
-                  onPress={() => setAdjust(n)}
-                  className={`px-3 py-1 rounded border ${
-                    adjust === n
-                      ? 'bg-blue-600 border-blue-600'
-                      : 'bg-white border-gray-300'
-                  }`}
-                >
-                  <Text
-                    className={
-                      adjust === n
-                        ? 'text-white text-sm'
-                        : 'text-gray-700 text-sm'
-                    }
-                  >
-                    {n > 0 ? `+${n}` : String(n)}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-
-            <Text className="text-xs text-gray-500 mt-1">Division color</Text>
-            <SingleSelectDropdown
-              options={
-                divisions.length
-                  ? divisions.map(d => ({
-                      label: `${d.name} (${d.color})`,
-                      value: d.color,
-                    }))
-                  : [{ label: color, value: color }]
+          </Pressable>
+          <Pressable
+            onPress={() => setActiveTab('catalog')}
+            className={`px-4 py-2 border-b-2 ${
+              activeTab === 'catalog'
+                ? 'border-blue-600'
+                : 'border-transparent'
+            }`}
+            testID="tools-tab-catalog"
+          >
+            <Text
+              className={
+                activeTab === 'catalog'
+                  ? 'text-blue-600 font-semibold'
+                  : 'text-gray-600'
               }
-              selectedValue={color}
-              onSelectionChange={v => setColor(String(v))}
-              placeholder="Select color"
-              title="Division color"
-              minWidth={220}
-            />
+            >
+              Schedule Templates
+            </Text>
+          </Pressable>
+        </View>
 
-            <Text className="text-xs text-gray-500 mt-1">Organizer branding</Text>
-            <View testID="tools-organizer-picker">
-              <SingleSelectDropdown
-                options={organizerOptions}
-                selectedValue={organizerId}
-                onSelectionChange={v => setOrganizerId(Number(v))}
-                placeholder="Organizer"
-                title="Organizer branding"
-                minWidth={220}
-              />
-            </View>
-
-            <Text className="text-xs text-gray-500 mt-1">Club host branding</Text>
-            <View testID="tools-club-picker">
-              <SingleSelectDropdown
-                options={clubOptions}
-                selectedValue={clubId}
-                onSelectionChange={v => setClubId(Number(v))}
-                placeholder="Club host"
-                title="Club host branding"
-                minWidth={220}
-              />
-            </View>
-
-            <AppTextInput
-              className="border border-gray-300 rounded px-3 py-2"
-              placeholder="PDF title"
-              value={pdfTitle}
-              onChangeText={setPdfTitle}
-            />
-            <AppTextInput
-              className="border border-gray-300 rounded px-3 py-2"
-              placeholder="court_index for matches PDF"
-              value={courtIndex}
-              onChangeText={setCourtIndex}
-              keyboardType="numeric"
-            />
-            <View className="flex-row flex-wrap gap-2">
-              <ActionButton
-                testID="tools-preview"
-                label="Preview"
-                variant="primary"
-                size="sm"
-                status={previewStatus.status}
-                errorMessage={previewStatus.errorMessage ?? undefined}
-                onPress={() => void previewStatus.run(runPreview)}
-              />
-              <ActionButton
-                testID="tools-pdf-matches"
-                label="PDF Matches"
-                startIcon="download"
-                variant="positive"
-                size="sm"
-                status={pdfMatchesStatus.status}
-                errorMessage={pdfMatchesStatus.errorMessage ?? undefined}
-                onPress={() =>
-                  void pdfMatchesStatus.run(() => downloadPdf('matches'))
-                }
-              />
-              <ActionButton
-                testID="tools-pdf-ranking"
-                label="PDF Ranking"
-                startIcon="download"
-                variant="positive"
-                size="sm"
-                status={pdfRankingStatus.status}
-                errorMessage={pdfRankingStatus.errorMessage ?? undefined}
-                onPress={() =>
-                  void pdfRankingStatus.run(() => downloadPdf('ranking'))
-                }
-              />
-              <ActionButton
-                testID="tools-demo"
-                label="Template demo"
-                variant="ghost"
-                size="sm"
-                status={demoStatus.status}
-                errorMessage={demoStatus.errorMessage ?? undefined}
-                onPress={() => void demoStatus.run(runDemo)}
-              />
-            </View>
-            {preview && (
-              <View className="mt-2">
-                <Text className="text-xs text-gray-600 font-mono">
-                  matches={String(preview.matches_count)} points=
-                  {String(preview.points_per_match)} template=
-                  {String(preview.template_version)}
-                </Text>
-                {previewMatches.slice(0, 12).map((m, i) => (
-                  <Text key={i} className="text-xs text-gray-500 mt-1">
-                    {m.court_name || `Court ${m.court_index}`} · A:
-                    {(m.side_a || []).join(',')} vs B:
-                    {(m.side_b || []).join(',')}
-                  </Text>
-                ))}
-              </View>
-            )}
-            {demo && (
-              <Text className="text-xs text-gray-600 mt-2">
-                Demo loaded — players={String((demo as any).players ?? '—')}{' '}
-                matches={String((demo as any).matches_count ?? '—')}
+        {activeTab === 'catalog' && (
+          <>
+            <View className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
+              <Text className="font-semibold text-gray-900 mb-2">
+                Template catalog
               </Text>
-            )}
+              <AdvancedDataTable
+                data={catalogRows}
+                primaryKeyField="id"
+                columns={[
+                  {
+                    key: 'players',
+                    label: 'Players',
+                    sortable: false,
+                    width: 80,
+                  },
+                  {
+                    key: 'partners',
+                    label: 'Partners',
+                    sortable: false,
+                    width: 80,
+                  },
+                  {
+                    key: 'repeat',
+                    label: 'Repeat',
+                    sortable: false,
+                    width: 80,
+                  },
+                  {
+                    key: 'courts',
+                    label: 'Courts',
+                    sortable: false,
+                    width: 80,
+                  },
+                  {
+                    key: 'fixed_teams',
+                    label: 'Fixed',
+                    sortable: false,
+                    width: 80,
+                  },
+                ]}
+                emptyMessage="No catalog rows"
+              />
+            </View>
+
+            <View className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
+              <Text className="font-semibold text-gray-900 mb-2">Metrics</Text>
+              {metrics?.summary != null && (
+                <Text className="text-sm text-gray-700 mb-2">
+                  Summary: {String(metrics.summary)}
+                </Text>
+              )}
+              <AdvancedDataTable
+                data={metricsRows}
+                primaryKeyField="id"
+                columns={[
+                  { key: 'key', label: 'Metric', sortable: false, width: 160 },
+                  { key: 'value', label: 'Value', sortable: false, width: 240 },
+                ]}
+                emptyMessage="No metrics"
+              />
+            </View>
+          </>
+        )}
+
+        {activeTab === 'modeB' && (
+          <View className="flex-row flex-wrap items-start">
+            {formColumn}
+            {selectedColumn}
           </View>
-          )}
+        )}
       </View>
     </AppLayout>
   );

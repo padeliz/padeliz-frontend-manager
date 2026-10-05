@@ -1,66 +1,66 @@
-import { PosterRow } from '@/types/api/edition';
+import { PosterRow } from '@/types/api/event';
 import { BaseApiService } from './baseApi';
 
 export class PostersApiService extends BaseApiService {
   async list(
-    editionDivisionId: number
+    eventDivisionId: number
   ): Promise<{ data: PosterRow[] }> {
     return this.get<{ data: PosterRow[] }>(
-      `/edition-divisions/${editionDivisionId}/posters`
+      `/event-divisions/${eventDivisionId}/posters`
     );
   }
 
   /**
-   * Branding comes from the edition's organizer and club host, not the request.
+   * Branding comes from the event's organizer and club host, not the request.
    */
   async generateMatches(
-    editionDivisionId: number,
+    eventDivisionId: number,
     params: { court: number }
   ): Promise<{ data: PosterRow; message?: string }> {
-    return this.post(`/edition-divisions/${editionDivisionId}/posters/matches`, {
+    return this.post(`/event-divisions/${eventDivisionId}/posters/matches`, {
       court: params.court,
     });
   }
 
   async generateRanking(
-    editionDivisionId: number
+    eventDivisionId: number
   ): Promise<{ data: PosterRow; message?: string }> {
     return this.post(
-      `/edition-divisions/${editionDivisionId}/posters/ranking`,
+      `/event-divisions/${eventDivisionId}/posters/ranking`,
       {}
     );
   }
 
   async downloadMatchesPdf(
-    editionDivisionId: number,
+    eventDivisionId: number,
     params: { court: number },
     filename = 'matches.pdf'
   ): Promise<void> {
     await this.downloadPdf(
-      `/edition-divisions/${editionDivisionId}/posters/matches/file?court=${params.court}`,
+      `/event-divisions/${eventDivisionId}/posters/matches/file?court=${params.court}`,
       filename,
       { method: 'GET' }
     );
   }
 
   async downloadRankingPdf(
-    editionDivisionId: number,
+    eventDivisionId: number,
     filename = 'ranking.pdf'
   ): Promise<void> {
     await this.downloadPdf(
-      `/edition-divisions/${editionDivisionId}/posters/ranking/file`,
+      `/event-divisions/${eventDivisionId}/posters/ranking/file`,
       filename,
       { method: 'GET' }
     );
   }
 
   async downloadPrinted(
-    editionDivisionId: number,
+    eventDivisionId: number,
     posterId: number,
     filename = 'printed.jpg'
   ): Promise<void> {
     await this.downloadNamedFile(
-      `/edition-divisions/${editionDivisionId}/posters/${posterId}/printed/file`,
+      `/event-divisions/${eventDivisionId}/posters/${posterId}/printed/file`,
       filename,
       {
         method: 'GET',
@@ -70,7 +70,7 @@ export class PostersApiService extends BaseApiService {
   }
 
   async uploadPrinted(
-    editionDivisionId: number,
+    eventDivisionId: number,
     posterId: number,
     file: Blob | File,
     filename = 'printed.jpg'
@@ -78,7 +78,7 @@ export class PostersApiService extends BaseApiService {
     const formData = new FormData();
     formData.append('image', file as any, filename);
     return this.requestFormData<{ data: PosterRow }>(
-      `/edition-divisions/${editionDivisionId}/posters/${posterId}/printed`,
+      `/event-divisions/${eventDivisionId}/posters/${posterId}/printed`,
       formData
     );
   }

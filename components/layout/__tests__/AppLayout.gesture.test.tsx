@@ -25,7 +25,7 @@ jest.mock('@/context/managerAuth', () => ({
 
 jest.mock('expo-router', () =>
   require('@/testing/expoRouterMock').createExpoRouterMock({
-  usePathname: () => '/editions/1',
+  usePathname: () => '/events/1',
   Link: ({ children }: any) => children,
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
 })
@@ -45,13 +45,13 @@ jest.mock('@/components/layout/Sidebar', () => {
   };
 });
 
-jest.mock('@/components/editions/EditionTabsBar', () => {
+jest.mock('@/components/events/EventTabsBar', () => {
   const { Text, View } = require('react-native');
-  return function EditionTabsBar({ tabs }: { tabs: { label: string }[] }) {
+  return function EventTabsBar({ tabs }: { tabs: { label: string }[] }) {
     return (
-      <View testID="edition-tabs-bar">
+      <View testID="event-tabs-bar">
         {tabs.map(t => (
-          <Text key={t.label} testID={`edition-tab-${t.label}`}>
+          <Text key={t.label} testID={`event-tab-${t.label}`}>
             {t.label}
           </Text>
         ))}
@@ -168,14 +168,14 @@ describe('AppLayout', () => {
     );
 
     await waitFor(() => {
-      expect(getByTestId('edition-tab-Flip0')).toBeTruthy();
+      expect(getByTestId('event-tab-Flip0')).toBeTruthy();
     });
     const afterMount = Number(getByTestId('content-renders').props.children);
 
     fireEvent.press(getByTestId('flip-subtab'));
 
     await waitFor(() => {
-      expect(getByTestId('edition-tab-Flip1')).toBeTruthy();
+      expect(getByTestId('event-tab-Flip1')).toBeTruthy();
     });
     expect(Number(getByTestId('content-renders').props.children)).toBe(
       afterMount

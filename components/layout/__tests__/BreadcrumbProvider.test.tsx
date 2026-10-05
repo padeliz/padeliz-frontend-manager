@@ -113,7 +113,7 @@ describe('BreadcrumbProvider', () => {
         <Segment
           id="zone"
           items={[
-            { label: 'Editions', href: '/editions' },
+            { label: 'Events', href: '/events' },
             { label: 'Summer' },
           ]}
         />
@@ -124,7 +124,7 @@ describe('BreadcrumbProvider', () => {
 
     await waitFor(() => {
       expect(getByTestId('trail').props.children).toBe(
-        'Editions > Summer > Details'
+        'Events > Summer > Details'
       );
     });
   });
@@ -185,11 +185,11 @@ describe('BreadcrumbProvider', () => {
     const { getByTestId } = render(
       <BreadcrumbProvider>
         <Segment
-          id="edition"
+          id="event"
           items={[
-            { label: 'Editions', href: '/editions' },
+            { label: 'Events', href: '/events' },
             { label: 'Summer' },
-            { label: 'Registrations', href: '/editions/1/registrations' },
+            { label: 'Registrations', href: '/events/1/registrations' },
           ]}
         />
         <Segment id="sub" items={[{ label: 'List' }]} depth={1} />
@@ -199,7 +199,7 @@ describe('BreadcrumbProvider', () => {
 
     await waitFor(() => {
       expect(getByTestId('trail').props.children).toBe(
-        'Editions > Summer > Registrations > List'
+        'Events > Summer > Registrations > List'
       );
     });
   });

@@ -30,7 +30,7 @@ export default function RootLayout() {
                     }}
                   />
                   <Stack.Screen
-                    name="lottery-live/[editionId]"
+                    name="lottery-live/[eventId]"
                     options={{
                       headerShown: false,
                     }}

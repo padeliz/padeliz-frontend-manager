@@ -1,16 +1,16 @@
 /**
- * Full-screen MiniTour-style lottery live kiosk (edition-scoped).
+ * Full-screen MiniTour-style lottery live kiosk (event-scoped).
  */
 
-import { resolveBoardAsset } from '@/components/editions/editionLotteryUtils';
+import { resolveBoardAsset } from '@/components/events/eventLotteryUtils';
 import { queryKeys } from '@/lib/queryClient';
-import { EditionsApiService } from '@/services/api/editionsApi';
+import { EventsApiService } from '@/services/api/eventsApi';
 import { lotteryLiveApi } from '@/services/api/lotteryLiveApi';
-import { LotteryLiveState, LotteryLucky } from '@/types/api/edition';
+import { LotteryLiveState, LotteryLucky } from '@/types/api/event';
 import {
   resolvePrizeMedia,
   shouldAutoAnnounce,
-} from '@/utils/edition/lotteryMedia';
+} from '@/utils/event/lotteryMedia';
 import { useQuery } from '@tanstack/react-query';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -23,10 +23,10 @@ import {
   View,
 } from 'react-native';
 
-const editionsApi = new EditionsApiService();
+const eventsApi = new EventsApiService();
 
 type Props = {
-  editionId: number;
+  eventId: number;
   lotteryId?: number | null;
 };
 
@@ -366,7 +366,7 @@ function InProgressLayout({
           <>
             <LuckyAvatar lucky={lucky} large />
             {finalized ? (
-              <Text style={styles.readOnly}>Edition finalized — view only</Text>
+              <Text style={styles.readOnly}>Event finalized — view only</Text>
             ) : null}
           </>
         )}
@@ -376,7 +376,7 @@ function InProgressLayout({
 }
 
 export default function LotteryLiveKiosk({
-  editionId,
+  eventId,
   lotteryId: lotteryIdProp = null,
 }: Props) {
   const [live, setLive] = useState<LotteryLiveState | null>(null);
@@ -390,15 +390,15 @@ export default function LotteryLiveKiosk({
       ? Number(lotteryIdProp)
       : null;
 
-  const editionQuery = useQuery({
-    queryKey: queryKeys.edition(editionId),
+  const eventQuery = useQuery({
+    queryKey: queryKeys.event(eventId),
     queryFn: async () => {
-      const res = await editionsApi.getEdition(editionId);
+      const res = await eventsApi.getEvent(eventId);
       return res.data;
     },
-    enabled: Number.isFinite(editionId),
+    enabled: Number.isFinite(eventId),
   });
-  const finalized = !!(editionQuery.data as any)?.finalized_at;
+  const finalized = !!(eventQuery.data as any)?.finalized_at;
 
   const refreshLive = useCallback(async () => {
     if (!lotteryId) return;
@@ -478,8 +478,8 @@ export default function LotteryLiveKiosk({
 
   const bgUrl = resolveBoardAsset(live?.background);
   const logoUrl = resolveBoardAsset(live?.logo);
-  const editionName =
-    live?.edition?.name || (editionQuery.data as any)?.name || `Edition ${editionId}`;
+  const eventName =
+    live?.event?.name || (eventQuery.data as any)?.name || `Event ${eventId}`;
   const lucky = live?.lucky;
   const showTimer = !!lucky && secondsLeft > 0;
   const showReveal = !!lucky && secondsLeft <= 0;
@@ -500,8 +500,8 @@ export default function LotteryLiveKiosk({
         ) : (
           <Text style={styles.logoFallback}>ARSH Padel MiniTour</Text>
         )}
-        <Text testID="lottery-live-edition-title" style={styles.editionTitle}>
-          {editionName} Lottery
+        <Text testID="lottery-live-event-title" style={styles.eventTitle}>
+          {eventName} Lottery
         </Text>
       </View>
 
@@ -531,17 +531,17 @@ export default function LotteryLiveKiosk({
             <Text style={styles.finishedText}>
               Congratulations to the lucky ones!
             </Text>
-            {live?.next_edition?.name ? (
+            {live?.next_event?.name ? (
               <Text style={styles.finishedText}>
-                See you at the next edition: {live.next_edition.name}
-                {live.next_edition.date
-                  ? ` on ${live.next_edition.date}`
+                See you at the next event: {live.next_event.name}
+                {live.next_event.date
+                  ? ` on ${live.next_event.date}`
                   : ''}{' '}
                 💚
               </Text>
             ) : (
               <Text style={styles.finishedText}>
-                See you at the next edition 💚
+                See you at the next event 💚
               </Text>
             )}
           </View>
@@ -593,7 +593,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontFamily: 'OpenSans, sans-serif',
   },
-  editionTitle: {
+  eventTitle: {
     color: '#fff',
     fontSize: 22,
     marginTop: 8,

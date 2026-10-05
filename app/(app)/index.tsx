@@ -30,10 +30,10 @@ export default function DashboardScreen() {
       color: 'bg-green-500',
     },
     {
-      title: 'Manage Editions',
-      description: 'Create and manage tournament editions',
+      title: 'Manage Events',
+      description: 'Create and manage tournament events',
       icon: 'calendar',
-      href: '/editions',
+      href: '/events',
       color: 'bg-purple-500',
     },
     {
@@ -125,7 +125,7 @@ export default function DashboardScreen() {
           </View>
           <View className="bg-white p-6 rounded-lg border border-gray-200">
             <Text className="text-2xl font-bold text-purple-600 mb-1">2</Text>
-            <Text className="text-gray-600">Editions</Text>
+            <Text className="text-gray-600">Events</Text>
           </View>
           <View className="bg-white p-6 rounded-lg border border-gray-200">
             <Text className="text-2xl font-bold text-orange-600 mb-1">25</Text>

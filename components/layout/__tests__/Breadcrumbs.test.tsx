@@ -15,7 +15,7 @@ describe('Breadcrumbs', () => {
         items={[
           { label: 'Organizers', href: '/organizers' },
           { label: 'Bucharest Padel Tour' },
-          { label: 'Editions', href: '/editions' },
+          { label: 'Events', href: '/events' },
           { label: '#37' },
           { label: 'Registrations' },
           { label: 'Register Players' },
