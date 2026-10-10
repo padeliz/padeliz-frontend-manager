@@ -1,5 +1,5 @@
 /**
- * Player custom field values: history table, submit form, invalidate.
+ * Player custom field values: history table (with review status), submit form.
  */
 
 import ActionButton from '@/components/ui/ActionButton';
@@ -18,6 +18,17 @@ import {
   ApiPlayerCustomFieldValue,
 } from '@/types/api/entities';
 import { DropdownOption } from '@/types/ui/dropdowns';
+import {
+  allowedStrings,
+  buildRacketExperienceValue,
+  emptyRacketExperienceEntry,
+  formatJsonFieldValue,
+  isJsonField,
+  isRacketExperienceField,
+  parseJsonDraft,
+  RACKET_EXPERIENCE_MEASURES,
+  RacketExperienceDraftEntry,
+} from '@/utils/customFieldJson';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -41,7 +52,24 @@ function formatTimestamp(ts?: number | null): string {
   return new Date(ts * 1000).toLocaleString();
 }
 
+const REVIEW_STATUS_LABEL: Record<string, string> = {
+  pending: 'Pending',
+  validated: 'Validated',
+  rejected: 'Rejected',
+  discarded: 'Discarded',
+};
+
+const REVIEW_STATUS_CLASS: Record<string, string> = {
+  pending: 'text-amber-700',
+  validated: 'text-green-700',
+  rejected: 'text-red-600',
+  discarded: 'text-gray-500',
+};
+
 function displayValue(value: ApiPlayerCustomFieldValue): string {
+  if (isJsonField(value.field)) {
+    return formatJsonFieldValue(value.field, value.value_json ?? value.value);
+  }
   if (value.value != null && value.value !== '') {
     return String(value.value);
   }
@@ -69,13 +97,11 @@ export default function PlayerCustomFieldsPanel({ playerId }: Props) {
   const [dateValue, setDateValue] = useState('');
   const [optionId, setOptionId] = useState<number | null>(null);
   const [optionIds, setOptionIds] = useState<number[]>([]);
-  const [invalidatingId, setInvalidatingId] = useState<number | null>(null);
-  const [invalidationReason, setInvalidationReason] = useState('');
+  const [jsonText, setJsonText] = useState('');
+  const [racketEntries, setRacketEntries] = useState<
+    RacketExperienceDraftEntry[]
+  >([emptyRacketExperienceEntry()]);
   const submitStatus = useActionButtonStatus({ auditoryFeedback: true });
-  const invalidateStatus = useActionButtonStatus({
-    auditoryFeedback: true,
-    resetKey: invalidatingId,
-  });
 
   const selectedField = useMemo(
     () => fields.find(f => f.id_player_custom_field === selectedFieldId) ?? null,
@@ -159,7 +185,11 @@ export default function PlayerCustomFieldsPanel({ playerId }: Props) {
     setDateValue('');
     setOptionId(null);
     setOptionIds([]);
+    setJsonText('');
+    setRacketEntries([emptyRacketExperienceEntry()]);
   };
+
+  const jsonErrorRef = React.useRef<string | null>(null);
 
   const buildPayload = (): PlayerCustomFieldValueSubmitPayload | null => {
     if (!selectedField) return null;
@@ -188,6 +218,17 @@ export default function PlayerCustomFieldsPanel({ playerId }: Props) {
         if (optionIds.length === 0) return null;
         payload.option_ids = optionIds;
         break;
+      case 'json': {
+        const built = isRacketExperienceField(selectedField)
+          ? buildRacketExperienceValue(racketEntries)
+          : parseJsonDraft(jsonText);
+        if (!built.ok) {
+          jsonErrorRef.current = built.error;
+          return null;
+        }
+        payload.value = built.value as PlayerCustomFieldValueSubmitPayload['value'];
+        break;
+      }
       default:
         return null;
     }
@@ -195,9 +236,11 @@ export default function PlayerCustomFieldsPanel({ playerId }: Props) {
   };
 
   const onSubmit = async () => {
+    jsonErrorRef.current = null;
     const payload = buildPayload();
     if (!payload) {
-      const message = 'Complete the value for the selected field.';
+      const message =
+        jsonErrorRef.current ?? 'Complete the value for the selected field.';
       showError('Validation', message);
       throw new Error(message);
     }
@@ -213,24 +256,121 @@ export default function PlayerCustomFieldsPanel({ playerId }: Props) {
     await loadValues();
   };
 
-  const onInvalidate = async (valueId: number) => {
-    try {
-      await valuesApi.invalidateValue(playerId, valueId, {
-        invalidation_reason: invalidationReason.trim() || undefined,
-      });
-    } catch (err: any) {
-      showError('Invalidate failed', err?.message || 'Could not invalidate');
-      throw err;
-    }
-    showSuccess('Invalidated', 'Value marked as invalidated');
-    setInvalidatingId(null);
-    setInvalidationReason('');
-    await loadValues();
-  };
-
   const toggleMultiOption = (id: number) => {
     setOptionIds(prev =>
       prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const updateRacketEntry = (
+    index: number,
+    patch: Partial<RacketExperienceDraftEntry>
+  ) => {
+    setRacketEntries(prev =>
+      prev.map((entry, i) => (i === index ? { ...entry, ...patch } : entry))
+    );
+  };
+
+  const renderRacketExperienceInput = () => {
+    const sports = allowedStrings(selectedField?.rules_json, 'sports');
+    const levels = allowedStrings(selectedField?.rules_json, 'levels');
+    const toOptions = (items: string[]): DropdownOption[] =>
+      items.map(item => ({ label: item, value: item }));
+    return (
+      <View testID="custom-field-value-racket-experience">
+        {racketEntries.map((entry, index) => (
+          <View
+            key={index}
+            testID={`racket-entry-${index}`}
+            className="border border-gray-200 rounded-lg p-3 mb-2 bg-white"
+          >
+            <View className="mb-2">
+              {sports.length > 0 ? (
+                <SingleSelectDropdown
+                  options={toOptions(sports)}
+                  selectedValue={entry.sport || null}
+                  onSelectionChange={value =>
+                    updateRacketEntry(index, {
+                      sport: value == null ? '' : String(value),
+                    })
+                  }
+                  placeholder="Sport"
+                  title="Sport"
+                  clearable
+                />
+              ) : (
+                <AppTextInput
+                  testID={`racket-sport-${index}`}
+                  value={entry.sport}
+                  onChangeText={v => updateRacketEntry(index, { sport: v })}
+                  placeholder="Sport"
+                  className="border border-gray-300 rounded-lg px-3 py-2 bg-white"
+                />
+              )}
+            </View>
+            <View className="mb-2">
+              {levels.length > 0 ? (
+                <SingleSelectDropdown
+                  options={toOptions(levels)}
+                  selectedValue={entry.level || null}
+                  onSelectionChange={value =>
+                    updateRacketEntry(index, {
+                      level: value == null ? '' : String(value),
+                    })
+                  }
+                  placeholder="Level"
+                  title="Level"
+                  clearable
+                />
+              ) : (
+                <AppTextInput
+                  testID={`racket-level-${index}`}
+                  value={entry.level}
+                  onChangeText={v => updateRacketEntry(index, { level: v })}
+                  placeholder="Level"
+                  className="border border-gray-300 rounded-lg px-3 py-2 bg-white"
+                />
+              )}
+            </View>
+            <View className="flex-row flex-wrap gap-2">
+              {RACKET_EXPERIENCE_MEASURES.map(measure => (
+                <AppTextInput
+                  key={measure}
+                  testID={`racket-${measure}-${index}`}
+                  value={entry[measure]}
+                  onChangeText={v =>
+                    updateRacketEntry(index, { [measure]: v })
+                  }
+                  placeholder={measure.replace(/_/g, ' ')}
+                  keyboardType="numeric"
+                  className="border border-gray-300 rounded-lg px-3 py-2 bg-white flex-1"
+                  style={{ minWidth: 110 }}
+                />
+              ))}
+            </View>
+            {racketEntries.length > 1 ? (
+              <Pressable
+                testID={`racket-remove-${index}`}
+                onPress={() =>
+                  setRacketEntries(prev => prev.filter((_, i) => i !== index))
+                }
+                className="self-start mt-2 bg-red-50 rounded px-2 py-1"
+              >
+                <Text className="text-red-700 text-xs">Remove</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ))}
+        <Pressable
+          testID="racket-add-entry"
+          onPress={() =>
+            setRacketEntries(prev => [...prev, emptyRacketExperienceEntry()])
+          }
+          className="self-start bg-gray-100 rounded px-3 py-1"
+        >
+          <Text className="text-sm text-gray-700">Add sport</Text>
+        </Pressable>
+      </View>
     );
   };
 
@@ -324,6 +464,23 @@ export default function PlayerCustomFieldsPanel({ playerId }: Props) {
             ))}
           </View>
         );
+      case 'json':
+        if (isRacketExperienceField(selectedField)) {
+          return renderRacketExperienceInput();
+        }
+        return (
+          <AppTextInput
+            testID="custom-field-value-json"
+            value={jsonText}
+            onChangeText={setJsonText}
+            placeholder='{"key": "value"}'
+            multiline
+            autoCapitalize="none"
+            autoCorrect={false}
+            className="border border-gray-300 rounded-lg px-3 py-2 bg-white font-mono"
+            style={{ minHeight: 96 }}
+          />
+        );
       default:
         return null;
     }
@@ -382,15 +539,18 @@ export default function PlayerCustomFieldsPanel({ playerId }: Props) {
         <Text className="text-gray-500">No custom field values yet.</Text>
       ) : (
         values.map(row => {
-          const invalidated = row.invalidated_at != null;
+          const status = row.review_status ?? 'pending';
+          const isCurrent = status === 'validated';
           return (
             <View
               key={row.id_player_custom_field_value}
               testID={`custom-field-value-row-${row.id_player_custom_field_value}`}
               className={`border rounded-lg p-3 mb-2 ${
-                invalidated
+                status === 'rejected'
                   ? 'border-red-200 bg-red-50 opacity-80'
-                  : 'border-gray-200 bg-white'
+                  : status === 'discarded'
+                    ? 'border-gray-200 bg-gray-50 opacity-70'
+                    : 'border-gray-200 bg-white'
               }`}
             >
               <Text className="text-sm font-medium text-gray-900">
@@ -405,65 +565,16 @@ export default function PlayerCustomFieldsPanel({ playerId }: Props) {
               <Text className="text-xs text-gray-500">
                 Submitted: {formatTimestamp(row.inserted_at)}
               </Text>
-              {invalidated ? (
-                <Text className="text-xs text-red-600 mt-1">
-                  Invalidated: {formatTimestamp(row.invalidated_at)}
-                  {row.invalidation_reason
-                    ? ` — ${row.invalidation_reason}`
-                    : ''}
-                </Text>
-              ) : (
-                <View className="mt-2">
-                  {invalidatingId === row.id_player_custom_field_value ? (
-                    <View>
-                      <AppTextInput
-                        testID={`invalidate-reason-${row.id_player_custom_field_value}`}
-                        value={invalidationReason}
-                        onChangeText={setInvalidationReason}
-                        placeholder="Reason (optional)"
-                        className="border border-gray-300 rounded-lg px-2 py-1 mb-2 bg-white"
-                      />
-                      <View className="flex-row gap-2">
-                        <ActionButton
-                          testID={`invalidate-confirm-${row.id_player_custom_field_value}`}
-                          label="Confirm"
-                          variant="danger"
-                          size="sm"
-                          status={invalidateStatus.status}
-                          errorMessage={
-                            invalidateStatus.errorMessage ?? undefined
-                          }
-                          onPress={() =>
-                            void invalidateStatus.run(() =>
-                              onInvalidate(row.id_player_custom_field_value)
-                            )
-                          }
-                        />
-                        <Pressable
-                          testID={`invalidate-cancel-${row.id_player_custom_field_value}`}
-                          onPress={() => {
-                            setInvalidatingId(null);
-                            setInvalidationReason('');
-                          }}
-                          className="bg-gray-100 rounded px-3 py-1"
-                        >
-                          <Text className="text-gray-700 text-xs">Cancel</Text>
-                        </Pressable>
-                      </View>
-                    </View>
-                  ) : (
-                    <Pressable
-                      testID={`invalidate-btn-${row.id_player_custom_field_value}`}
-                      onPress={() =>
-                        setInvalidatingId(row.id_player_custom_field_value)
-                      }
-                      className="self-start bg-red-50 rounded px-2 py-1"
-                    >
-                      <Text className="text-red-700 text-xs">Invalidate</Text>
-                    </Pressable>
-                  )}
-                </View>
-              )}
+              <Text
+                testID={`custom-field-review-status-${row.id_player_custom_field_value}`}
+                className={`text-xs mt-1 ${REVIEW_STATUS_CLASS[status] ?? 'text-gray-600'}`}
+              >
+                Status: {REVIEW_STATUS_LABEL[status] ?? status}
+                {isCurrent ? ' (current)' : ''}
+                {row.reviewed_at
+                  ? ` — reviewed ${formatTimestamp(row.reviewed_at)}`
+                  : ''}
+              </Text>
             </View>
           );
         })

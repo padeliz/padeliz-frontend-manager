@@ -1,7 +1,11 @@
 /**
- * Global payment-ops queue list (proofs / refunds / abandoned Netopia).
- * Locked `queue=` triage — one row per checkout; mutations live on
+ * Checkout list, one row per checkout; mutations live on
  * RegistrationPaymentPanel (per registration line / proof).
+ *
+ * - `queue`: global payment-ops queue (proofs / refunds / abandoned Netopia),
+ *   locked `queue=` triage.
+ * - `playerId`: every checkout of one player (Player > Checkouts tab), embedded
+ *   in the player chrome. No queue triage.
  */
 
 import ResourceListPage from '@/components/pages/ResourceListPage';
@@ -65,17 +69,32 @@ function firstRegistrationId(
   return withId?.registration_id ?? null;
 }
 
-type Props = {
-  queue: RegistrationOpsQueue;
+type Props =
+  | { queue: RegistrationOpsQueue; playerId?: undefined }
+  | { playerId: number; queue?: undefined };
+
+const PLAYER_COPY = {
+  title: 'Checkouts',
+  description: 'All registration checkouts of this player',
 };
 
-export default function RegistrationQueueList({ queue }: Props) {
+export default function RegistrationQueueList({ queue, playerId }: Props) {
   const router = useRouter();
-  const copy = QUEUE_COPY[queue];
+  const isPlayerScope = playerId != null;
+  const copy = isPlayerScope
+    ? {
+        ...PLAYER_COPY,
+        sectionHref: `/players/${playerId}/checkouts`,
+      }
+    : QUEUE_COPY[queue as RegistrationOpsQueue];
   /** Checkout PK → first registration line (for metadata-style onView). */
   const registrationByCheckoutRef = useRef<Map<number, number>>(new Map());
 
-  const extraListParams = useMemo(() => ({ queue }), [queue]);
+  // Part of the list cache key: sibling queues / players must not share a cache entry.
+  const extraListParams = useMemo(
+    () => (isPlayerScope ? { player_id: playerId } : { queue }),
+    [isPlayerScope, playerId, queue]
+  );
 
   const openRegistration = useCallback(
     (registrationId: number) => {
@@ -84,27 +103,32 @@ export default function RegistrationQueueList({ queue }: Props) {
     [router]
   );
 
-  const fetchData = useCallback(async (params: any) => {
-    const response = await checkoutsApi.getCheckouts({
-      queue: params.queue,
-      page: params.page,
-      per_page: params.per_page,
-      q: params.q,
-    });
-    const next = new Map<number, number>();
-    for (const checkout of response.data) {
-      const registrationId = firstRegistrationId(checkout);
-      if (registrationId != null) {
-        next.set(checkout.id_checkout, registrationId);
+  const fetchData = useCallback(
+    async (params: any) => {
+      const response = isPlayerScope
+        ? await checkoutsApi.getPlayerCheckouts(playerId)
+        : await checkoutsApi.getCheckouts({
+            queue: params.queue,
+            page: params.page,
+            per_page: params.per_page,
+            q: params.q,
+          });
+      const next = new Map<number, number>();
+      for (const checkout of response.data) {
+        const registrationId = firstRegistrationId(checkout);
+        if (registrationId != null) {
+          next.set(checkout.id_checkout, registrationId);
+        }
       }
-    }
-    registrationByCheckoutRef.current = next;
-    return {
-      data: response.data,
-      meta: response.meta,
-      links: {},
-    };
-  }, []);
+      registrationByCheckoutRef.current = next;
+      return {
+        data: response.data,
+        meta: response.meta,
+        links: {},
+      };
+    },
+    [isPlayerScope, playerId]
+  );
 
   const handleView = useCallback(
     (checkoutId: number) => {
@@ -116,7 +140,7 @@ export default function RegistrationQueueList({ queue }: Props) {
     [openRegistration]
   );
 
-  const staticColumns: UiDataTableColumn<ApiEventRegistrationCheckout>[] =
+  const allColumns: UiDataTableColumn<ApiEventRegistrationCheckout>[] =
     useMemo(
       () => [
         {
@@ -258,6 +282,13 @@ export default function RegistrationQueueList({ queue }: Props) {
       [openRegistration]
     );
 
+  // The player is implied on the Player > Checkouts tab.
+  const staticColumns = useMemo(
+    () =>
+      isPlayerScope ? allColumns.filter(col => col.key !== 'player') : allColumns,
+    [allColumns, isPlayerScope]
+  );
+
   const config = useResourcePageConfig<ApiEventRegistrationCheckout>({
     resourceName: 'EventRegistrationCheckout',
     resourceDisplayName: 'Checkout',
@@ -269,11 +300,14 @@ export default function RegistrationQueueList({ queue }: Props) {
     onView: handleView,
     staticColumns,
     primaryKeyField: 'id_checkout',
-    // Queue triage only — no create/delete from these lists.
+    // Read-only lists — no create/delete from here.
     enableBulkDelete: false,
     enableBulkExport: true,
-    excludeFilterFields: ['payment_status'],
+    excludeFilterFields: isPlayerScope
+      ? ['payment_status', 'player_id']
+      : ['payment_status'],
     extraListParams,
+    embedded: isPlayerScope,
   });
 
   return <ResourceListPage config={config} />;

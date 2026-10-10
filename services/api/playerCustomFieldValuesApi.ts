@@ -5,7 +5,8 @@ import { BaseApiService } from './baseApi';
 export type PlayerCustomFieldValueSubmitPayload = {
   player_custom_field_id: number;
   event_id?: number | null;
-  value?: string | number | boolean | null;
+  /** Json fields send the structured value (array/object). */
+  value?: string | number | boolean | Record<string, unknown> | unknown[] | null;
   option_id?: number;
   option_ids?: number[];
 };
@@ -56,16 +57,5 @@ export class PlayerCustomFieldValuesApiService extends BaseApiService {
     payload: PlayerCustomFieldValueSubmitPayload
   ): Promise<ApiResponse<ApiPlayerCustomFieldValue>> {
     return this.post(`/players/${playerId}/custom-field-values`, payload);
-  }
-
-  async invalidateValue(
-    playerId: number,
-    valueId: number,
-    payload: { invalidation_reason?: string } = {}
-  ): Promise<ApiResponse<ApiPlayerCustomFieldValue>> {
-    return this.post(
-      `/players/${playerId}/custom-field-values/${valueId}/invalidate`,
-      payload
-    );
   }
 }

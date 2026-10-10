@@ -9,7 +9,7 @@
     "web": "expo start --web --port 8083 --clear",
     "test": "jest",
     "test:watch": "jest --watchAll",
-    "test:ci": "jest --ci --coverage=false",
+    "test:ci": "jest --ci --coverage=false --runInBand",
     "lint": "expo lint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -68,6 +68,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
+    "@react-native/eslint-config": "^0.79.1",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/react": "^16.3.3",
     "@testing-library/react-native": "^13.3.3",

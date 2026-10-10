@@ -69,6 +69,8 @@ export default function EventParticipationsRoute() {
       (customFieldsQuery.data || []).map(f => ({
         label: f.label,
         value: f.id_player_custom_field,
+        code: f.code,
+        type: f.type,
       })),
     [customFieldsQuery.data]
   );

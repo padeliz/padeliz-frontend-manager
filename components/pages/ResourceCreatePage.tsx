@@ -42,6 +42,7 @@ export default function ResourceCreatePage<
     subHeader,
     getViewPath,
     seedFromQuery,
+    formExtras,
   } = config;
 
   const searchParams = useLocalSearchParams();
@@ -304,6 +305,7 @@ export default function ResourceCreatePage<
               />
             );
           })}
+          {formExtras}
         </View>
       </View>
     </View>

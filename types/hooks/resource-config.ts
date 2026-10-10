@@ -117,4 +117,6 @@ export interface HookResourceCreatePageConfigOptions<
   onBack?: () => void;
   getViewPath?: (id: number, created: T) => string;
   seedFromQuery?: boolean | string[];
+  /** Extra form content rendered below the metadata field card. */
+  formExtras?: ReactNode;
 }

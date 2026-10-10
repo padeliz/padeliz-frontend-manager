@@ -60,4 +60,20 @@ describe('RegistrationCheckoutsApiService', () => {
       'queue=refund_pending'
     );
   });
+
+  it('lists a player checkouts by filters[player_id] without a queue', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: [{ id_checkout: 5, player_id: 9, items: [] }] }),
+    });
+    const api = new RegistrationCheckoutsApiService();
+    const res = await api.getPlayerCheckouts(9);
+
+    const url = decodeURIComponent(String(fetchMock.mock.calls[0][0]));
+    expect(url).toContain('/api/v1/manager/registration-checkouts');
+    expect(url).toContain('filters[player_id]=9');
+    expect(url).not.toContain('queue=');
+    expect(res.data[0].id_checkout).toBe(5);
+    expect(res.meta.total).toBe(1);
+  });
 });

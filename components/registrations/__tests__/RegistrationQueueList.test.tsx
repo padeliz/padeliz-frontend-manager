@@ -50,12 +50,17 @@ const mockGetCheckouts = jest.fn(async () => ({
   meta: { total: 1, last_page: 1 },
   links: {},
 }));
+const mockGetPlayerCheckouts = jest.fn(async (_playerId: number) => ({
+  data: [{ id_checkout: 77, event_id: 1, player_id: 9, status: 'completed', total_amount: 50, items: [] }],
+  meta: { total: 1, last_page: 1 },
+}));
 const mockPush = jest.fn();
 let capturedConfig: any;
 
 jest.mock('@/services/api/registrationCheckoutsApi', () => ({
   RegistrationCheckoutsApiService: jest.fn().mockImplementation(() => ({
     getCheckouts: (...args: unknown[]) => mockGetCheckouts(...args),
+    getPlayerCheckouts: (playerId: number) => mockGetPlayerCheckouts(playerId),
   })),
 }));
 
@@ -176,5 +181,48 @@ describe('RegistrationQueueList', () => {
 
     fireEvent.press(getByTestId('checkout-line-2'));
     expect(mockPush).toHaveBeenCalledWith('/event-registrations/2140');
+  });
+
+  describe('player scope (Player > Checkouts tab)', () => {
+    it('lists the player checkouts without any queue and embeds in the chrome', async () => {
+      render(<RegistrationQueueList playerId={9} />);
+      await waitFor(() => expect(capturedConfig).toBeTruthy());
+
+      expect(capturedConfig.resourceName).toBe('EventRegistrationCheckout');
+      expect(capturedConfig.embedded).toBe(true);
+      expect(capturedConfig.extraListParams).toEqual({ player_id: 9 });
+      expect(capturedConfig.extraListParams).not.toHaveProperty('queue');
+      expect(capturedConfig.excludeFilterFields).toEqual(
+        expect.arrayContaining(['player_id'])
+      );
+      expect(capturedConfig.title).toBe('Checkouts');
+      expect(capturedConfig.sectionHref).toBe('/players/9/checkouts');
+
+      const res = await capturedConfig.fetchData({ page: 1, per_page: 10 });
+      expect(mockGetPlayerCheckouts).toHaveBeenCalledWith(9);
+      expect(mockGetCheckouts).not.toHaveBeenCalled();
+      expect(res.data[0].id_checkout).toBe(77);
+    });
+
+    it('drops the redundant player column but keeps the rest', async () => {
+      render(<RegistrationQueueList playerId={9} />);
+      await waitFor(() => expect(capturedConfig).toBeTruthy());
+
+      const keys = capturedConfig.staticColumns.map((c: any) => c.key);
+      expect(keys).not.toContain('player');
+      expect(keys).toEqual(
+        expect.arrayContaining(['id_checkout', 'event', 'status', 'items'])
+      );
+    });
+
+    it('keeps queue lists global and not embedded', async () => {
+      render(<RegistrationQueueList queue="awaiting_proof" />);
+      await waitFor(() => expect(capturedConfig).toBeTruthy());
+
+      expect(capturedConfig.embedded).toBe(false);
+      expect(capturedConfig.staticColumns.map((c: any) => c.key)).toContain(
+        'player'
+      );
+    });
   });
 });

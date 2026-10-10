@@ -11,6 +11,7 @@ import { useActionButtonStatus } from '@/hooks/useActionButtonStatus';
 import { EventDivisionsApiService } from '@/services/api/eventDivisionsApi';
 import { ApiDivision, ApiEventDivision } from '@/types/api/entities';
 import { confirmAction } from '@/utils/confirmAction';
+import { boundOrNull } from '@/utils/playerLevel';
 import { sortBySkillOrder } from '@/utils/event/eventDivisionOrder';
 import { openInNewWindow } from '@/utils/openInNewWindow';
 import { Ionicons } from '@expo/vector-icons';
@@ -42,15 +43,28 @@ type NewDivisionDraft = {
   players_limit: string;
   playing_start_time: string;
   playing_end_time: string;
+  entry_fee: string;
+  /** Weakest accepted level for this event division (optional, 2 decimals). */
+  level_min: string;
+  /** Strongest accepted level for this event division (optional, 2 decimals). */
+  level_max: string;
 };
 
 const EMPTY_DRAFT: NewDivisionDraft = {
   division_id: null,
   division_title: '',
-  players_limit: '16',
-  playing_start_time: '10:00',
-  playing_end_time: '18:00',
+  players_limit: '',
+  playing_start_time: '',
+  playing_end_time: '',
+  entry_fee: '',
+  level_min: '',
+  level_max: '',
 };
+
+function catalogBoundText(value: string | number | null | undefined): string {
+  if (value == null || value === '') return '';
+  return String(value);
+}
 
 export function divisionLabel(ed: ApiEventDivision): string {
   return (
@@ -124,12 +138,14 @@ export default function EventDivisionsTab({
     return local.some((d, i) => d.id_event_division !== original[i]);
   }, [divisions, local]);
 
-  const catalogOptions = useMemo(() => {
-    const taken = new Set(divisions.map(d => d.division_id));
-    return catalogDivisions
-      .filter(d => !taken.has(d.id_division))
-      .map(d => ({ label: `${d.name} (#${d.id_division})`, value: d.id_division }));
-  }, [catalogDivisions, divisions]);
+  const catalogOptions = useMemo(
+    () =>
+      catalogDivisions.map(d => ({
+        label: `${d.name} (#${d.id_division})`,
+        value: d.id_division,
+      })),
+    [catalogDivisions]
+  );
 
   const pickDivision = (divisionId: number) => {
     const picked = catalogDivisions.find(d => d.id_division === divisionId);
@@ -138,6 +154,8 @@ export default function EventDivisionsTab({
       division_id: divisionId,
       division_title:
         prev.division_title.trim() === '' ? picked?.name || '' : prev.division_title,
+      level_min: catalogBoundText(picked?.level_min),
+      level_max: catalogBoundText(picked?.level_max),
     }));
   };
 
@@ -188,6 +206,17 @@ export default function EventDivisionsTab({
       if (!Number.isFinite(playersLimit) || playersLimit < 1) {
         throw new Error('Players limit must be a positive number.');
       }
+      if (!draft.playing_start_time.trim() || !draft.playing_end_time.trim()) {
+        throw new Error('Start and end times are required.');
+      }
+      const entryFeeRaw = draft.entry_fee.trim();
+      if (entryFeeRaw === '') {
+        throw new Error('Entry fee is required.');
+      }
+      const entryFee = Number(entryFeeRaw);
+      if (!Number.isFinite(entryFee) || entryFee < 0 || !Number.isInteger(entryFee)) {
+        throw new Error('Entry fee must be a non-negative whole number (RON).');
+      }
       await eventDivisionsApi.createEventDivision({
         event_id: eventId,
         division_id: draft.division_id,
@@ -195,8 +224,22 @@ export default function EventDivisionsTab({
         players_limit: playersLimit,
         playing_start_time: draft.playing_start_time,
         playing_end_time: draft.playing_end_time,
+        entry_fee: entryFee,
+        ...(boundOrNull(draft.level_min) != null
+          ? { level_min: boundOrNull(draft.level_min)! }
+          : {}),
+        ...(boundOrNull(draft.level_max) != null
+          ? { level_max: boundOrNull(draft.level_max)! }
+          : {}),
       });
-      setDraft(EMPTY_DRAFT);
+      // Preserve schedule/fee fields for the next add; clear division identity + levels.
+      setDraft(prev => ({
+        ...EMPTY_DRAFT,
+        players_limit: prev.players_limit,
+        playing_start_time: prev.playing_start_time,
+        playing_end_time: prev.playing_end_time,
+        entry_fee: prev.entry_fee,
+      }));
       await onRefresh();
     });
   };
@@ -266,6 +309,18 @@ export default function EventDivisionsTab({
               />
             </View>
             <View style={{ minWidth: 110 }}>
+              <Text className="text-xs text-gray-500 mb-1">Entry fee (RON)</Text>
+              <AppTextInput
+                testID="divisions-entry-fee-input"
+                className="border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
+                value={draft.entry_fee}
+                onChangeText={v =>
+                  setDraft(prev => ({ ...prev, entry_fee: v }))
+                }
+                keyboardType="numeric"
+              />
+            </View>
+            <View style={{ minWidth: 110 }}>
               <Text className="text-xs text-gray-500 mb-1">Start (HH:MM)</Text>
               <AppTextInput
                 testID="divisions-start-input"
@@ -285,6 +340,32 @@ export default function EventDivisionsTab({
                 onChangeText={v =>
                   setDraft(prev => ({ ...prev, playing_end_time: v }))
                 }
+              />
+            </View>
+            <View style={{ minWidth: 100 }}>
+              <Text className="text-xs text-gray-500 mb-1">Level min</Text>
+              <AppTextInput
+                testID="divisions-level-min-input"
+                className="border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
+                value={draft.level_min}
+                onChangeText={v =>
+                  setDraft(prev => ({ ...prev, level_min: v }))
+                }
+                placeholder="e.g. 4.99"
+                keyboardType="decimal-pad"
+              />
+            </View>
+            <View style={{ minWidth: 100 }}>
+              <Text className="text-xs text-gray-500 mb-1">Level max</Text>
+              <AppTextInput
+                testID="divisions-level-max-input"
+                className="border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
+                value={draft.level_max}
+                onChangeText={v =>
+                  setDraft(prev => ({ ...prev, level_max: v }))
+                }
+                placeholder="e.g. 4.67"
+                keyboardType="decimal-pad"
               />
             </View>
             <ActionButton
@@ -344,6 +425,9 @@ export default function EventDivisionsTab({
                   limit {ed.players_limit} · {ed.playing_start_time || '—'} –{' '}
                   {ed.playing_end_time || '—'} · skill_order{' '}
                   {ed.skill_order ?? 0}
+                  {ed.level_min != null || ed.level_max != null
+                    ? ` · level ${ed.level_min ?? '—'} → ${ed.level_max ?? '—'}`
+                    : ''}
                 </Text>
               </View>
               <View className="flex-row items-center">

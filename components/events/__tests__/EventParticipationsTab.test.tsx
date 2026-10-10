@@ -156,7 +156,12 @@ function renderTab(opts: {
   participationsLocked?: boolean;
   divisionsOverride?: typeof divisions;
   participationsOverride?: typeof participations;
-  customFieldOptions?: Array<{ label: string; value: number }>;
+  customFieldOptions?: Array<{
+    label: string;
+    value: number;
+    code?: string;
+    type?: 'json';
+  }>;
   selectedCustomFieldIds?: number[];
   onCustomFieldSelectionChange?: (ids: number[]) => void;
 }) {
@@ -1244,5 +1249,69 @@ describe('EventParticipationsTab row chrome and tooltips', () => {
       expect(getByTestId('tooltip-title')).toHaveTextContent('Club');
       expect(getByTestId('tooltip-body')).toHaveTextContent(/Padel Club/);
     });
+  });
+
+  it('renders racket_experience custom fields with structured display', () => {
+    const racket = [
+      {
+        ...participations[0],
+        custom_field_values: [
+          {
+            field_id: 12,
+            label: 'Racket experience',
+            value: JSON.stringify([
+              {
+                sport: 'Padel',
+                level: 'Beginner',
+                years_of_playing: 2,
+                matches_played: 10,
+              },
+            ]),
+            recent_answers: [],
+          },
+        ],
+      },
+    ];
+    const { getByTestId } = renderTab({
+      eventFinalized: false,
+      selectedDivisionId: 9,
+      participationsOverride: racket as any,
+      customFieldOptions: [
+        {
+          label: 'Racket experience',
+          value: 12,
+          code: 'racket_experience',
+          type: 'json',
+        },
+      ],
+      selectedCustomFieldIds: [12],
+    });
+    expect(getByTestId('custom-field-value-100-12')).toHaveTextContent(
+      'Padel · Beginner · 2 years · 10 matches'
+    );
+  });
+
+  it('falls back to raw JSON text when the field code is unknown', () => {
+    const raw = JSON.stringify([{ sport: 'Padel' }]);
+    const other = [
+      {
+        ...participations[0],
+        custom_field_values: [
+          { field_id: 13, label: 'Misc', value: raw, recent_answers: [] },
+        ],
+      },
+    ];
+    const { getByTestId } = renderTab({
+      eventFinalized: false,
+      selectedDivisionId: 9,
+      participationsOverride: other as any,
+      customFieldOptions: [
+        { label: 'Misc', value: 13, code: 'misc', type: 'json' },
+      ],
+      selectedCustomFieldIds: [13],
+    });
+    expect(getByTestId('custom-field-value-100-13')).toHaveTextContent(
+      '[{"sport":"Padel"}]'
+    );
   });
 });

@@ -173,6 +173,8 @@ export interface ResourceCreatePageConfig<
    * `true` = any writable field; `string[]` = those keys only.
    */
   seedFromQuery?: boolean | string[];
+  /** Extra form content rendered below the metadata field card (e.g. M2M pickers). */
+  formExtras?: React.ReactNode;
 }
 
 export interface ResourceCreatePageProps<

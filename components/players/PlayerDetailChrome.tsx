@@ -1,5 +1,5 @@
 /**
- * Player detail chrome: Details | Profile Images tabs.
+ * Player detail chrome: Details | Profile Images | Custom fields | Checkouts tabs.
  */
 
 import { usePageChrome } from '@/components/chrome/PageChromeProvider';
@@ -76,6 +76,11 @@ export function PlayerDetailChrome() {
         label: 'Custom fields',
         href: `/players/${playerId}/custom-fields`,
         match: '/custom-fields',
+      },
+      {
+        label: 'Checkouts',
+        href: `/players/${playerId}/checkouts`,
+        match: '/checkouts',
       },
     ],
     [playerId]

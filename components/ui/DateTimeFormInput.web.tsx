@@ -10,6 +10,7 @@
 import React, { useMemo, useState } from 'react';
 import { View } from 'react-native';
 import { INPUT_PLACEHOLDER_COLOR } from '@/constants/theme';
+import { parseClockStringToDate } from '@/utils/parseClockStringToDate';
 import type { DateTimeFormInputProps } from './DateTimeFormInput';
 
 const HTML_INPUT_TYPE: Record<DateTimeFormInputProps['inputType'], string> = {
@@ -56,14 +57,7 @@ function parseInputValue(
 ): Date | null {
   if (!rawValue) return null;
   if (inputType === 'time') {
-    const [hStr, mStr, sStr] = rawValue.split(':');
-    const h = Number(hStr);
-    const m = Number(mStr);
-    const s = sStr ? Number(sStr) : 0;
-    if ([h, m, s].some(n => Number.isNaN(n))) return null;
-    const d = new Date();
-    d.setHours(h, m, s, 0);
-    return d;
+    return parseClockStringToDate(rawValue);
   }
   // 'date' and 'datetime-local' are parsed as local time by the Date
   // constructor when no timezone suffix is present.

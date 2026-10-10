@@ -142,7 +142,7 @@ export default function BenefitEditorForm({
       ...prev,
       conditions: [
         ...prev.conditions,
-        { condition_type: 'eligibility_flag', parameters: null },
+        { condition_type: 'student_proof_active', parameters: null },
       ],
     }));
     setConditionParamDrafts(prev => [...prev, '']);

@@ -110,10 +110,33 @@ const divisions = [
 ] as any;
 
 const catalog = [
-  { id_division: 2, name: 'Rookies', color: '#FACC15' },
-  { id_division: 3, name: 'Open', color: '#22C55E' },
-  { id_division: 4, name: 'Kids', color: '#38BDF8' },
+  { id_division: 2, name: 'Rookies', color: '#FACC15', level_min: '5.99', level_max: '5.00' },
+  { id_division: 3, name: 'Open', color: '#22C55E', level_min: '3.99', level_max: '3.00' },
+  { id_division: 4, name: 'Kids', color: '#38BDF8', level_min: '4.99', level_max: '4.67' },
 ] as any;
+
+/** Fill required schedule/fee fields that no longer have defaults. */
+function fillRequiredCreateFields(
+  getByTestId: (id: string) => any,
+  overrides: { players?: string; start?: string; end?: string; fee?: string } = {}
+) {
+  fireEvent.changeText(
+    getByTestId('divisions-players-limit-input'),
+    overrides.players ?? '16'
+  );
+  fireEvent.changeText(
+    getByTestId('divisions-start-input'),
+    overrides.start ?? '10:00'
+  );
+  fireEvent.changeText(
+    getByTestId('divisions-end-input'),
+    overrides.end ?? '18:00'
+  );
+  fireEvent.changeText(
+    getByTestId('divisions-entry-fee-input'),
+    overrides.fee ?? '55'
+  );
+}
 
 function ChromeSaveProbe() {
   const { actions } = usePageChrome();
@@ -167,9 +190,10 @@ describe('EventDivisionsTab', () => {
     expect(getByTestId('division-row-10')).toBeTruthy();
   });
 
-  it('creates a division prefilling the title from the catalog name', async () => {
+  it('creates a division prefilling title and levels from the catalog', async () => {
     const { getByTestId, onRefresh } = renderTab();
 
+    fillRequiredCreateFields(getByTestId);
     fireEvent.press(getByTestId('dropdown-Division-option-4'));
     fireEvent.press(getByTestId('divisions-add-button'));
 
@@ -181,9 +205,85 @@ describe('EventDivisionsTab', () => {
         players_limit: 16,
         playing_start_time: '10:00',
         playing_end_time: '18:00',
+        entry_fee: 55,
+        level_min: '4.99',
+        level_max: '4.67',
       });
     });
     expect(onRefresh).toHaveBeenCalled();
+  });
+
+  it('preserves players limit, times, and entry fee after a successful create', async () => {
+    const { getByTestId } = renderTab();
+
+    fillRequiredCreateFields(getByTestId, {
+      players: '8',
+      start: '11:00',
+      end: '15:00',
+      fee: '60',
+    });
+    fireEvent.press(getByTestId('dropdown-Division-option-4'));
+    fireEvent.press(getByTestId('divisions-add-button'));
+
+    await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
+
+    expect(getByTestId('divisions-players-limit-input').props.value).toBe('8');
+    expect(getByTestId('divisions-start-input').props.value).toBe('11:00');
+    expect(getByTestId('divisions-end-input').props.value).toBe('15:00');
+    expect(getByTestId('divisions-entry-fee-input').props.value).toBe('60');
+    expect(getByTestId('divisions-title-input').props.value).toBe('');
+    expect(getByTestId('divisions-level-min-input').props.value).toBe('');
+    expect(getByTestId('divisions-level-max-input').props.value).toBe('');
+  });
+
+  it('creates a division with overridden level_min / level_max bounds', async () => {
+    const { getByTestId } = renderTab();
+
+    fillRequiredCreateFields(getByTestId);
+    fireEvent.press(getByTestId('dropdown-Division-option-4'));
+    fireEvent.changeText(getByTestId('divisions-level-min-input'), '4.50');
+    fireEvent.changeText(getByTestId('divisions-level-max-input'), ' 4.10 ');
+    fireEvent.press(getByTestId('divisions-add-button'));
+
+    await waitFor(() => {
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          division_id: 4,
+          entry_fee: 55,
+          level_min: '4.50',
+          level_max: '4.10',
+        })
+      );
+    });
+  });
+
+  it('omits bounds from the payload when cleared after catalog pick', async () => {
+    const { getByTestId } = renderTab();
+    fillRequiredCreateFields(getByTestId);
+    fireEvent.press(getByTestId('dropdown-Division-option-4'));
+    fireEvent.changeText(getByTestId('divisions-level-min-input'), '');
+    fireEvent.changeText(getByTestId('divisions-level-max-input'), '');
+    fireEvent.press(getByTestId('divisions-add-button'));
+    await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
+    const payload = mockCreate.mock.calls[0][0] as Record<string, unknown>;
+    expect(payload).not.toHaveProperty('level_min');
+    expect(payload).not.toHaveProperty('level_max');
+    expect(payload.entry_fee).toBe(55);
+  });
+
+  it('shows stored bounds in the row meta', () => {
+    const { getByTestId } = renderTab({
+      divisions: [
+        { ...divisions[0], level_min: '4.99', level_max: '4.67' },
+        divisions[1],
+      ],
+    });
+    expect(getByTestId('division-meta-9')).toHaveTextContent(
+      'limit 16 · 10:00 – 14:00 · skill_order 0 · level 4.99 → 4.67'
+    );
+    expect(getByTestId('division-meta-10')).toHaveTextContent(
+      'limit 12 · 14:00 – 18:00 · skill_order 1'
+    );
   });
 
   it('keeps an edited title instead of the catalog name', async () => {
@@ -191,7 +291,7 @@ describe('EventDivisionsTab', () => {
 
     fireEvent.changeText(getByTestId('divisions-title-input'), 'Kids Cup');
     fireEvent.press(getByTestId('dropdown-Division-option-4'));
-    fireEvent.changeText(getByTestId('divisions-players-limit-input'), '8');
+    fillRequiredCreateFields(getByTestId, { players: '8' });
     fireEvent.press(getByTestId('divisions-add-button'));
 
     await waitFor(() => {
@@ -199,16 +299,17 @@ describe('EventDivisionsTab', () => {
         expect.objectContaining({
           division_title: 'Kids Cup',
           players_limit: 8,
+          entry_fee: 55,
         })
       );
     });
   });
 
-  it('excludes divisions already used by the event from the picker', () => {
-    const { getByTestId, queryByTestId } = renderTab();
+  it('keeps catalog divisions selectable even when already used by the event', () => {
+    const { getByTestId } = renderTab();
+    expect(getByTestId('dropdown-Division-option-2')).toBeTruthy();
+    expect(getByTestId('dropdown-Division-option-3')).toBeTruthy();
     expect(getByTestId('dropdown-Division-option-4')).toBeTruthy();
-    expect(queryByTestId('dropdown-Division-option-2')).toBeNull();
-    expect(queryByTestId('dropdown-Division-option-3')).toBeNull();
   });
 
   it('deletes after confirmation and holds the success state on the icon button', async () => {
@@ -284,10 +385,20 @@ describe('EventDivisionsTab', () => {
   it('surfaces API failures on the Add button instead of an error banner', async () => {
     mockCreate.mockRejectedValueOnce(new Error('duplicate division'));
     const { getByTestId, findByTestId, queryByTestId } = renderTab();
+    fillRequiredCreateFields(getByTestId);
     fireEvent.press(getByTestId('dropdown-Division-option-4'));
     fireEvent.press(getByTestId('divisions-add-button'));
     expect(await findByTestId('divisions-add-button-error')).toBeTruthy();
     expect(queryByTestId('divisions-error')).toBeNull();
+  });
+
+  it('requires entry fee before create', async () => {
+    const { getByTestId, findByTestId } = renderTab();
+    fillRequiredCreateFields(getByTestId, { fee: '' });
+    fireEvent.press(getByTestId('dropdown-Division-option-4'));
+    fireEvent.press(getByTestId('divisions-add-button'));
+    expect(await findByTestId('divisions-add-button-error')).toBeTruthy();
+    expect(mockCreate).not.toHaveBeenCalled();
   });
 
   it('fails validation inside run when no catalog division is picked', async () => {

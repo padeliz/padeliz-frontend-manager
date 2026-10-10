@@ -227,6 +227,8 @@ export default function ResourceViewPage<
       const formattedValues: Record<string, any> = {};
       for (const [fieldKey, value] of Object.entries(editValues)) {
         const def = metadata!.swagger_schema.properties[fieldKey];
+        // Loaded relations (e.g. a division's `levels`) are not writable schema fields.
+        if (!def) continue;
         if (getUploadConfig(def)) continue;
         const fieldInfo = formatField({
           metadata: metadata!,
@@ -490,9 +492,6 @@ export default function ResourceViewPage<
     const def = metadata.swagger_schema.properties[fieldKey];
     const uploadCfg = getUploadConfig(def);
     if (uploadCfg) {
-      const eligibilityBlocked =
-        resourceName === 'Eligibility' &&
-        (resource as any).review_status === 'approved';
       return (
         <ManagerFileUpload
           key={fieldKey}
@@ -500,7 +499,7 @@ export default function ResourceViewPage<
           config={uploadCfg}
           parentId={resourceId}
           value={(isEditing ? editValues[fieldKey] : resource[fieldKey]) as any}
-          disabled={saving || eligibilityBlocked}
+          disabled={saving}
           onChanged={handleRefresh}
           error={editErrors[fieldKey]}
         />

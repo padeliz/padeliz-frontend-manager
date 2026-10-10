@@ -2,6 +2,7 @@
  * Participations tab: players per ED with arrows + drag-and-drop reorder/move.
  */
 
+import { formatJsonFieldValue } from '@/utils/customFieldJson';
 import { useRegisterPageActions } from '@/components/chrome/PageChromeProvider';
 import CachedPdfImageReload from '@/components/events/CachedPdfImageReload';
 import ActionButton from '@/components/ui/ActionButton';
@@ -15,6 +16,7 @@ import { EventParticipationsApiService } from '@/services/api/eventParticipation
 import {
   ApiEventDivision,
   ApiEventParticipation,
+  ApiPlayerCustomField,
 } from '@/types/api/entities';
 import { confirmAction } from '@/utils/confirmAction';
 import { formatDisplayDate } from '@/utils/fieldFormatter';
@@ -83,7 +85,13 @@ type Props = {
   selectedDivisionId: number | null;
   registeredNotParticipatingCount?: number;
   participationsLocked?: boolean;
-  customFieldOptions?: Array<{ label: string; value: number }>;
+  /** `code`/`type` let json fields (e.g. racket_experience) use structured display. */
+  customFieldOptions?: Array<{
+    label: string;
+    value: number;
+    code?: string;
+    type?: ApiPlayerCustomField['type'];
+  }>;
   selectedCustomFieldIds?: number[];
   onCustomFieldSelectionChange?: (ids: number[]) => void;
   onRefresh: () => Promise<void>;
@@ -337,15 +345,37 @@ function recentAnswersTooltipBody(
     .join('\n');
 }
 
+/** The API sends json values as a JSON-encoded string; decode before structured display. */
+function customFieldDisplayValue(
+  field: Pick<ApiPlayerCustomField, 'code' | 'type'> | null,
+  value: unknown
+): string {
+  if (field?.type === 'json' && typeof value === 'string') {
+    try {
+      return formatJsonFieldValue(field, JSON.parse(value));
+    } catch {
+      return value;
+    }
+  }
+  return typeof value === 'string'
+    ? value
+    : formatJsonFieldValue(field, value);
+}
+
 function CustomFieldCell({
   p,
   fieldId,
   label,
+  code,
+  type,
 }: {
   p: ApiEventParticipation;
   fieldId: number;
   label: string;
+  code?: string;
+  type?: ApiPlayerCustomField['type'];
 }) {
+  const field = code != null && type != null ? { code, type } : null;
   const entry = (p.custom_field_values || []).find(v => v.field_id === fieldId);
   const tipBody = entry
     ? recentAnswersTooltipBody(entry.recent_answers || [])
@@ -361,7 +391,7 @@ function CustomFieldCell({
           tooltipTitle={tipBody ? label : undefined}
           testID={`custom-field-value-${p.id_participation}-${fieldId}`}
         >
-          {entry.value}
+          {customFieldDisplayValue(field, entry.value)}
         </EllipsisText>
       ) : (
         <Text
@@ -781,6 +811,8 @@ export default function EventParticipationsTab({
       return {
         fieldId: Number(id),
         label: opt?.label ?? `Field #${id}`,
+        code: opt?.code,
+        type: opt?.type,
       };
     });
   }, [customFieldOptions, selectedCustomFieldIds]);
@@ -1148,6 +1180,8 @@ export default function EventParticipationsTab({
                             p={p}
                             fieldId={col.fieldId}
                             label={col.label}
+                            code={col.code}
+                            type={col.type}
                           />
                         ))}
                         <Cell width={COL.arrows} className="flex-row items-center">

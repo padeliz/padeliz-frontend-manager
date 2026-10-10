@@ -33,6 +33,9 @@ export const queryKeys = {
     ['schedule', eventDivisionId] as const,
   standings: (eventDivisionId: number | string) =>
     ['standings', eventDivisionId] as const,
+  participationLevel: (participationId: number | string) =>
+    ['participationLevel', participationId] as const,
+  levelBands: () => ['levelBands'] as const,
   organizers: () => ['organizers'] as const,
   clubsPicker: () => ['clubsPicker'] as const,
   lotteryLive: (lotteryId: number | string) =>

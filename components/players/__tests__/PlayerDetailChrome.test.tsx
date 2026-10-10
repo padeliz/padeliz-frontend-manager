@@ -28,9 +28,16 @@ jest.mock('expo-router', () =>
 
 jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
 
+const mockTabsBarProps: { tabs: { label: string; href: string; match: string }[] } = {
+  tabs: [],
+};
+
 jest.mock('@/components/events/EventTabsBar', () => {
   const { View } = require('react-native');
-  return () => <View testID="event-tabs-bar" />;
+  return (props: any) => {
+    mockTabsBarProps.tabs = props.tabs;
+    return <View testID="event-tabs-bar" />;
+  };
 });
 
 jest.mock('@/components/layout/AppLayout', () => {
@@ -38,13 +45,16 @@ jest.mock('@/components/layout/AppLayout', () => {
   const { View, Text } = require('react-native');
   return ({
     title,
+    tabBar,
     children,
   }: {
     title?: string;
+    tabBar?: React.ReactNode;
     children: React.ReactNode;
   }) => (
     <View>
       {title ? <Text testID="app-layout-title">{title}</Text> : null}
+      {tabBar}
       {children}
     </View>
   );
@@ -131,6 +141,34 @@ describe('PlayerDetailChrome', () => {
         'Player: Ace Player'
       );
     });
+    await act(async () => {
+      await new Promise<void>(resolve => setTimeout(resolve, 0));
+    });
+  });
+
+  it('offers a Checkouts tab that links to the player checkouts route', async () => {
+    mockPathname.value = '/players/42/checkouts';
+    mockUsePageChrome.mockReturnValue({ actions: null });
+    const { getByTestId } = renderChrome();
+    await waitFor(() => {
+      expect(getByTestId('app-layout-title')).toHaveTextContent(
+        'Player: Ace Player'
+      );
+    });
+
+    const checkouts = mockTabsBarProps.tabs.find(t => t.label === 'Checkouts');
+    expect(checkouts).toEqual(
+      expect.objectContaining({
+        href: '/players/42/checkouts',
+        match: '/checkouts',
+      })
+    );
+    expect(mockTabsBarProps.tabs.map(t => t.label)).toEqual([
+      'Details',
+      'Profile Images',
+      'Custom fields',
+      'Checkouts',
+    ]);
     await act(async () => {
       await new Promise<void>(resolve => setTimeout(resolve, 0));
     });

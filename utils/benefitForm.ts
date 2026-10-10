@@ -31,7 +31,7 @@ export const BENEFIT_EXCLUSIVITY_OPTIONS: DropdownOption[] = [
 ];
 
 export const BENEFIT_CONDITION_TYPE_OPTIONS: DropdownOption[] = [
-  { label: 'Eligibility flag', value: 'eligibility_flag' },
+  { label: 'Active student proof', value: 'student_proof_active' },
   { label: 'Days before event date', value: 'days_before_event_date' },
   { label: 'Referrer selected', value: 'referrer_selected' },
   {

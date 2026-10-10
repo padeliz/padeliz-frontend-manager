@@ -76,7 +76,6 @@ export function resolveUploadPath(
   if (vars.id != null) {
     path = path
       .replace(/\{player\}/g, String(vars.id))
-      .replace(/\{playerEligibility\}/g, String(vars.id))
       .replace(/\{prize\}/g, String(vars.id));
   }
   return path;

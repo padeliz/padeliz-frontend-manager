@@ -133,10 +133,22 @@ export const managerNavigationItems: NavigationItem[] = [
     description: 'IBAN shown to paying players',
   },
   {
-    label: 'Eligibilities',
-    href: '/eligibilities',
+    label: 'Level assessments',
+    href: '/player-level-assessments',
     icon: 'checkmark-done',
-    description: 'Player eligibility reviews',
+    description: 'Review player level assessments',
+  },
+  {
+    label: 'Levels',
+    href: '/levels',
+    icon: 'stats-chart',
+    description: 'Seeded level bands (read-only)',
+  },
+  {
+    label: 'Student proofs',
+    href: '/player-student-proofs',
+    icon: 'school',
+    description: 'Review student proof uploads',
   },
   {
     label: 'Prizes',

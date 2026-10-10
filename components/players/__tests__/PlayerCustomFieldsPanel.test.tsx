@@ -11,7 +11,6 @@ import React from 'react';
 
 const mockGetValues = jest.fn();
 const mockCreateValue = jest.fn();
-const mockInvalidateValue = jest.fn();
 const mockGetFields = jest.fn();
 const mockGetEvents = jest.fn();
 
@@ -19,7 +18,6 @@ jest.mock('@/services/api/playerCustomFieldValuesApi', () => ({
   PlayerCustomFieldValuesApiService: jest.fn().mockImplementation(() => ({
     getValues: (...args: unknown[]) => mockGetValues(...args),
     createValue: (...args: unknown[]) => mockCreateValue(...args),
-    invalidateValue: (...args: unknown[]) => mockInvalidateValue(...args),
   })),
 }));
 
@@ -127,14 +125,25 @@ describe('PlayerCustomFieldsPanel', () => {
           player_custom_field_id: 7,
           value: 'M',
           submitted_via: 'manager',
+          review_status: 'validated',
           inserted_at: 1700000000,
+          field: { label: 'Shirt size' },
+        },
+        {
+          id_player_custom_field_value: 100,
+          player_id: 42,
+          player_custom_field_id: 7,
+          value: 'S',
+          submitted_via: 'csv',
+          review_status: 'rejected',
+          reviewed_at: 1700000100,
+          inserted_at: 1699999000,
           field: { label: 'Shirt size' },
         },
       ],
       meta: { last_page: 1 },
     });
     mockCreateValue.mockResolvedValue({ data: {}, message: 'ok' });
-    mockInvalidateValue.mockResolvedValue({ data: {}, message: 'ok' });
   });
 
   it('renders history rows', async () => {
@@ -228,50 +237,24 @@ describe('PlayerCustomFieldsPanel', () => {
     expect(mockShowError).toHaveBeenCalledWith('Submit failed', 'Boom');
   });
 
-  it('invalidates a value through the Confirm ActionButton', async () => {
-    const { getByTestId, findByTestId } = renderPanel();
+  it('shows review status and marks only validated rows as current', async () => {
+    const { getByTestId, queryByTestId, queryByText } = renderPanel();
 
     await waitFor(() =>
       expect(getByTestId('custom-field-value-row-99')).toBeTruthy()
     );
-
-    fireEvent.press(getByTestId('invalidate-btn-99'));
-    fireEvent.changeText(getByTestId('invalidate-reason-99'), 'wrong size');
-    const confirm = await findByTestId('invalidate-confirm-99');
-    await act(async () => {
-      fireEvent.press(confirm);
-    });
-
-    await waitFor(() =>
-      expect(mockInvalidateValue).toHaveBeenCalledWith(42, 99, {
-        invalidation_reason: 'wrong size',
-      })
-    );
-    expect(mockShowSuccess).toHaveBeenCalledWith(
-      'Invalidated',
-      'Value marked as invalidated'
-    );
+    expect(
+      getByTestId('custom-field-review-status-99').props.children.join('')
+    ).toContain('Validated (current)');
+    const rejected = getByTestId('custom-field-review-status-100')
+      .props.children.join('');
+    expect(rejected).toContain('Rejected');
+    expect(rejected).not.toContain('(current)');
+    expect(queryByTestId('invalidate-btn-99')).toBeNull();
+    expect(queryByText('Invalidate')).toBeNull();
   });
 
-  it('reports an invalidate failure on the Confirm button and toasts', async () => {
-    mockInvalidateValue.mockRejectedValueOnce(new Error('Nope'));
-    const { getByTestId, findByTestId } = renderPanel();
-
-    await waitFor(() =>
-      expect(getByTestId('custom-field-value-row-99')).toBeTruthy()
-    );
-
-    fireEvent.press(getByTestId('invalidate-btn-99'));
-    const confirm = await findByTestId('invalidate-confirm-99');
-    await act(async () => {
-      fireEvent.press(confirm);
-    });
-
-    expect(await findByTestId('invalidate-confirm-99-error')).toBeTruthy();
-    expect(mockShowError).toHaveBeenCalledWith('Invalidate failed', 'Nope');
-  });
-
-  it('drives both mutations through ActionButton with auditory feedback', () => {
+  it('drives submit through ActionButton with auditory feedback', () => {
     const fs = require('fs') as typeof import('fs');
     const path = require('path') as typeof import('path');
     const src = fs.readFileSync(
@@ -284,9 +267,7 @@ describe('PlayerCustomFieldsPanel', () => {
     expect(src).toContain(
       'const submitStatus = useActionButtonStatus({ auditoryFeedback: true });'
     );
-    expect(src).toMatch(
-      /const invalidateStatus = useActionButtonStatus\(\{[\s\S]*?auditoryFeedback: true,/
-    );
+    expect(src).not.toContain('invalidate');
     expect(src).toContain('showSuccess(');
     expect(src).toContain('showError(');
     expect(src).not.toContain('successHoldMs');

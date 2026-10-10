@@ -4,14 +4,20 @@ import { useRegisterPageActions } from '@/components/chrome/PageChromeProvider';
 import { EventGeneralEditHint } from '@/components/events/eventGeneralHint';
 import { useActionButtonStatus } from '@/hooks/useActionButtonStatus';
 import { queryKeys } from '@/lib/queryClient';
+import { EventParticipationsApiService } from '@/services/api/eventParticipationsApi';
+import { LevelsApiService } from '@/services/api/levelsApi';
 import { scheduleApi } from '@/services/api/scheduleApi';
 import { standingsApi } from '@/services/api/standingsApi';
-import { ApiEventDivision } from '@/types/api/entities';
+import { ApiEventDivision, ApiLevel } from '@/types/api/entities';
 import { StandingRow } from '@/types/api/event';
 import { confirmAction } from '@/utils/confirmAction';
+import { validatePlayerLevelInput } from '@/utils/playerLevel';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
+
+const participationsApi = new EventParticipationsApiService();
+const levelsApi = new LevelsApiService();
 
 type Props = {
   eventDivisionId: number | null;
@@ -192,9 +198,55 @@ export default function EventStandingsTab({
     setBaseline(JSON.stringify(next));
   }, [standingsQuery.dataUpdatedAt, scheduleQuery.dataUpdatedAt]);
 
+  // Participation-sourced player level, one lookup per standing row.
+  const levelQueries = useQueries({
+    queries: rows.map(r => ({
+      queryKey: queryKeys.participationLevel(r.participation_id),
+      queryFn: async () => {
+        const res = await participationsApi.getParticipationLevel(
+          r.participation_id
+        );
+        return res.data;
+      },
+    })),
+  });
+  const savedLevels = useMemo(() => {
+    const map: Record<number, string> = {};
+    rows.forEach((r, i) => {
+      const level = levelQueries[i]?.data?.level;
+      if (level != null) map[r.participation_id] = String(level);
+    });
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, levelQueries.map(q => q.dataUpdatedAt).join(',')]);
+
+  // Seeded level bands, used to pre-validate levels before saving.
+  const levelBandsQuery = useQuery({
+    queryKey: queryKeys.levelBands(),
+    queryFn: () => levelsApi.getAllLevels(),
+    enabled: !!eventDivisionId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  /** Only the user's edits; untouched rows show the saved level. */
+  const [levelDrafts, setLevelDrafts] = useState<Record<number, string>>({});
+
+  const changedLevels = useMemo(() => {
+    const changed: Array<{ participationId: number; level: string }> = [];
+    Object.entries(levelDrafts).forEach(([id, raw]) => {
+      const level = raw.trim();
+      if (level !== '' && level !== (savedLevels[Number(id)] ?? '')) {
+        changed.push({ participationId: Number(id), level });
+      }
+    });
+    return changed;
+  }, [levelDrafts, savedLevels]);
+
   const dirty = useMemo(
-    () => baseline !== '' && JSON.stringify(drafts) !== baseline,
-    [baseline, drafts]
+    () =>
+      (baseline !== '' && JSON.stringify(drafts) !== baseline) ||
+      changedLevels.length > 0,
+    [baseline, changedLevels.length, drafts]
   );
 
   const reload = useCallback(async () => {
@@ -206,6 +258,25 @@ export default function EventStandingsTab({
 
   const saveAll = useCallback(async () => {
     if (!eventDivisionId || finalized) return;
+    // Validate every level against the bands before any request goes out.
+    // If bands cannot be loaded the check is skipped; the API stays authoritative.
+    if (changedLevels.length > 0) {
+      let bands: ApiLevel[] | undefined = levelBandsQuery.data;
+      if (!bands) {
+        try {
+          bands = await queryClient.fetchQuery({
+            queryKey: queryKeys.levelBands(),
+            queryFn: () => levelsApi.getAllLevels(),
+          });
+        } catch {
+          bands = [];
+        }
+      }
+      for (const { level } of changedLevels) {
+        const error = validatePlayerLevelInput(level, bands ?? []);
+        if (error) throw new Error(error);
+      }
+    }
     setSaving(true);
     try {
       const base = JSON.parse(baseline || '{}') as Record<number, Draft>;
@@ -225,13 +296,34 @@ export default function EventStandingsTab({
           rank: Number(d.rank),
         });
       }
+      for (const { participationId, level } of changedLevels) {
+        await participationsApi.upsertParticipationLevel(participationId, level);
+      }
+      if (changedLevels.length > 0) {
+        await Promise.all(
+          changedLevels.map(({ participationId }) =>
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.participationLevel(participationId),
+            })
+          )
+        );
+        setLevelDrafts({});
+      }
       await queryClient.invalidateQueries({
         queryKey: queryKeys.standings(eventDivisionId),
       });
     } finally {
       setSaving(false);
     }
-  }, [baseline, drafts, eventDivisionId, finalized, queryClient]);
+  }, [
+    baseline,
+    changedLevels,
+    drafts,
+    eventDivisionId,
+    finalized,
+    levelBandsQuery.data,
+    queryClient,
+  ]);
 
   useRegisterPageActions(
     eventDivisionId
@@ -326,6 +418,27 @@ export default function EventStandingsTab({
                   />
                 </View>
               ))}
+              <View className="mr-2">
+                <Text className="text-xs text-gray-500">level</Text>
+                <AppTextInput
+                  testID={'standing-level-' + r.participation_id}
+                  editable={!finalized}
+                  className="border border-gray-300 rounded px-2 py-1 w-24"
+                  keyboardType="decimal-pad"
+                  placeholder="e.g. 3.50"
+                  value={
+                    levelDrafts[r.participation_id] ??
+                    savedLevels[r.participation_id] ??
+                    ''
+                  }
+                  onChangeText={v =>
+                    setLevelDrafts(prev => ({
+                      ...prev,
+                      [r.participation_id]: v,
+                    }))
+                  }
+                />
+              </View>
             </View>
           </View>
         ))

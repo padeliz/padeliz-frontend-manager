@@ -1,6 +1,6 @@
-import { ApiEventParticipation } from '@/types/api/entities';
+import { ApiEventParticipation, ApiPlayerLevel } from '@/types/api/entities';
 import { ApiBulkDeleteResponse, ApiResponse } from '@/types/api/responses';
-import { BaseApiService } from './baseApi';
+import { ApiError, BaseApiService } from './baseApi';
 
 export class EventParticipationsApiService extends BaseApiService {
   /**
@@ -124,6 +124,35 @@ export class EventParticipationsApiService extends BaseApiService {
     return this.patch<{ data: ApiEventParticipation[] }>(
       '/event-participations/reorder',
       { participations }
+    );
+  }
+
+  /**
+   * Level entered for a participation, or `null` when none exists yet (404).
+   */
+  async getParticipationLevel(
+    participationId: number
+  ): Promise<{ data: ApiPlayerLevel | null }> {
+    try {
+      return await this.get<{ data: ApiPlayerLevel }>(
+        `/event-participations/${participationId}/level`
+      );
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) {
+        return { data: null };
+      }
+      throw err;
+    }
+  }
+
+  /** `level` must be exactly two decimals inside a seeded band. */
+  async upsertParticipationLevel(
+    participationId: number,
+    level: string
+  ): Promise<{ data: ApiPlayerLevel }> {
+    return this.put<{ data: ApiPlayerLevel }>(
+      `/event-participations/${participationId}/level`,
+      { level }
     );
   }
 }

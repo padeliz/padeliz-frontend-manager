@@ -152,6 +152,20 @@ export function formatField({
       ) {
         result.inputType = 'select';
         result.constraints.enum = fieldDefinition.enum;
+      } else if (fieldDefinition.format === 'time') {
+        result.inputType = 'time';
+      } else if (fieldDefinition.format === 'date') {
+        result.inputType = 'date';
+      } else if (fieldDefinition.format === 'date-time') {
+        result.inputType = 'datetime';
+      } else if (fieldDefinition.format === 'timestamp') {
+        result.inputType = 'datetime';
+      } else if (fieldDefinition.format === 'year') {
+        result.inputType = 'year';
+      } else if (fieldDefinition.format === 'color') {
+        result.inputType = 'color';
+      } else if (isRichTextField(fieldDefinition)) {
+        result.inputType = 'richtext';
       }
     }
     if (isReadOnly) {

@@ -33,11 +33,11 @@ describe('ManagerFileUpload', () => {
           form_field: 'file',
           upload: {
             method: 'POST',
-            path: '/api/v1/manager/eligibilities/{id}/student-proofs',
+            path: '/api/v1/manager/players/{id}/profile-images',
           },
           delete: {
             method: 'DELETE',
-            path: '/api/v1/manager/eligibilities/{id}/student-proofs/{childId}',
+            path: '/api/v1/manager/players/{id}/profile-images/{childId}',
           },
         }}
         pendingFiles={[]}

@@ -19,6 +19,7 @@ import ColorFormInput from './ColorFormInput';
 import YearFormInput from './YearFormInput';
 import SingleSelectDropdown from './SingleSelectDropdown';
 import RichTextEditor from './RichTextEditor';
+import { parseClockStringToDate } from '@/utils/parseClockStringToDate';
 
 export default function ValidationField({
   field,
@@ -91,6 +92,8 @@ export default function ValidationField({
     }
 
     if (typeof dateValue === 'string') {
+      const clock = parseClockStringToDate(dateValue);
+      if (clock) return clock;
       const parsed = new Date(dateValue);
       return isNaN(parsed.getTime()) ? null : parsed;
     }

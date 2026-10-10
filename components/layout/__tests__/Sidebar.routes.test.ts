@@ -13,6 +13,11 @@ describe('Sidebar manager routes match API resource paths', () => {
     expect(hrefs).toContain('/event-registrations');
     expect(hrefs).toContain('/clubs');
 
+    expect(hrefs).toContain('/player-level-assessments');
+    expect(hrefs).toContain('/player-student-proofs');
+    expect(hrefs).toContain('/levels');
+
+    expect(hrefs).not.toContain('/eligibilities');
     expect(hrefs).not.toContain('/prize-from-clubs');
     expect(hrefs).not.toContain('/lotteries');
     expect(hrefs).not.toContain('/event-lucky-ones');

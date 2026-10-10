@@ -1,8 +1,10 @@
 /**
- * Player profile images gallery with upload, delete, and PDF primary selection.
+ * Player profile images gallery with upload, delete, and PDF primary selection,
+ * plus the cached PDF avatars (both collecting-points variants) with regenerate.
  */
 
 import ImageFilesPicker from '@/components/players/ImageFilesPicker';
+import PlayerCachedPdfImagesSection from '@/components/players/PlayerCachedPdfImagesSection';
 import { useToast } from '@/context/ToastContext';
 import { queryKeys } from '@/lib/queryClient';
 import { PlayersApiService } from '@/services/api/playersApi';
@@ -184,6 +186,12 @@ export default function PlayerProfileImagesPanel({ playerId }: Props) {
       {images.length === 0 ? (
         <Text className="text-gray-500 mt-4">No profile images yet.</Text>
       ) : null}
+
+      <PlayerCachedPdfImagesSection
+        playerId={playerId}
+        images={playerQuery.data.cached_pdf_images}
+        onRegenerated={refresh}
+      />
     </ScrollView>
   );
 }

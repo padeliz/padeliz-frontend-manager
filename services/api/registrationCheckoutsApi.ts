@@ -20,6 +20,26 @@ export class RegistrationCheckoutsApiService extends BaseApiService {
     if (params.q) queryParams.append('q', params.q);
 
     const endpoint = `/registration-checkouts?${queryParams.toString()}`;
+    return this.listCheckouts(endpoint, params.per_page);
+  }
+
+  /**
+   * Every checkout of one player (Player > Checkouts tab): no `queue` triage —
+   * the API skips it whenever `filters[player_id]` is present.
+   */
+  async getPlayerCheckouts(
+    playerId: number
+  ): Promise<{ data: ApiEventRegistrationCheckout[]; meta: any }> {
+    const queryParams = new URLSearchParams();
+    queryParams.append('filters[player_id]', String(playerId));
+
+    return this.listCheckouts(`/registration-checkouts?${queryParams.toString()}`);
+  }
+
+  private async listCheckouts(
+    endpoint: string,
+    perPage?: number
+  ): Promise<{ data: ApiEventRegistrationCheckout[]; meta: any }> {
     const response = await this.get<{
       data: ApiEventRegistrationCheckout[];
       meta?: any;
@@ -32,7 +52,7 @@ export class RegistrationCheckoutsApiService extends BaseApiService {
         total: data.length,
         last_page: 1,
         current_page: 1,
-        per_page: data.length || params.per_page || 10,
+        per_page: data.length || perPage || 10,
       },
     };
   }

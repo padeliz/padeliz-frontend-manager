@@ -2,7 +2,10 @@
  * @jest-environment jsdom
  */
 import { formStateToPayload, formatBenefitEffect } from '@/utils/benefitForm';
-import { EMPTY_BENEFIT_FORM } from '@/utils/benefitForm';
+import {
+  BENEFIT_CONDITION_TYPE_OPTIONS,
+  EMPTY_BENEFIT_FORM,
+} from '@/utils/benefitForm';
 
 describe('benefitForm helpers', () => {
   it('formats fixed and percent effects', () => {
@@ -12,6 +15,19 @@ describe('benefitForm helpers', () => {
     expect(
       formatBenefitEffect({ amount_type: 'percent', amount_value: 10 })
     ).toBe('10%');
+  });
+
+  it('offers student_proof_active instead of eligibility_flag', () => {
+    const values = BENEFIT_CONDITION_TYPE_OPTIONS.map(o => o.value);
+    expect(values).toContain('student_proof_active');
+    expect(values).not.toContain('eligibility_flag');
+    const payload = formStateToPayload({
+      ...EMPTY_BENEFIT_FORM,
+      conditions: [{ condition_type: 'student_proof_active', parameters: null }],
+    });
+    expect(payload.conditions).toEqual([
+      { condition_type: 'student_proof_active', parameters: null },
+    ]);
   });
 
   it('maps form state to API payload for event scope', () => {

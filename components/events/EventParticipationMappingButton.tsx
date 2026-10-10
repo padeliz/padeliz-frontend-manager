@@ -42,6 +42,7 @@ export default function EventParticipationMappingButton({
   });
 
   const preview = previewQuery.data;
+  // Block presses while any preview fetch is in flight; "checking" UI is initial load only.
   const previewBusy = previewQuery.isLoading || previewQuery.isFetching;
   const structurallyDisabled =
     mutationsDisabled || preview?.can_map === false;
@@ -54,7 +55,7 @@ export default function EventParticipationMappingButton({
 
   // Initial probe only — do not let background preview refetch override map success/error.
   const status =
-    preview == null && previewBusy ? 'checking' : mapStatus.status;
+    preview == null && previewQuery.isLoading ? 'checking' : mapStatus.status;
 
   const runMap = useCallback(
     async (confirmOverwrite: boolean) => {

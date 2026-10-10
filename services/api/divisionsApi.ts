@@ -79,6 +79,19 @@ export class DivisionsApiService extends BaseApiService {
   }
 
   /**
+   * Replace the division's level bands (M2M pivot) only. `level_min` and
+   * `level_max` are intentionally not sent, so the API leaves them untouched.
+   */
+  async syncDivisionLevels(
+    id: number,
+    levelIds: number[]
+  ): Promise<{ data: ApiDivision }> {
+    return this.patch<{ data: ApiDivision }>(`/divisions/${id}`, {
+      level_ids: levelIds,
+    });
+  }
+
+  /**
    * Delete a division
    */
   async deleteDivision(id: number): Promise<void> {

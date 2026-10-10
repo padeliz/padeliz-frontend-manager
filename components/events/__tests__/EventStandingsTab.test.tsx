@@ -44,6 +44,32 @@ jest.mock('@/services/api/standingsApi', () => ({
   },
 }));
 
+const mockGetParticipationLevel = jest.fn(async (..._args: unknown[]) => ({
+  data: null as null | { level: string },
+}));
+const mockUpsertParticipationLevel = jest.fn(
+  async (..._args: unknown[]) => ({ data: {} })
+);
+
+jest.mock('@/services/api/eventParticipationsApi', () => ({
+  EventParticipationsApiService: jest.fn().mockImplementation(() => ({
+    getParticipationLevel: (...args: unknown[]) =>
+      mockGetParticipationLevel(...args),
+    upsertParticipationLevel: (...args: unknown[]) =>
+      mockUpsertParticipationLevel(...args),
+  })),
+}));
+
+const mockGetAllLevels = jest.fn(async () => [
+  { id_level: 1, name: 'Mid', level_min: '3.00', level_max: '4.99' },
+]);
+
+jest.mock('@/services/api/levelsApi', () => ({
+  LevelsApiService: jest.fn().mockImplementation(() => ({
+    getAllLevels: () => mockGetAllLevels(),
+  })),
+}));
+
 jest.mock('@/services/api/scheduleApi', () => ({
   scheduleApi: {
     getSchedule: jest.fn(async () => ({
@@ -99,6 +125,110 @@ describe('EventStandingsTab', () => {
     jest.clearAllMocks();
     lastChromeSaveError = null;
     (window as any).confirm = jest.fn(() => true);
+    mockGetParticipationLevel.mockResolvedValue({ data: null });
+    mockGetAllLevels.mockResolvedValue([
+      { id_level: 1, name: 'Mid', level_min: '3.00', level_max: '4.99' },
+    ]);
+  });
+
+  it('shows the saved participation level in a per-row level input', async () => {
+    mockGetParticipationLevel.mockResolvedValue({ data: { level: '3.50' } });
+    const { findByTestId } = renderTab(
+      <EventStandingsTab eventDivisionId={9} />
+    );
+    const input = await findByTestId('standing-level-100');
+    await waitFor(() => expect(input.props.value).toBe('3.50'));
+    expect(mockGetParticipationLevel).toHaveBeenCalledWith(100);
+  });
+
+  it('saves an entered level through event-participations/{id}/level', async () => {
+    const { standingsApi } = require('@/services/api/standingsApi');
+    const { findByTestId, getByTestId } = renderTab(
+      <EventStandingsTab eventDivisionId={9} />
+    );
+    const input = await findByTestId('standing-level-100');
+    fireEvent.changeText(input, '3.50');
+    fireEvent.press(getByTestId('chrome-save'));
+
+    await waitFor(() =>
+      expect(mockUpsertParticipationLevel).toHaveBeenCalledWith(100, '3.50')
+    );
+    // The standing row itself was untouched.
+    expect(standingsApi.updateStanding).not.toHaveBeenCalled();
+    expect(lastChromeSaveError).toBeNull();
+  });
+
+  it('rejects a level without 2 decimals before any request', async () => {
+    const { standingsApi } = require('@/services/api/standingsApi');
+    const { findByTestId, getByTestId, getByDisplayValue } = renderTab(
+      <EventStandingsTab eventDivisionId={9} />
+    );
+    const input = await findByTestId('standing-level-100');
+    fireEvent.changeText(getByDisplayValue('10'), '15');
+    fireEvent.changeText(input, '3.5');
+    fireEvent.press(getByTestId('chrome-save'));
+
+    await waitFor(() => expect(lastChromeSaveError).toBeInstanceOf(Error));
+    expect((lastChromeSaveError as Error).message).toMatch(/2 decimals/);
+    expect(mockUpsertParticipationLevel).not.toHaveBeenCalled();
+    expect(standingsApi.updateStanding).not.toHaveBeenCalled();
+  });
+
+  it('rejects a 2-decimal level outside every band before any request', async () => {
+    const { standingsApi } = require('@/services/api/standingsApi');
+    const { findByTestId, getByTestId } = renderTab(
+      <EventStandingsTab eventDivisionId={9} />
+    );
+    const input = await findByTestId('standing-level-100');
+    await waitFor(() => expect(mockGetAllLevels).toHaveBeenCalled());
+    fireEvent.changeText(input, '8.00');
+    fireEvent.press(getByTestId('chrome-save'));
+
+    await waitFor(() => expect(lastChromeSaveError).toBeInstanceOf(Error));
+    expect((lastChromeSaveError as Error).message).toMatch(/outside every/);
+    expect(mockUpsertParticipationLevel).not.toHaveBeenCalled();
+    expect(standingsApi.updateStanding).not.toHaveBeenCalled();
+  });
+
+  it('accepts an in-band 2-decimal level', async () => {
+    const { findByTestId, getByTestId } = renderTab(
+      <EventStandingsTab eventDivisionId={9} />
+    );
+    const input = await findByTestId('standing-level-100');
+    await waitFor(() => expect(mockGetAllLevels).toHaveBeenCalled());
+    fireEvent.changeText(input, '3.75');
+    fireEvent.press(getByTestId('chrome-save'));
+
+    await waitFor(() =>
+      expect(mockUpsertParticipationLevel).toHaveBeenCalledWith(100, '3.75')
+    );
+    expect(lastChromeSaveError).toBeNull();
+  });
+
+  it('does not re-send an unchanged level', async () => {
+    mockGetParticipationLevel.mockResolvedValue({ data: { level: '3.50' } });
+    const { findByTestId, getByTestId } = renderTab(
+      <EventStandingsTab eventDivisionId={9} />
+    );
+    const input = await findByTestId('standing-level-100');
+    await waitFor(() => expect(input.props.value).toBe('3.50'));
+    fireEvent.changeText(input, '3.50');
+    fireEvent.press(getByTestId('chrome-save'));
+    await waitFor(() => expect(lastChromeSaveError).toBeNull());
+    expect(mockUpsertParticipationLevel).not.toHaveBeenCalled();
+  });
+
+  it('surfaces API level errors through chrome Save', async () => {
+    mockUpsertParticipationLevel.mockRejectedValueOnce(
+      new Error('Level 3.75 is not inside a seeded level band.')
+    );
+    const { findByTestId, getByTestId } = renderTab(
+      <EventStandingsTab eventDivisionId={9} />
+    );
+    fireEvent.changeText(await findByTestId('standing-level-100'), '3.75');
+    fireEvent.press(getByTestId('chrome-save'));
+    await waitFor(() => expect(lastChromeSaveError).toBeInstanceOf(Error));
+    expect((lastChromeSaveError as Error).message).toMatch(/seeded level band/);
   });
 
   it('shows player names and recalculate button', async () => {
