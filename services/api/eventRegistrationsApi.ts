@@ -53,14 +53,14 @@ export class EventRegistrationsApiService extends BaseApiService {
       /** Top-level ops queue — not a filters[] key. */
       queue?: RegistrationOpsQueue;
       filters?: {
-        player_id?: number;
+        player_user_id?: number;
         event_id?: number;
         event_division_id?: number | null;
         lifecycle_status?: string;
         payment_status?: string;
       };
       sort_by?: {
-        player_id?: 'asc' | 'desc';
+        player_user_id?: 'asc' | 'desc';
         event_id?: 'asc' | 'desc';
         inserted_at?: 'asc' | 'desc';
         updated_at?: 'asc' | 'desc';

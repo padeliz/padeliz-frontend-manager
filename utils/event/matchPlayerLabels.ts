@@ -6,7 +6,7 @@ import {
 export type ParticipationLike = {
   id_participation?: number;
   player?: {
-    id_player?: number;
+    id_user?: number;
     name?: string;
     first_name?: string;
     last_name?: string;
@@ -16,7 +16,7 @@ export type ParticipationLike = {
 export function formatPlayerDisplayName(
   player:
     | {
-        id_player?: number;
+        id_user?: number;
         name?: string;
         first_name?: string;
         last_name?: string;
@@ -28,7 +28,7 @@ export function formatPlayerDisplayName(
   return (
     player.name ||
     [player.first_name, player.last_name].filter(Boolean).join(' ') ||
-    (player.id_player != null ? `Player #${player.id_player}` : null)
+    (player.id_user != null ? `Player #${player.id_user}` : null)
   );
 }
 
@@ -48,7 +48,7 @@ export function buildParticipationsById(
  * Resolve a match-slot label:
  * 1. nested matchPlayer.player
  * 2. schedule.participations[participation_id].player
- * 3. #player_id | #participation_id | #?
+ * 3. #player_user_id | #participation_id | #?
  *
  * Replacement substitutes are not written onto match_players, so this always
  * shows the original scheduled roster player.
@@ -68,7 +68,7 @@ export function resolveMatchPlayerLabel(
     if (fromParticipation) return fromParticipation;
   }
 
-  return `#${matchPlayer?.player_id ?? matchPlayer?.participation_id ?? '?'}`;
+  return `#${matchPlayer?.player_user_id ?? matchPlayer?.participation_id ?? '?'}`;
 }
 
 export function matchSidePlayerNames(

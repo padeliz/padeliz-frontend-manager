@@ -64,14 +64,14 @@ export default function GrantBenefitEntitlementPage() {
         ...(benefitId == null
           ? { benefit_definition_id: ['Select a benefit.'] }
           : {}),
-        ...(playerId == null ? { player_id: ['Select a player.'] } : {}),
+        ...(playerId == null ? { player_user_id: ['Select a player.'] } : {}),
       });
       throw new Error('Missing required fields');
     }
     try {
       const response = await entitlementsApi.grantEntitlement({
         benefit_definition_id: benefitId,
-        player_id: playerId,
+        player_user_id: playerId,
         valid_until: validUntil
           ? Math.floor(validUntil.getTime() / 1000)
           : null,
@@ -143,7 +143,7 @@ export default function GrantBenefitEntitlementPage() {
               onSearch={playerPicker.onSearch}
               loading={playerPicker.loading}
             />
-            {errors.player_id?.map(message => (
+            {errors.player_user_id?.map(message => (
               <Text
                 key={message}
                 className="text-red-600 text-sm mt-1"

@@ -88,7 +88,7 @@ const previewRows = [
       status: 'mapped',
       matched_by: 'email',
       player: {
-        id_player: 12,
+        id_user: 12,
         name: 'Mara Popescu',
         pdf_avatar_url: null,
         profile_image_url: 'https://cdn.example/mara.png',
@@ -110,8 +110,8 @@ const previewRows = [
       matched_by: null,
       player: null,
       candidates: [
-        { id_player: 1, name: 'Email Owner', pdf_avatar_url: null },
-        { id_player: 2, name: 'Phone Owner', pdf_avatar_url: null },
+        { id_user: 1, name: 'Email Owner', pdf_avatar_url: null },
+        { id_user: 2, name: 'Phone Owner', pdf_avatar_url: null },
       ],
       name_matches: [],
     },
@@ -128,7 +128,7 @@ const previewRows = [
       status: 'mapped',
       matched_by: 'email',
       player: {
-        id_player: 99,
+        id_user: 99,
         name: 'Already In',
         pdf_avatar_url: null,
         profile_image_url: null,
@@ -220,7 +220,7 @@ describe('EventRegistrationImportPanel', () => {
         rows: [
           {
             index: 1,
-            player_id: 12,
+            player_user_id: 12,
             action: 'registered',
             registration_id: 50,
           },
@@ -235,7 +235,7 @@ describe('EventRegistrationImportPanel', () => {
     expect(body.format).toBe('playtomic');
     expect(body.rows.map((r: any) => r.index)).toEqual([1]);
     expect(body.rows[0]).toMatchObject({
-      player_id: 12,
+      player_user_id: 12,
       status: 'mapped',
     });
   });

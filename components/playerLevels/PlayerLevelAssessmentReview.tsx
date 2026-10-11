@@ -40,13 +40,13 @@ function formatTimestamp(ts?: number | null): string {
 }
 
 export function assessmentPlayerLabel(
-  assessment: Pick<ApiPlayerLevelAssessment, 'player' | 'player_id'>
+  assessment: Pick<ApiPlayerLevelAssessment, 'player' | 'player_user_id'>
 ): string {
   const p = assessment.player;
   return (
     p?.name ||
     [p?.first_name, p?.last_name].filter(Boolean).join(' ') ||
-    `Player #${assessment.player_id}`
+    `Player #${assessment.player_user_id}`
   );
 }
 

@@ -46,9 +46,9 @@ export default function TopNavigation({ onMenuPress, user }: TopNavigationProps)
             className="flex-row items-center p-2 rounded-lg hover:bg-gray-100"
           >
             {/* User avatar */}
-            {user?.google_avatar ? (
+            {user?.profile_image_url ? (
               <Image
-                source={{ uri: user.google_avatar }}
+                source={{ uri: user.profile_image_url }}
                 className="w-8 h-8 rounded-full mr-2"
               />
             ) : (

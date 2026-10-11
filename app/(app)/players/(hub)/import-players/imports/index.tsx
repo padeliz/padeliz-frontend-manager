@@ -2,10 +2,10 @@ import { useRouter } from 'expo-router';
 import React, { useCallback } from 'react';
 import ResourceListPage from '@/components/pages/ResourceListPage';
 import { useResourcePageConfig } from '@/hooks/useResourcePageConfig';
-import { PlayerImportApiService } from '@/services/api/playerImportApi';
-import { ApiPlayerImport } from '@/types/api/entities';
+import { UserImportApiService } from '@/services/api/userImportApi';
+import { ApiUserImport } from '@/types/api/entities';
 
-const importsApi = new PlayerImportApiService();
+const importsApi = new UserImportApiService();
 
 export default function PlayerImportsListPage() {
   const router = useRouter();
@@ -26,8 +26,8 @@ export default function PlayerImportsListPage() {
     [router]
   );
 
-  const config = useResourcePageConfig<ApiPlayerImport>({
-    resourceName: 'PlayerImport',
+  const config = useResourcePageConfig<ApiUserImport>({
+    resourceName: 'UserImport',
     resourceDisplayName: 'Import',
     fetchData,
     title: 'Player Imports',

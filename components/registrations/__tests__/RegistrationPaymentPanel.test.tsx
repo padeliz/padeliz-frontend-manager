@@ -1,6 +1,7 @@
 /**
  * @jest-environment jsdom
  */
+import { productDateTimeToDate } from '@/utils/productDateTime';
 import RegistrationPaymentPanel, {
   feesAreLocked,
 } from '@/components/registrations/RegistrationPaymentPanel';
@@ -75,11 +76,21 @@ jest.mock('@/components/ui/SingleSelectDropdown', () => {
   };
 });
 
+function eventWindow(ymd: string) {
+  const event_starts_at = Math.floor(
+    productDateTimeToDate(ymd, '09:00:00').getTime() / 1000
+  );
+  const event_ends_at = Math.floor(
+    productDateTimeToDate(ymd, '22:00:00').getTime() / 1000
+  );
+  return { event_starts_at, event_ends_at };
+}
+
 function registration(overrides: Record<string, any> = {}) {
   return {
     id_registration: 4,
     event_id: 1,
-    player_id: 2,
+    player_user_id: 2,
     is_minor: false,
     is_student: false,
     payment: 50,
@@ -95,7 +106,7 @@ function registration(overrides: Record<string, any> = {}) {
     payment_attempts: [],
     event: {
       id_event: 1,
-      date: '2099-01-01',
+      ...eventWindow('2099-01-01'),
       finalized_at: null,
     },
     ...overrides,
@@ -178,7 +189,7 @@ describe('RegistrationPaymentPanel', () => {
         payment_status: 'awaiting_proof_review',
         event: {
           id_event: 1,
-          date: '2099-01-01',
+          ...eventWindow('2099-01-01'),
           finalized_at: 123,
         },
         payment_proofs: [
@@ -208,7 +219,7 @@ describe('RegistrationPaymentPanel', () => {
       registration({
         event: {
           id_event: 1,
-          date: '2000-01-01',
+          ...eventWindow('2000-01-01'),
           finalized_at: null,
         },
       })
@@ -224,7 +235,7 @@ describe('RegistrationPaymentPanel', () => {
       registration({
         event: {
           id_event: 1,
-          date: '2000-01-01',
+          ...eventWindow('2000-01-01'),
           finalized_at: 99,
         },
       })
@@ -245,7 +256,7 @@ describe('RegistrationPaymentPanel', () => {
         payment_status: 'refund_pending',
         event: {
           id_event: 1,
-          date: '2099-01-01',
+          ...eventWindow('2099-01-01'),
           finalized_at: 50,
         },
       })

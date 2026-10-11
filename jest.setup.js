@@ -1,5 +1,8 @@
 /* global jest */
 
+const { configure } = require('@testing-library/react-native');
+configure({ asyncUtilTimeout: 5000 });
+
 jest.mock('expo-router', () =>
   require('./testing/expoRouterMock').createExpoRouterMock()
 );
@@ -23,6 +26,12 @@ jest.mock('expo-haptics', () => ({
     Error: 'error',
     Warning: 'warning',
   },
+}));
+
+jest.mock('expo-secure-store', () => ({
+  getItemAsync: jest.fn(async () => null),
+  setItemAsync: jest.fn(async () => undefined),
+  deleteItemAsync: jest.fn(async () => undefined),
 }));
 
 jest.mock('@react-navigation/native', () => {

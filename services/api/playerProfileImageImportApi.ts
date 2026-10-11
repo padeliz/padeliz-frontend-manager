@@ -12,7 +12,7 @@ import { BaseApiService } from './baseApi';
 export type PlayerProfileImageImportSaveRow = {
   index: number;
   filename: string;
-  player_id: number;
+  player_user_id: number;
   is_pdf_primary: boolean;
 };
 

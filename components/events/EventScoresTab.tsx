@@ -248,10 +248,10 @@ export default function EventScoresTab({
           null;
         return {
           playerId: Number(
-            mp?.player_id ??
-              mp?.player?.id_player ??
-              participation?.player_id ??
-              participation?.player?.id_player
+            mp?.player_user_id ??
+              mp?.player?.id_user ??
+              participation?.player_user_id ??
+              participation?.player?.id_user
           ),
           collecting: Boolean(participation?.is_collecting_points ?? false),
         };

@@ -35,6 +35,7 @@ import {
   formatFinalizedAt,
 } from '@/utils/softDirtyNav';
 import { formatDisplayDate } from '@/utils/fieldFormatter';
+import { dayYmdFromUnix } from '@/utils/productDateTime';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Slot,
@@ -413,10 +414,10 @@ export function EventChrome() {
     : `Event: ${eventId}`;
 
   const description = useMemo(() => {
-    const raw = eventQuery.data?.date?.trim();
-    if (!raw) return undefined;
-    return formatDisplayDate(raw);
-  }, [eventQuery.data?.date]);
+    const starts = eventQuery.data?.event_starts_at;
+    if (starts == null) return undefined;
+    return formatDisplayDate(dayYmdFromUnix(starts));
+  }, [eventQuery.data?.event_starts_at]);
 
   if (!Number.isFinite(eventId)) {
     return <Text className="p-4 text-red-600">Invalid event id</Text>;

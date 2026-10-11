@@ -14,8 +14,8 @@ import { Pressable, Text, View } from 'react-native';
 const mockPreview = jest.fn();
 const mockSave = jest.fn();
 
-jest.mock('@/services/api/playerImportApi', () => ({
-  PlayerImportApiService: jest.fn().mockImplementation(() => ({
+jest.mock('@/services/api/userImportApi', () => ({
+  UserImportApiService: jest.fn().mockImplementation(() => ({
     preview: (...args: unknown[]) => mockPreview(...args),
     save: (...args: unknown[]) => mockSave(...args),
   })),
@@ -29,7 +29,7 @@ jest.mock('@/hooks/usePlayerPicker', () => ({
   }),
   playerToDropdownOption: (player: any) => ({
     label: player.name,
-    value: player.id_player,
+    value: player.id_user,
     imageUrl: player.pdf_avatar_url ?? null,
   }),
 }));
@@ -117,7 +117,7 @@ const previewRows = [
       matched_by: null,
       player: null,
       candidates: [],
-      name_matches: [{ id_player: 12, name: 'Mara Popescu', pdf_avatar_url: null }],
+      name_matches: [{ id_user: 12, name: 'Mara Popescu', pdf_avatar_url: null }],
     },
   },
   {
@@ -130,7 +130,7 @@ const previewRows = [
     mapping: {
       status: 'mapped',
       matched_by: 'email',
-      player: { id_player: 12, name: 'Mara Popescu', pdf_avatar_url: 'https://img/a.png' },
+      player: { id_user: 12, name: 'Mara Popescu', pdf_avatar_url: 'https://img/a.png' },
       candidates: [],
       name_matches: [],
     },
@@ -147,8 +147,8 @@ const previewRows = [
       matched_by: null,
       player: null,
       candidates: [
-        { id_player: 1, name: 'Email Owner', pdf_avatar_url: null },
-        { id_player: 2, name: 'Phone Owner', pdf_avatar_url: null },
+        { id_user: 1, name: 'Email Owner', pdf_avatar_url: null },
+        { id_user: 2, name: 'Phone Owner', pdf_avatar_url: null },
       ],
       name_matches: [],
     },
@@ -226,9 +226,9 @@ describe('PlayerImportPanel', () => {
     mockSave.mockResolvedValue({
       data: {
         rows: [
-          { row_index: 0, player_id: 50, first_name: 'New', last_name: 'Player', action: 'created' },
-          { row_index: 1, player_id: 12, first_name: 'Mara', last_name: 'Popescu', action: 'attached' },
-          { row_index: 2, player_id: 1, first_name: 'Conflict', last_name: 'Row', action: 'attached' },
+          { row_index: 0, player_user_id: 50, first_name: 'New', last_name: 'Player', action: 'created' },
+          { row_index: 1, player_user_id: 12, first_name: 'Mara', last_name: 'Popescu', action: 'attached' },
+          { row_index: 2, player_user_id: 1, first_name: 'Conflict', last_name: 'Row', action: 'attached' },
         ],
       },
       message: 'ok',
@@ -290,15 +290,15 @@ describe('PlayerImportPanel', () => {
     expect(screen.getByText('Phone Owner')).toBeTruthy();
   });
 
-  it('fills player_id and option label after a successful Save', async () => {
+  it('fills player_user_id and option label after a successful Save', async () => {
     const screen = await loadPreview();
     mockSave.mockResolvedValue({
       data: {
         rows: [
-          { row_index: 0, player_id: 50, first_name: 'New', last_name: 'Player', action: 'created' },
-          { row_index: 1, player_id: 12, first_name: 'Mara', last_name: 'Popescu', action: 'attached' },
-          { row_index: 2, player_id: 1, first_name: 'Conflict', last_name: 'Row', action: 'attached' },
-          { row_index: 3, player_id: 77, first_name: '*fictiv*', last_name: 'Guest', action: 'created' },
+          { row_index: 0, player_user_id: 50, first_name: 'New', last_name: 'Player', action: 'created' },
+          { row_index: 1, player_user_id: 12, first_name: 'Mara', last_name: 'Popescu', action: 'attached' },
+          { row_index: 2, player_user_id: 1, first_name: 'Conflict', last_name: 'Row', action: 'attached' },
+          { row_index: 3, player_user_id: 77, first_name: '*fictiv*', last_name: 'Guest', action: 'created' },
         ],
       },
       message: 'ok',

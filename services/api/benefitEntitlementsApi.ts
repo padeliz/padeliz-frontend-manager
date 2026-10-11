@@ -3,7 +3,7 @@ import { BaseApiService } from './baseApi';
 
 export type BenefitEntitlementGrantPayload = {
   benefit_definition_id: number;
-  player_id: number;
+  player_user_id: number;
   remaining_uses?: number | null;
   valid_from?: number | null;
   valid_until?: number | null;
@@ -17,14 +17,14 @@ export class BenefitEntitlementsApiService extends BaseApiService {
       q?: string;
       filters?: {
         benefit_definition_id?: number;
-        player_id?: number;
+        player_user_id?: number;
         source_type?: string;
         status?: string;
       };
       sort_by?: {
         id_entitlement?: 'asc' | 'desc';
         benefit_definition_id?: 'asc' | 'desc';
-        player_id?: 'asc' | 'desc';
+        player_user_id?: 'asc' | 'desc';
         remaining_uses?: 'asc' | 'desc';
         valid_from?: 'asc' | 'desc';
         valid_until?: 'asc' | 'desc';

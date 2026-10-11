@@ -39,7 +39,7 @@ export default function PlayersListPage() {
   );
 
   const config = useResourcePageConfig<ApiPlayer>({
-    resourceName: 'Player',
+    resourceName: 'User',
     resourceDisplayName: 'Player',
     fetchData,
     bulkDelete,

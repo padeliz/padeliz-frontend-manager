@@ -42,7 +42,7 @@ export interface KotcParticipant {
 
 export interface SmashParticipant {
   participation_id: string;
-  player_id: string;
+  player_user_id: string;
   player_name: string;
   name_normalized: string;
   slot: SmashSlot;

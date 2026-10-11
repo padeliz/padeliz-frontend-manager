@@ -82,14 +82,14 @@ describe('EventRegistrationsApiService', () => {
     const api = new EventRegistrationsApiService();
     await api.createRegistration({
       event_id: 9,
-      player_id: 3,
+      player_user_id: 3,
     });
     expect(String(fetchMock.mock.calls[0][0])).toContain(
       '/api/v1/manager/event-registrations'
     );
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
       event_id: 9,
-      player_id: 3,
+      player_user_id: 3,
     });
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).not.toHaveProperty(
       'event_division_id'
@@ -104,12 +104,12 @@ describe('EventRegistrationsApiService', () => {
     const api = new EventRegistrationsApiService();
     await api.createRegistration({
       event_id: 9,
-      player_id: 3,
+      player_user_id: 3,
       event_division_id: null,
     });
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
       event_id: 9,
-      player_id: 3,
+      player_user_id: 3,
       event_division_id: null,
     });
   });

@@ -37,7 +37,7 @@ type PdfPrimaryMode = 'none' | 'locked' | 'checkbox' | 'radio';
 
 type DraftRow = ApiPlayerProfileImageImportPreviewRow & {
   included: boolean;
-  player_id: number | null;
+  player_user_id: number | null;
   player: ApiPlayer | null;
   is_pdf_primary: boolean;
   pdfPrimaryMode: PdfPrimaryMode;
@@ -55,8 +55,8 @@ function seedOptionsFromPreview(row: ApiPlayerProfileImageImportPreviewRow): Dro
   const seen = new Set<number>();
   const options: DropdownOption[] = [];
   for (const player of players) {
-    if (seen.has(player.id_player)) continue;
-    seen.add(player.id_player);
+    if (seen.has(player.id_user)) continue;
+    seen.add(player.id_user);
     options.push(playerToDropdownOption(player));
   }
   return options;
@@ -80,10 +80,10 @@ function existingCount(player: ApiPlayer | null): number {
 function applyPdfPrimaryRules(rows: DraftRow[]): DraftRow[] {
   const includedByPlayer = new Map<number, DraftRow[]>();
   for (const row of rows) {
-    if (!row.included || row.player_id == null) continue;
-    const list = includedByPlayer.get(row.player_id) ?? [];
+    if (!row.included || row.player_user_id == null) continue;
+    const list = includedByPlayer.get(row.player_user_id) ?? [];
     list.push(row);
-    includedByPlayer.set(row.player_id, list);
+    includedByPlayer.set(row.player_user_id, list);
   }
 
   const primaryByPlayer = new Map<number, number>();
@@ -99,7 +99,7 @@ function applyPdfPrimaryRules(rows: DraftRow[]): DraftRow[] {
   }
 
   return rows.map(row => {
-    if (!row.included || row.player_id == null) {
+    if (!row.included || row.player_user_id == null) {
       return {
         ...row,
         is_pdf_primary: false,
@@ -108,11 +108,11 @@ function applyPdfPrimaryRules(rows: DraftRow[]): DraftRow[] {
       };
     }
 
-    const group = includedByPlayer.get(row.player_id) ?? [];
+    const group = includedByPlayer.get(row.player_user_id) ?? [];
     const count = existingCount(row.player);
 
     if (group.length >= 2) {
-      const primaryIndex = primaryByPlayer.get(row.player_id)!;
+      const primaryIndex = primaryByPlayer.get(row.player_user_id)!;
       return {
         ...row,
         is_pdf_primary: row.index === primaryIndex,
@@ -140,7 +140,7 @@ function applyPdfPrimaryRules(rows: DraftRow[]): DraftRow[] {
 }
 
 function includedBatchCountForPlayer(rows: DraftRow[], playerId: number): number {
-  return rows.filter(r => r.included && r.player_id === playerId).length;
+  return rows.filter(r => r.included && r.player_user_id === playerId).length;
 }
 
 function mergeOptions(
@@ -193,7 +193,7 @@ export default function PlayerProfileImageImportPanel() {
         return {
           ...row,
           included: true,
-          player_id: player?.id_player ?? null,
+          player_user_id: player?.id_user ?? null,
           player,
           is_pdf_primary: player != null,
           pdfPrimaryMode: 'none',
@@ -258,8 +258,8 @@ export default function PlayerProfileImageImportPanel() {
     async (index: number, patch: Partial<DraftRow>) => {
       const playerInPatch = 'player' in patch;
       let playerFetch: ApiPlayer | null | undefined;
-      if (patch.player_id != null && !playerInPatch) {
-        playerFetch = await fetchPlayerForRow(patch.player_id);
+      if (patch.player_user_id != null && !playerInPatch) {
+        playerFetch = await fetchPlayerForRow(patch.player_user_id);
       }
 
       setRowsWithPdfRules(prev =>
@@ -267,7 +267,7 @@ export default function PlayerProfileImageImportPanel() {
           if (row.index !== index) return row;
 
           let nextPlayer = row.player;
-          if (patch.player_id === null) {
+          if (patch.player_user_id === null) {
             nextPlayer = null;
           } else if (playerInPatch) {
             nextPlayer = patch.player ?? null;
@@ -292,7 +292,7 @@ export default function PlayerProfileImageImportPanel() {
     (playerId: number, rowIndex: number) => {
       setRowsWithPdfRules(prev =>
         prev.map(row => {
-          if (!row.included || row.player_id !== playerId) return row;
+          if (!row.included || row.player_user_id !== playerId) return row;
           return { ...row, is_pdf_primary: row.index === rowIndex };
         })
       );
@@ -303,9 +303,9 @@ export default function PlayerProfileImageImportPanel() {
 
   const atCapacity = useCallback(
     (row: DraftRow): boolean => {
-      if (!row.included || row.player_id == null) return false;
+      if (!row.included || row.player_user_id == null) return false;
       const existing = existingCount(row.player);
-      const batch = includedBatchCountForPlayer(rows, row.player_id);
+      const batch = includedBatchCountForPlayer(rows, row.player_user_id);
       return existing + batch > maxImagesPerPlayer;
     },
     [maxImagesPerPlayer, rows]
@@ -316,7 +316,7 @@ export default function PlayerProfileImageImportPanel() {
     const next = rows.map(row => {
       if (!row.included) return { ...row, errors: [] as string[] };
       const errors: string[] = [];
-      if (row.player_id == null) {
+      if (row.player_user_id == null) {
         errors.push('Select a player for each included row.');
       }
       if (atCapacity(row)) {
@@ -347,7 +347,7 @@ export default function PlayerProfileImageImportPanel() {
     const payloadRows: PlayerProfileImageImportSaveRow[] = included.map(row => ({
       index: row.index,
       filename: row.filename,
-      player_id: row.player_id!,
+      player_user_id: row.player_user_id!,
       is_pdf_primary: row.is_pdf_primary,
     }));
 
@@ -366,7 +366,7 @@ export default function PlayerProfileImageImportPanel() {
       });
       setDirty(false);
       showSuccess('Import saved', response.message || 'Profile images imported');
-      await queryClient.invalidateQueries({ queryKey: ['resourceList', 'Player'] });
+      await queryClient.invalidateQueries({ queryKey: ['resourceList', 'User'] });
       await queryClient.invalidateQueries({
         queryKey: ['resourceList', 'PlayerProfileImageImport'],
       });
@@ -438,18 +438,18 @@ export default function PlayerProfileImageImportPanel() {
             const showRadio =
               row.pdfPrimaryMode === 'radio' &&
               row.included &&
-              row.player_id != null;
+              row.player_user_id != null;
             const showCheckbox =
               row.pdfPrimaryMode === 'checkbox' &&
               row.included &&
-              row.player_id != null;
+              row.player_user_id != null;
             const showLocked =
               row.pdfPrimaryMode === 'locked' &&
               row.included &&
-              row.player_id != null;
+              row.player_user_id != null;
             const existingImages = row.player?.uploaded_profile_images ?? [];
             const displayStatus =
-              row.player_id != null ? 'mapped' : row.mapping.status;
+              row.player_user_id != null ? 'mapped' : row.mapping.status;
 
             return (
               <View
@@ -533,7 +533,7 @@ export default function PlayerProfileImageImportPanel() {
                   {showRadio ? (
                     <Pressable
                       testID={`profile-image-pdf-radio-${row.index}`}
-                      onPress={() => setPdfPrimaryForPlayer(row.player_id!, row.index)}
+                      onPress={() => setPdfPrimaryForPlayer(row.player_user_id!, row.index)}
                       className="flex-row items-center"
                     >
                       <View
@@ -557,12 +557,12 @@ export default function PlayerProfileImageImportPanel() {
                   >
                     <SingleSelectDropdown
                       options={options}
-                      selectedValue={row.player_id}
+                      selectedValue={row.player_user_id}
                       onSelectionChange={value => {
                         const id = value == null ? null : Number(value);
                         void updateRow(
                           row.index,
-                          id == null ? { player_id: null } : { player_id: id }
+                          id == null ? { player_user_id: null } : { player_user_id: id }
                         );
                       }}
                       placeholder="Map player"
@@ -574,7 +574,7 @@ export default function PlayerProfileImageImportPanel() {
                     />
                   </View>
 
-                  {row.player_id != null ? (
+                  {row.player_user_id != null ? (
                     <View
                       testID={`profile-image-existing-${row.index}`}
                       className="flex-row items-center gap-1 flex-wrap"

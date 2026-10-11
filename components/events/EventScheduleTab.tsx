@@ -19,9 +19,10 @@ import {
   isGenerateBlocked,
 } from '@/utils/event/schedulePreview';
 import { confirmAction } from '@/utils/confirmAction';
+import { formatDivisionPlayingWindow } from '@/utils/productDateTime';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -109,6 +110,8 @@ export default function EventScheduleTab({
   const [form, setForm] = useState<ScheduleFormPayload>({});
   const [baseline, setBaseline] = useState<string>('');
   const [preview, setPreview] = useState<SchedulePreview | null>(null);
+  const [syncedScheduleState, setSyncedScheduleState] =
+    useState<ScheduleState | null>(null);
   const previewStatus = useActionButtonStatus();
   const generateStatus = useActionButtonStatus({ auditoryFeedback: true });
   const deleteStatus = useActionButtonStatus({ auditoryFeedback: true });
@@ -141,21 +144,25 @@ export default function EventScheduleTab({
 
   const locationCourts: ApiCourt[] = courtsQuery.data || [];
   const state = scheduleQuery.data || null;
+  // Sync editable form from schedule on first paint with data (not only in effect).
+  if (state !== syncedScheduleState) {
+    setSyncedScheduleState(state);
+    if (state) {
+      const next = formFromSchedule(state);
+      setForm(next);
+      setBaseline(JSON.stringify(next));
+      setPreview(null);
+    }
+  }
   const finalized = !!state?.is_finalized;
   const generateBlocked = isGenerateBlocked(state || {});
   const generateBlockReason = generateBlockedReason(state || {});
   const canReplace = canConfirmReplaceSchedule(state || {});
   const adjust = form.adjust ?? SCHEDULE_KNOB_DEFAULTS.adjust;
-  const playingStartTime = state?.event_division?.playing_start_time || '—';
-  const playingEndTime = state?.event_division?.playing_end_time || '—';
-
-  useEffect(() => {
-    if (!state) return;
-    const next = formFromSchedule(state);
-    setForm(next);
-    setBaseline(JSON.stringify(next));
-    setPreview(null);
-  }, [state]);
+  const playingWindowLabel = formatDivisionPlayingWindow(
+    state?.event_division?.playing_starts_at,
+    state?.event_division?.playing_ends_at
+  );
 
   const dirty = useMemo(() => {
     if (!baseline) return false;
@@ -311,7 +318,7 @@ export default function EventScheduleTab({
     );
   }
 
-  if (scheduleQuery.isLoading && !state) {
+  if (scheduleQuery.isPending && !state) {
     return <ActivityIndicator />;
   }
 
@@ -395,7 +402,7 @@ export default function EventScheduleTab({
                 Playing window (edit on the Divisions tab)
               </Text>
               <Text className="text-sm text-gray-800">
-                {playingStartTime} – {playingEndTime}
+                {playingWindowLabel}
               </Text>
             </View>
             {(

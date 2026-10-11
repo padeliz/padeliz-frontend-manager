@@ -26,6 +26,12 @@ jest.mock('@/services/api/eventDivisionsApi', () => ({
   })),
 }));
 
+jest.mock('@/services/api/eventLotteriesApi', () => ({
+  EventLotteriesApiService: jest.fn().mockImplementation(() => ({
+    getLotteries: jest.fn(async () => ({ data: [] })),
+  })),
+}));
+
 jest.mock('@/lib/actionButtonFeedback', () => ({
   playSuccess: jest.fn(async () => undefined),
   playError: jest.fn(async () => undefined),
@@ -108,6 +114,7 @@ describe('EventChrome finalize', () => {
     (window as any).confirm = jest.fn(() => true);
     const { findByText, findByTestId } = renderChrome();
     fireEvent.press(await findByText('Finalize'));
+    await waitFor(() => expect(mockFinalizeEvent).toHaveBeenCalled());
     await findByTestId('event-chrome-finalize-error');
     expect(Alert.alert).not.toHaveBeenCalledWith(
       'Finalize failed',

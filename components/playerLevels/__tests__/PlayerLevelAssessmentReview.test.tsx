@@ -37,20 +37,20 @@ const bands = [
 function assessment(overrides: Record<string, unknown> = {}) {
   return {
     id_player_level_assessment: 7,
-    player_id: 42,
+    player_user_id: 42,
     player_custom_field_submission_id: 5,
     submitted_at: 1700000000,
     ready_for_review: true,
     review_status: 'pending',
     inserted_at: 1,
-    player: { id_player: 42, name: 'Mara Lovelace' },
+    player: { id_user: 42, name: 'Mara Lovelace' },
     submission: {
       id_player_custom_field_submission: 5,
-      player_id: 42,
+      player_user_id: 42,
       values: [
         {
           id_player_custom_field_value: 11,
-          player_id: 42,
+          player_user_id: 42,
           player_custom_field_id: 3,
           field: { code: 'racket_experience', label: 'Racket experience', type: 'json' },
           value_json: [
@@ -59,7 +59,7 @@ function assessment(overrides: Record<string, unknown> = {}) {
         },
         {
           id_player_custom_field_value: 12,
-          player_id: 42,
+          player_user_id: 42,
           player_custom_field_id: 4,
           field: { code: 'shirt', label: 'Shirt', type: 'text' },
           value: 'M',

@@ -92,7 +92,7 @@ export default function RegistrationQueueList({ queue, playerId }: Props) {
 
   // Part of the list cache key: sibling queues / players must not share a cache entry.
   const extraListParams = useMemo(
-    () => (isPlayerScope ? { player_id: playerId } : { queue }),
+    () => (isPlayerScope ? { player_user_id: playerId } : { queue }),
     [isPlayerScope, playerId, queue]
   );
 
@@ -172,7 +172,7 @@ export default function RegistrationQueueList({ queue, playerId }: Props) {
           render: (item: ApiEventRegistrationCheckout) => (
             <Text className="text-gray-900 text-sm">
               {formatPlayerDisplayName(item.player) ||
-                `Player #${item.player_id}`}
+                `Player #${item.player_user_id}`}
             </Text>
           ),
         },
@@ -304,7 +304,7 @@ export default function RegistrationQueueList({ queue, playerId }: Props) {
     enableBulkDelete: false,
     enableBulkExport: true,
     excludeFilterFields: isPlayerScope
-      ? ['payment_status', 'player_id']
+      ? ['payment_status', 'player_user_id']
       : ['payment_status'],
     extraListParams,
     embedded: isPlayerScope,

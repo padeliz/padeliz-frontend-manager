@@ -51,7 +51,7 @@ function registration(paymentStatus: string) {
     data: {
       id_registration: 4,
       event_id: 1,
-      player_id: 2,
+      player_user_id: 2,
       is_minor: false,
       is_student: false,
       payment: 50,

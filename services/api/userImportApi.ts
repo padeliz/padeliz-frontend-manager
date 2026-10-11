@@ -1,6 +1,6 @@
 import {
-  ApiPlayerImport,
-  ApiPlayerImportPreviewRow,
+  ApiUserImport,
+  ApiUserImportPreviewRow,
 } from '@/types/api/entities';
 import {
   ApiPaginatedResponse,
@@ -8,19 +8,19 @@ import {
 } from '@/types/api/responses';
 import { BaseApiService } from './baseApi';
 
-export type PlayerImportSaveRow = {
+export type UserImportSaveRow = {
   index: number;
   first_name: string | null;
   middle_name: string | null;
   last_name: string | null;
   email: string | null;
   phone: string | null;
-  player_id: number | null;
+  player_user_id: number | null;
 };
 
-export class PlayerImportApiService extends BaseApiService {
+export class UserImportApiService extends BaseApiService {
   async preview(file: File): Promise<
-    ApiResponse<{ format: string; rows: ApiPlayerImportPreviewRow[] }>
+    ApiResponse<{ format: string; rows: ApiUserImportPreviewRow[] }>
   > {
     const form = new FormData();
     form.append('file', file);
@@ -30,8 +30,8 @@ export class PlayerImportApiService extends BaseApiService {
   async save(payload: {
     format: string;
     filename: string;
-    rows: PlayerImportSaveRow[];
-  }): Promise<ApiResponse<ApiPlayerImport>> {
+    rows: UserImportSaveRow[];
+  }): Promise<ApiResponse<ApiUserImport>> {
     return this.post('/players/import', payload);
   }
 
@@ -43,7 +43,7 @@ export class PlayerImportApiService extends BaseApiService {
       filters?: Record<string, string | number>;
       sort_by?: Record<string, 'asc' | 'desc'>;
     } = {}
-  ): Promise<ApiPaginatedResponse<ApiPlayerImport[]>> {
+  ): Promise<ApiPaginatedResponse<ApiUserImport[]>> {
     const queryParams = new URLSearchParams();
     if (params.page) queryParams.append('page', params.page.toString());
     if (params.per_page)
@@ -62,11 +62,11 @@ export class PlayerImportApiService extends BaseApiService {
       });
     }
     const qs = queryParams.toString();
-    return this.get(`/player-imports${qs ? `?${qs}` : ''}`);
+    return this.get(`/user-imports${qs ? `?${qs}` : ''}`);
   }
 
-  async getImport(id: number): Promise<ApiResponse<ApiPlayerImport>> {
-    return this.get(`/player-imports/${id}`);
+  async getImport(id: number): Promise<ApiResponse<ApiUserImport>> {
+    return this.get(`/user-imports/${id}`);
   }
 
   async getImportRows(
@@ -77,7 +77,7 @@ export class PlayerImportApiService extends BaseApiService {
       filters?: Record<string, string | number>;
       sort_by?: Record<string, 'asc' | 'desc'>;
     } = {}
-  ): Promise<ApiPaginatedResponse<ApiPlayerImport['rows']>> {
+  ): Promise<ApiPaginatedResponse<ApiUserImport['rows']>> {
     const queryParams = new URLSearchParams();
     if (params.page) queryParams.append('page', params.page.toString());
     if (params.per_page)
@@ -96,6 +96,6 @@ export class PlayerImportApiService extends BaseApiService {
       });
     }
     const qs = queryParams.toString();
-    return this.get(`/player-import-rows${qs ? `?${qs}` : ''}`);
+    return this.get(`/user-import-rows${qs ? `?${qs}` : ''}`);
   }
 }

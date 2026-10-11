@@ -23,26 +23,26 @@ const PREVIEW_IMAGE_SIZE = 40;
 
 type DraftRow = ApiEventRegistrationImportPreviewRow & {
   included: boolean;
-  player_id: number | null;
+  player_user_id: number | null;
   errors: string[];
 };
 
 function isEligible(row: {
   mapping: { status: string };
   already_registered: boolean;
-  player_id?: number | null;
+  player_user_id?: number | null;
 }): boolean {
   return (
     row.mapping.status === 'mapped' &&
     !row.already_registered &&
-    row.player_id != null
+    row.player_user_id != null
   );
 }
 
 function playerLabel(row: DraftRow): string {
   const player = row.mapping.player;
   if (player?.name) return player.name;
-  if (row.player_id != null) return `Player #${row.player_id}`;
+  if (row.player_user_id != null) return `Player #${row.player_user_id}`;
   return '—';
 }
 
@@ -78,16 +78,16 @@ export default function EventRegistrationImportPanel({
   const applyPreview = useCallback(
     (previewRows: ApiEventRegistrationImportPreviewRow[]) => {
       const nextRows = previewRows.map(row => {
-        const player_id = row.mapping.player?.id_player ?? null;
+        const player_user_id = row.mapping.player?.id_user ?? null;
         const eligible = isEligible({
           mapping: row.mapping,
           already_registered: row.already_registered,
-          player_id,
+          player_user_id,
         });
         return {
           ...row,
           included: eligible,
-          player_id,
+          player_user_id,
           errors: [],
         };
       });
@@ -100,7 +100,7 @@ export default function EventRegistrationImportPanel({
             isEligible({
               mapping: row.mapping,
               already_registered: row.already_registered,
-              player_id: row.player_id,
+              player_user_id: row.player_user_id,
             })
         )
       );
@@ -154,7 +154,7 @@ export default function EventRegistrationImportPanel({
           isEligible({
             mapping: row.mapping,
             already_registered: row.already_registered,
-            player_id: row.player_id,
+            player_user_id: row.player_user_id,
           })
       )
       .map(row => ({
@@ -164,7 +164,7 @@ export default function EventRegistrationImportPanel({
         last_name: row.last_name,
         email: row.email || null,
         phone: row.phone || null,
-        player_id: row.player_id,
+        player_user_id: row.player_user_id,
         status: row.mapping.status,
       }));
 
@@ -232,7 +232,7 @@ export default function EventRegistrationImportPanel({
       isEligible({
         mapping: row.mapping,
         already_registered: row.already_registered,
-        player_id: row.player_id,
+        player_user_id: row.player_user_id,
       })
   );
   const canSave =
@@ -291,7 +291,7 @@ export default function EventRegistrationImportPanel({
             const eligible = isEligible({
               mapping: row.mapping,
               already_registered: row.already_registered,
-              player_id: row.player_id,
+              player_user_id: row.player_user_id,
             });
             return (
               <View

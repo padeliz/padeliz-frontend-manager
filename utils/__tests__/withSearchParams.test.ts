@@ -11,7 +11,7 @@ describe('withSearchParams', () => {
     expect(
       withSearchParams('/event-registrations/add', {
         event_id: 4,
-        player_id: null,
+        player_user_id: null,
         extra: undefined,
       })
     ).toBe('/event-registrations/add?event_id=4');
@@ -27,7 +27,7 @@ describe('withSearchParams', () => {
     expect(
       withSearchParams('/event-registrations/add', {
         event_id: null,
-        player_id: undefined,
+        player_user_id: undefined,
       })
     ).toBe('/event-registrations/add');
   });

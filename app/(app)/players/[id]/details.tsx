@@ -31,7 +31,7 @@ export default function ViewPlayerDetailsPage() {
   );
 
   const config = useResourceViewPageConfig<ApiPlayer>({
-    resourceName: 'Player',
+    resourceName: 'User',
     resourceDisplayName: 'Player',
     fetchResource,
     updateResource,

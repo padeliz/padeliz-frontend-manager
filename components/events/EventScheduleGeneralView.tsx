@@ -11,6 +11,7 @@ import { ScheduleState } from '@/types/api/event';
 import { useQueries } from '@tanstack/react-query';
 import React, { useMemo } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
+import { formatDivisionPlayingWindow } from '@/utils/productDateTime';
 import type { ScheduleSection } from './EventScheduleTab';
 
 type Props = {
@@ -35,7 +36,7 @@ function KnobsReadonly({ state }: { state: ScheduleState }) {
         {state.is_finalized ? 'yes' : 'no'}
       </Text>
       <Text className="text-sm text-gray-800">
-        {ed.playing_start_time || '—'} – {ed.playing_end_time || '—'} ·
+        {formatDivisionPlayingWindow(ed.playing_starts_at, ed.playing_ends_at)} ·
         opponents {schedule?.player_opponents_nr ?? '—'} · repeat{' '}
         {schedule?.player_matches_repeat ?? '—'} · final points{' '}
         {schedule?.final_points_target ?? '—'}

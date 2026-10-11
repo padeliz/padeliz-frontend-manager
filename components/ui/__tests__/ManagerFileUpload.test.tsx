@@ -2,49 +2,62 @@
  * @jest-environment jsdom
  */
 import ManagerFileUpload from '@/components/ui/ManagerFileUpload';
-import { render, screen } from '@testing-library/react-native';
+import { ApiError } from '@/services/api/baseApi';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
-jest.mock('expo-image-picker', () => ({
-  requestMediaLibraryPermissionsAsync: jest.fn(async () => ({
-    granted: true,
-  })),
-  launchImageLibraryAsync: jest.fn(async () => ({ canceled: true, assets: [] })),
-  MediaTypeOptions: { Images: 'Images', All: 'All' },
-}));
+const mockRemove = jest.fn();
+const mockUpload = jest.fn();
 
 jest.mock('@/services/api/managerUploadApi', () => ({
   managerUploadApi: {
-    upload: jest.fn(),
-    remove: jest.fn(),
+    upload: (...args: unknown[]) => mockUpload(...args),
+    remove: (...args: unknown[]) => mockRemove(...args),
   },
 }));
 
+const multiCoverConfig = {
+  mode: 'multi' as const,
+  max_files: 2,
+  max_size_kb: 5120,
+  accept: ['image/png'],
+  form_field: 'file',
+  required: true,
+  upload: {
+    method: 'POST',
+    path: '/api/v1/manager/events/{id}/cover-images',
+  },
+  delete: {
+    method: 'DELETE',
+    path: '/api/v1/manager/events/{id}/cover-images/{childId}',
+  },
+};
+
 describe('ManagerFileUpload', () => {
-  it('renders upload control for web-style pending mode', () => {
-    render(
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('surfaces API 422 when deleting the last cover image', async () => {
+    mockRemove.mockRejectedValue(
+      new ApiError(422, 'An event must keep at least one cover image.')
+    );
+
+    const { getByTestId, findByText } = render(
       <ManagerFileUpload
-        label="Proofs"
-        config={{
-          mode: 'multi',
-          max_files: 3,
-          max_size_kb: 30720,
-          accept: ['image/jpeg', 'application/pdf'],
-          form_field: 'file',
-          upload: {
-            method: 'POST',
-            path: '/api/v1/manager/players/{id}/profile-images',
-          },
-          delete: {
-            method: 'DELETE',
-            path: '/api/v1/manager/players/{id}/profile-images/{childId}',
-          },
-        }}
-        pendingFiles={[]}
-        onPendingChange={jest.fn()}
+        label="Cover Images"
+        config={multiCoverConfig}
+        parentId={5}
+        value={[{ id: 9, url: 'https://cdn.test/cover.png' }]}
+        onChanged={jest.fn()}
       />
     );
-    expect(screen.getByTestId('manager-file-upload')).toBeTruthy();
-    expect(screen.getByText('Select file')).toBeTruthy();
+
+    fireEvent.press(getByTestId('manager-file-upload-delete-9'));
+
+    expect(await findByText(/at least one cover/i)).toBeTruthy();
+    await waitFor(() => {
+      expect(mockRemove).toHaveBeenCalled();
+    });
   });
 });

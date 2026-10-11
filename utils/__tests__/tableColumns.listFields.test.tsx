@@ -7,11 +7,11 @@ describe('tableColumns list_fields and images', () => {
     display_field: null,
     list_fields: [
       'player.profile_image_url',
-      'player_id',
+      'player_user_id',
       'event_division_id',
     ],
     swagger_schema: {
-      required: ['event_id', 'player_id', 'payment'],
+      required: ['event_id', 'player_user_id', 'payment'],
       properties: {
         id_registration: {
           type: 'integer',
@@ -23,12 +23,12 @@ describe('tableColumns list_fields and images', () => {
           type: 'integer',
           title: 'Event',
         },
-        player_id: {
+        player_user_id: {
           type: 'integer',
           title: 'Player',
         },
         player: {
-          oneOf: [{ $ref: '#/components/schemas/Player' }, { type: 'null' }],
+          oneOf: [{ $ref: '#/components/schemas/User' }, { type: 'null' }],
         },
         event_division_id: {
           type: 'integer',
@@ -46,16 +46,16 @@ describe('tableColumns list_fields and images', () => {
       },
     },
     filterable_fields: {
-      player_id: {
+      player_user_id: {
         type: 'foreign_key',
-        related_schema_name: 'Player',
+        related_schema_name: 'User',
       },
       event_division_id: {
         type: 'foreign_key',
         related_schema_name: 'EventDivision',
       },
     },
-    sortable_fields: ['id_registration', 'player_id', 'payment'],
+    sortable_fields: ['id_registration', 'player_user_id', 'payment'],
     searchable_fields: [],
   };
 
@@ -64,7 +64,7 @@ describe('tableColumns list_fields and images', () => {
     list_fields: [],
     swagger_schema: {
       properties: {
-        id_player: { type: 'integer', readOnly: true, title: 'ID' },
+        id_user: { type: 'integer', readOnly: true, title: 'ID' },
         name: { type: 'string', readOnly: true, title: 'Name' },
         profile_image_url: {
           type: 'string',
@@ -85,7 +85,7 @@ describe('tableColumns list_fields and images', () => {
     const columns = generateColumnsFromMetadata(registrationMetadata, {
       excludeFields: ['event_id'],
       linkedResourcesMetadata: {
-        Player: playerMetadata,
+        User: playerMetadata,
         EventDivision: {
           display_field: 'division_title',
           swagger_schema: {
@@ -112,17 +112,17 @@ describe('tableColumns list_fields and images', () => {
     ]);
   });
 
-  it('maps player_id list_fields entry to linked column key player', () => {
+  it('maps player_user_id list_fields entry to linked column key player', () => {
     const columns = generateColumnsFromMetadata(registrationMetadata, {
-      linkedResourcesMetadata: { Player: playerMetadata },
+      linkedResourcesMetadata: { User: playerMetadata },
     });
     expect(columns.find(c => c.key === 'player')).toBeTruthy();
-    expect(columns.find(c => c.key === 'player_id')).toBeFalsy();
+    expect(columns.find(c => c.key === 'player_user_id')).toBeFalsy();
   });
 
   it('creates dotted image column that renders Image or dash', () => {
     const columns = generateColumnsFromMetadata(registrationMetadata, {
-      linkedResourcesMetadata: { Player: playerMetadata },
+      linkedResourcesMetadata: { User: playerMetadata },
     });
     const imgCol = columns.find(c => c.key === 'player.profile_image_url');
     expect(imgCol?.type).toBe('image');
@@ -181,7 +181,7 @@ describe('tableColumns list_fields and images', () => {
   it('excludeFields drops columns under list_fields ordering', () => {
     const columns = generateColumnsFromMetadata(registrationMetadata, {
       excludeFields: ['event_id', 'player.profile_image_url'],
-      linkedResourcesMetadata: { Player: playerMetadata },
+      linkedResourcesMetadata: { User: playerMetadata },
     });
     expect(columns.map(c => c.key)).not.toContain('player.profile_image_url');
     expect(columns.map(c => c.key)[0]).toBe('id_registration');
@@ -195,7 +195,7 @@ describe('tableColumns list_fields and images', () => {
         swagger_schema: {
           required: ['first_name'],
           properties: {
-            id_player: { type: 'integer', readOnly: true, title: 'ID' },
+            id_user: { type: 'integer', readOnly: true, title: 'ID' },
             name: { type: 'string', readOnly: true, title: 'Name' },
             first_name: { type: 'string', title: 'First name' },
             zebra: { type: 'string', title: 'Zebra' },
@@ -208,7 +208,7 @@ describe('tableColumns list_fields and images', () => {
       {}
     );
     expect(columns.map(c => c.key)).toEqual([
-      'id_player',
+      'id_user',
       'name',
       'first_name',
       'zebra',

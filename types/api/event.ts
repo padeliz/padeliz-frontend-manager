@@ -35,7 +35,7 @@ export interface ScheduleMatchPreview {
 }
 
 export interface SchedulePreview {
-  player_ids?: number[];
+  player_user_ids?: number[];
   opponents_per_player?: number;
   repeat_partners?: number;
   court_names?: string[];
@@ -93,7 +93,7 @@ export interface ScheduleBoardMetrics {
 
 export interface SchedulePlayerBoardRow {
   participation_id: number;
-  player_id: number;
+  player_user_id: number;
   short_name: string;
   pdf_avatar_url: string | null;
   is_collecting_points: boolean;
@@ -115,12 +115,12 @@ export interface ScheduleState {
 }
 
 export interface GameMatchSidePlayer {
-  player_id?: number;
+  player_user_id?: number;
   participation_id?: number;
-  player?: { id_player?: number; name?: string; first_name?: string; last_name?: string };
+  player?: { id_user?: number; name?: string; first_name?: string; last_name?: string };
   participation?: {
     id_participation?: number;
-    player?: { id_player?: number; name?: string; first_name?: string; last_name?: string } | null;
+    player?: { id_user?: number; name?: string; first_name?: string; last_name?: string } | null;
   } | null;
 }
 
@@ -162,7 +162,7 @@ export interface ReplacementRow {
   event_division_id?: number;
   original_participation_id: number;
   substitute_participation_id?: number;
-  substitute_player_id?: number;
+  substitute_player_user_id?: number;
   match_id?: number | null;
   event_division?: {
     id_event_division?: number;
@@ -174,7 +174,7 @@ export interface ReplacementRow {
     id_participation?: number;
     is_collecting_points?: boolean;
     player?: {
-      id_player?: number;
+      id_user?: number;
       name?: string;
       first_name?: string;
       last_name?: string;
@@ -185,7 +185,7 @@ export interface ReplacementRow {
     id_participation?: number;
     is_collecting_points?: boolean;
     player?: {
-      id_player?: number;
+      id_user?: number;
       name?: string;
       first_name?: string;
       last_name?: string;
@@ -193,7 +193,7 @@ export interface ReplacementRow {
     } | null;
   } | null;
   substitute_player?: {
-    id_player?: number;
+    id_user?: number;
     name?: string;
     first_name?: string;
     last_name?: string;
@@ -225,7 +225,7 @@ export interface LotteryLucky {
   prize_index?: number | null;
   prize_quantity?: number | null;
   player?: {
-    id_player?: number;
+    id_user?: number;
     name?: string;
     avatar_url?: string | null;
   } | null;
@@ -244,7 +244,7 @@ export interface LotteryLiveState {
 }
 
 export interface ScratchSchedulePayload {
-  player_ids: number[];
+  player_user_ids: number[];
   court_names: string[];
   time_start?: string;
   playing_start_time?: string;
@@ -269,7 +269,7 @@ export interface ScratchSchedulePayload {
   final_points_target?: number;
   include_scores?: boolean;
   allow_replacements?: boolean;
-  collecting_player_ids?: number[];
+  collecting_player_user_ids?: number[];
 }
 
 export interface ApiCourt {

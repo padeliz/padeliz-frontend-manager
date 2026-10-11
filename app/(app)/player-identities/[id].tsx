@@ -8,7 +8,7 @@ const api = new PlayerIdentitiesApiService();
 
 /** The provider link itself (player, provider, subject) is immutable on the API. */
 const READ_ONLY_FIELDS = [
-  'player_id',
+  'user_id',
   'provider',
   'provider_subject',
   'linked_at',
@@ -28,7 +28,7 @@ export default function ViewPlayerIdentityPage() {
   );
 
   const config = useResourceViewPageConfig<ApiPlayerIdentity>({
-    resourceName: 'PlayerIdentity',
+    resourceName: 'UserIdentity',
     resourceDisplayName: 'Identity',
     sectionLabel: 'Player identities',
     sectionHref: '/player-identities',

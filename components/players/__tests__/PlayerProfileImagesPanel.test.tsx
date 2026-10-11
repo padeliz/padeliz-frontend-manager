@@ -35,7 +35,7 @@ jest.mock('@/components/players/ImageFilesPicker', () => {
 function player(cachedImages: unknown[]) {
   return {
     data: {
-      id_player: 42,
+      id_user: 42,
       name: 'Ace Player',
       uploaded_profile_images: [
         { id: 1, url: 'https://cdn.example/p1.png', is_pdf_primary: true },

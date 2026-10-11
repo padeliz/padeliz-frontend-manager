@@ -36,7 +36,7 @@ function kotcRow(
 function smashRow(
   overrides: Partial<{
     position: number;
-    player_id: string;
+    player_user_id: string;
     player_name: string;
     session_tries: number;
     record_hold_seconds: number;
@@ -46,7 +46,7 @@ function smashRow(
 ) {
   return {
     position: 1,
-    player_id: 'p1',
+    player_user_id: 'p1',
     player_name: 'Ace Player',
     session_tries: 3,
     record_hold_seconds: 65,
@@ -195,10 +195,10 @@ describe('ChallengeLeaderboardTable', () => {
     const { getByTestId, queryByTestId } = render(
       <SmashLeaderboardTable
         rows={[
-          smashRow({ is_record_holder: true, player_id: 'p1' }),
+          smashRow({ is_record_holder: true, player_user_id: 'p1' }),
           smashRow({
             is_record_holder: false,
-            player_id: 'p2',
+            player_user_id: 'p2',
             player_name: 'Other',
             position: 2,
           }),

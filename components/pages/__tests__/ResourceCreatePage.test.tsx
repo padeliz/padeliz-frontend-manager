@@ -211,19 +211,23 @@ describe('ResourceCreatePage required upload gate', () => {
         properties: {
           id_event: { type: 'integer', readOnly: true },
           name: { type: 'string', title: 'Name' },
-          cover_url: {
-            type: 'string',
+          cover_images: {
+            type: 'array',
             readOnly: true,
-            title: 'Cover',
+            title: 'Cover Images',
             'x-padeliz-upload': {
-              mode: 'single',
-              max_files: 1,
+              mode: 'multi',
+              max_files: 2,
               form_field: 'file',
               required: true,
               accept: ['image/png'],
               upload: {
                 method: 'POST',
-                path: '/api/v1/manager/events/{id}/cover',
+                path: '/api/v1/manager/events/{id}/cover-images',
+              },
+              delete: {
+                method: 'DELETE',
+                path: '/api/v1/manager/events/{id}/cover-images/{childId}',
               },
             },
           },
@@ -252,7 +256,7 @@ describe('ResourceCreatePage required upload gate', () => {
     fireEvent.press(screen.getByTestId('resource-create-save'));
     await waitFor(() => {
       expect(createResource).not.toHaveBeenCalled();
-      expect(screen.getByText('cover_url is required')).toBeTruthy();
+      expect(screen.getByText('cover_images is required')).toBeTruthy();
     });
   });
 });

@@ -236,7 +236,7 @@ jest.mock('@/hooks/usePlayerPicker', () => ({
   }),
   playerToDropdownOption: (p: any) => ({
     label: p.name,
-    value: p.id_player,
+    value: p.id_user,
   }),
 }));
 
@@ -501,8 +501,8 @@ describe('Tools templates Mode B', () => {
 
       fireEvent.press(getByTestId('tools-preview'));
       await waitFor(() => expect(mockPreview).toHaveBeenCalled());
-      expect(mockPreview.mock.calls[0][0].player_ids).toEqual([101, 102]);
-      expect(mockPreview.mock.calls[0][0].collecting_player_ids).toEqual([
+      expect(mockPreview.mock.calls[0][0].player_user_ids).toEqual([101, 102]);
+      expect(mockPreview.mock.calls[0][0].collecting_player_user_ids).toEqual([
         101, 102,
       ]);
       expect(mockPreview.mock.calls[0][0].color).toBe('#FACC15');
@@ -511,7 +511,7 @@ describe('Tools templates Mode B', () => {
       fireEvent.press(getByTestId('tools-player-row-101-mock-reorder'));
       fireEvent.press(getByTestId('tools-preview'));
       await waitFor(() =>
-        expect(mockPreview.mock.calls.at(-1)?.[0].player_ids).toEqual([
+        expect(mockPreview.mock.calls.at(-1)?.[0].player_user_ids).toEqual([
           102, 101,
         ])
       );
@@ -519,7 +519,7 @@ describe('Tools templates Mode B', () => {
       fireEvent.press(getByTestId('tools-collecting-101'));
       fireEvent.press(getByTestId('tools-preview'));
       await waitFor(() =>
-        expect(mockPreview.mock.calls.at(-1)?.[0].collecting_player_ids).toEqual(
+        expect(mockPreview.mock.calls.at(-1)?.[0].collecting_player_user_ids).toEqual(
           [102]
         )
       );

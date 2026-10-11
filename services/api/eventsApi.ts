@@ -18,11 +18,11 @@ export class EventsApiService extends BaseApiService {
       filters?: {
         name?: string;
         location_id?: number;
-        date?: string;
       };
       sort_by?: {
         name?: 'asc' | 'desc';
-        date?: 'asc' | 'desc';
+        event_starts_at?: 'asc' | 'desc';
+        event_ends_at?: 'asc' | 'desc';
         location_id?: 'asc' | 'desc';
         inserted_at?: 'asc' | 'desc';
         updated_at?: 'asc' | 'desc';

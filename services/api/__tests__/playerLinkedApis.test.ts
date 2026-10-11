@@ -52,20 +52,20 @@ describe('Player linked resource API services', () => {
         page: 2,
         per_page: 5,
         q: 'abc',
-        filters: { player_id: 7 },
+        filters: { user_id: 7 },
       });
       const { url } = lastCall();
       expect(url).toContain(`${BASE}/${path}?`);
       expect(url).toContain('page=2');
       expect(url).toContain('per_page=5');
       expect(url).toContain('q=abc');
-      expect(url).toContain('filters[player_id]=7');
+      expect(url).toContain('filters[user_id]=7');
     });
 
     it('creates with POST, updates with PUT and deletes with DELETE', async () => {
       fetchMock.mockResolvedValue(ok({ data: { id: 1 } }));
 
-      await api[`create${m}`]({ player_id: 7 });
+      await api[`create${m}`]({ user_id: 7 });
       expect(lastCall().url).toBe(`${BASE}/${path}`);
       expect(lastCall().init.method).toBe('POST');
 
@@ -98,11 +98,11 @@ describe('Player linked resource API services', () => {
     it('lists filtered by player and provider', async () => {
       fetchMock.mockResolvedValue(ok({ data: [], meta: {}, links: {} }));
       await api.getIdentities({
-        filters: { player_id: 7, provider: 'google' },
+        filters: { user_id: 7, provider: 'google' },
       });
       const { url } = lastCall();
       expect(url).toContain(`${BASE}/player-identities?`);
-      expect(url).toContain('filters[player_id]=7');
+      expect(url).toContain('filters[user_id]=7');
       expect(url).toContain('filters[provider]=google');
     });
 

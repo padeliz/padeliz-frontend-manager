@@ -1,21 +1,21 @@
 import { ApiResourceMetadata } from '@/types/api/metadata';
 
 /**
- * Minimal Player-like metadata for unit/component tests.
- * Shaped after api-docs-v1.json Player schema (not a full copy).
+ * Minimal User (directory player) metadata for unit/component tests.
+ * Shaped after api-docs-v1.json User schema (not a full copy).
  */
 export const playerMetadata: ApiResourceMetadata = {
   version: '1.0.0',
-  schema_name: 'Player',
+  schema_name: 'User',
   display_field: 'name',
   searchable_fields: ['name', 'first_name', 'last_name'],
   filterable_fields: {},
-  sortable_fields: ['id_player', 'name'],
+  sortable_fields: ['id_user', 'name'],
   request_body: {},
   swagger_schema: {
     required: ['name', 'first_name', 'last_name'],
     properties: {
-      id_player: {
+      id_user: {
         title: 'ID',
         description: 'Unique Identifier',
         type: 'integer',

@@ -19,7 +19,7 @@ describe('PlayerProfileImageImportApiService.save', () => {
         {
           index: 0,
           filename: 'mara.jpg',
-          player_id: 12,
+          player_user_id: 12,
           is_pdf_primary: true,
         },
       ],
@@ -52,7 +52,7 @@ describe('PlayerProfileImageImportApiService.save', () => {
         {
           index: 1,
           filename: 'photo.jpg',
-          player_id: 3,
+          player_user_id: 3,
           is_pdf_primary: false,
         },
       ],

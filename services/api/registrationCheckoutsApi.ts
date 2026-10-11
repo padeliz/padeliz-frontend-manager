@@ -25,13 +25,13 @@ export class RegistrationCheckoutsApiService extends BaseApiService {
 
   /**
    * Every checkout of one player (Player > Checkouts tab): no `queue` triage —
-   * the API skips it whenever `filters[player_id]` is present.
+   * the API skips it whenever `filters[player_user_id]` is present.
    */
   async getPlayerCheckouts(
     playerId: number
   ): Promise<{ data: ApiEventRegistrationCheckout[]; meta: any }> {
     const queryParams = new URLSearchParams();
-    queryParams.append('filters[player_id]', String(playerId));
+    queryParams.append('filters[player_user_id]', String(playerId));
 
     return this.listCheckouts(`/registration-checkouts?${queryParams.toString()}`);
   }

@@ -110,7 +110,7 @@ describe('PlayerCustomFieldsPanel json custom fields', () => {
       data: [
         {
           id_player_custom_field_value: 50,
-          player_id: 42,
+          player_user_id: 42,
           player_custom_field_id: 20,
           value_json: [
             {
@@ -146,7 +146,7 @@ describe('PlayerCustomFieldsPanel json custom fields', () => {
       data: [
         {
           id_player_custom_field_value: 51,
-          player_id: 42,
+          player_user_id: 42,
           player_custom_field_id: 21,
           value_json: { a: 1 },
           value: { a: 1 },

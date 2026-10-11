@@ -79,7 +79,7 @@ describe('EventRegistrationImportApiService', () => {
           last_name: 'Popescu',
           email: 'mara@example.test',
           phone: '+40700',
-          player_id: 12,
+          player_user_id: 12,
           status: 'mapped',
         },
       ],

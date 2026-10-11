@@ -383,9 +383,9 @@ export default function EventScheduleMatchesBoard({
     const row = boardByParticipation.get(participationId);
     const participation = participationById.get(participationId);
     const playerId = Number(
-      row?.player_id ??
-        participation?.player_id ??
-        participation?.player?.id_player
+      row?.player_user_id ??
+        participation?.player_user_id ??
+        participation?.player?.id_user
     );
     const collecting = Boolean(
       row?.is_collecting_points ?? participation?.is_collecting_points ?? false
@@ -415,7 +415,7 @@ export default function EventScheduleMatchesBoard({
   const playerChipStats = (participation: any) => {
     const pid = Number(participation.id_participation);
     const row = boardByParticipation.get(pid);
-    const playerId = row?.player_id ?? participation.player_id;
+    const playerId = row?.player_user_id ?? participation.player_user_id;
     const met =
       playerId != null
         ? metrics?.players_met?.[playerId] ??

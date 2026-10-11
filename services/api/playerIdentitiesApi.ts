@@ -17,7 +17,7 @@ export class PlayerIdentitiesApiService extends BaseApiService {
       per_page?: number;
       q?: string;
       filters?: {
-        player_id?: number;
+        user_id?: number;
         provider?: string;
         is_avatar_primary?: 0 | 1;
       };

@@ -2,7 +2,8 @@
  * @jest-environment jsdom
  */
 import ResourceViewPage from '@/components/pages/ResourceViewPage';
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { LinkedEntityService } from '@/utils/linkedEntityService';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
 jest.mock('@expo/vector-icons', () => ({
@@ -39,9 +40,16 @@ jest.mock('@/hooks/useResourceMetadata', () => ({
   }),
 }));
 
+let resolveDetectLinked: ((value: unknown[]) => void) | undefined;
+
 jest.mock('@/utils/linkedEntityService', () => ({
   LinkedEntityService: {
-    detectLinkedEntities: jest.fn(async () => []),
+    detectLinkedEntities: jest.fn(
+      () =>
+        new Promise(resolve => {
+          resolveDetectLinked = resolve;
+        })
+    ),
   },
 }));
 
@@ -102,14 +110,31 @@ function renderView(readOnlyFields?: string[]) {
   );
 }
 
+/** Resolve linked-entity detection inside act so setLinkedEntities is covered. */
+async function awaitLinkedEntitiesSettled() {
+  const detect = LinkedEntityService.detectLinkedEntities as jest.Mock;
+  await waitFor(() => expect(detect).toHaveBeenCalled());
+  await act(async () => {
+    resolveDetectLinked?.([]);
+  });
+}
+
 describe('ResourceViewPage readOnlyFields', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    resolveDetectLinked = undefined;
+    (LinkedEntityService.detectLinkedEntities as jest.Mock).mockImplementation(
+      () =>
+        new Promise(resolve => {
+          resolveDetectLinked = resolve;
+        })
+    );
   });
 
   it('edits every field when no readOnlyFields are configured', async () => {
     const { getByText } = renderView();
     await waitFor(() => expect(getByText('display:payment')).toBeTruthy());
+    await awaitLinkedEntitiesSettled();
 
     fireEvent.press(getByText('Edit'));
 
@@ -122,6 +147,7 @@ describe('ResourceViewPage readOnlyFields', () => {
   it('keeps configured fields display-only in edit mode', async () => {
     const { getByText, queryByText } = renderView(['payment', 'discount']);
     await waitFor(() => expect(getByText('display:payment')).toBeTruthy());
+    await awaitLinkedEntitiesSettled();
 
     fireEvent.press(getByText('Edit'));
 
@@ -147,5 +173,6 @@ describe('ResourceViewPage readOnlyFields', () => {
       />
     );
     await waitFor(() => expect(getByTestId('view-footer')).toBeTruthy());
+    await awaitLinkedEntitiesSettled();
   });
 });

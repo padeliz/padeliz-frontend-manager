@@ -13,7 +13,7 @@ const mockDelete = jest.fn();
 const mockReorder = jest.fn();
 const mockUpdate = jest.fn();
 const mockGetPlayers = jest.fn(async () => ({
-  data: [{ id_player: 1, name: 'Alice' }],
+  data: [{ id_user: 1, name: 'Alice' }],
 }));
 const mockGeneratePdfAvatar = jest.fn();
 
@@ -30,7 +30,7 @@ jest.mock('@/services/api/playersApi', () => ({
   PlayersApiService: jest.fn().mockImplementation(() => ({
     getPlayers: (...args: unknown[]) => mockGetPlayers(...args),
     getPlayer: jest.fn(async () => ({
-      data: { id_player: 1, name: 'Alice' },
+      data: { id_user: 1, name: 'Alice' },
     })),
     generatePdfAvatar: (...args: unknown[]) => mockGeneratePdfAvatar(...args),
   })),
@@ -84,8 +84,8 @@ const divisions = [
     division_id: 2,
     division_title: 'A',
     players_limit: 8,
-    playing_start_time: '10:00',
-    playing_end_time: '18:00',
+    playing_starts_at: 1_700_000_000,
+    playing_ends_at: 1_700_028_800,
     player_matches_repeat: 1,
     include_scores: true,
     has_demonstrative_match: false,
@@ -98,8 +98,8 @@ const divisions = [
     division_id: 3,
     division_title: 'B',
     players_limit: 8,
-    playing_start_time: '10:00',
-    playing_end_time: '18:00',
+    playing_starts_at: 1_700_000_000,
+    playing_ends_at: 1_700_028_800,
     player_matches_repeat: 1,
     include_scores: true,
     has_demonstrative_match: false,
@@ -112,24 +112,24 @@ const participations = [
   {
     id_participation: 100,
     event_id: 1,
-    player_id: 1,
+    player_user_id: 1,
     event_division_id: 9,
     division_id: 2,
     sort_order: 0,
     inserted_at: 1,
     is_collecting_points: true,
-    player: { id_player: 1, name: 'Alice' },
+    player: { id_user: 1, name: 'Alice' },
   },
   {
     id_participation: 101,
     event_id: 1,
-    player_id: 2,
+    player_user_id: 2,
     event_division_id: 10,
     division_id: 3,
     sort_order: 0,
     inserted_at: 1,
     is_collecting_points: false,
-    player: { id_player: 2, name: 'Bob' },
+    player: { id_user: 2, name: 'Bob' },
   },
 ];
 
@@ -475,7 +475,7 @@ describe('EventParticipationsTab collecting points', () => {
       expect(mockUpdate).toHaveBeenCalledWith(100, {
         event_id: 1,
         event_division_id: 9,
-        player_id: 1,
+        player_user_id: 1,
         is_collecting_points: false,
       });
     });
@@ -489,10 +489,10 @@ describe('EventParticipationsTab collecting points', () => {
       {
         ...participations[0],
         id_participation: 102,
-        player_id: 3,
+        player_user_id: 3,
         sort_order: 1,
         is_collecting_points: true,
-        player: { id_player: 3, name: 'Cara' },
+        player: { id_user: 3, name: 'Cara' },
       },
     ];
     const client = createTestQueryClient();
@@ -583,9 +583,9 @@ describe('EventParticipationsTab summary UX', () => {
       {
         ...participations[0],
         id_participation: 102,
-        player_id: 3,
+        player_user_id: 3,
         sort_order: 1,
-        player: { id_player: 3, name: 'Cara' },
+        player: { id_user: 3, name: 'Cara' },
       },
     ];
     const client = createTestQueryClient();
@@ -853,7 +853,7 @@ describe('EventParticipationsTab add player', () => {
       expect(mockCreate).toHaveBeenCalledWith({
         event_id: 1,
         event_division_id: 10,
-        player_id: 1,
+        player_user_id: 1,
       })
     );
     expect(await findByTestId('participations-add-button-success')).toBeTruthy();
@@ -1111,9 +1111,9 @@ describe('EventParticipationsTab row chrome and tooltips', () => {
       {
         ...participations[0],
         id_participation: 102,
-        player_id: 3,
+        player_user_id: 3,
         sort_order: 1,
-        player: { id_player: 3, name: 'Cara' },
+        player: { id_user: 3, name: 'Cara' },
       },
     ];
     const { getByTestId } = renderTab({

@@ -10,7 +10,7 @@ const mockGetCheckouts = jest.fn(async () => ({
     {
       id_checkout: 42,
       event_id: 1,
-      player_id: 9,
+      player_user_id: 9,
       status: 'awaiting_proof',
       total_amount: 100,
       items: [
@@ -43,7 +43,7 @@ const mockGetCheckouts = jest.fn(async () => ({
         { id_payment_proof: 7, url: 'https://x', review_status: 'pending' },
       ],
       latest_attempt: null,
-      player: { id_player: 9, name: 'Ada' },
+      player: { id_user: 9, name: 'Ada' },
       event: { id_event: 1, name: 'Spring Open' },
     },
   ],
@@ -51,7 +51,7 @@ const mockGetCheckouts = jest.fn(async () => ({
   links: {},
 }));
 const mockGetPlayerCheckouts = jest.fn(async (_playerId: number) => ({
-  data: [{ id_checkout: 77, event_id: 1, player_id: 9, status: 'completed', total_amount: 50, items: [] }],
+  data: [{ id_checkout: 77, event_id: 1, player_user_id: 9, status: 'completed', total_amount: 50, items: [] }],
   meta: { total: 1, last_page: 1 },
 }));
 const mockPush = jest.fn();
@@ -190,10 +190,10 @@ describe('RegistrationQueueList', () => {
 
       expect(capturedConfig.resourceName).toBe('EventRegistrationCheckout');
       expect(capturedConfig.embedded).toBe(true);
-      expect(capturedConfig.extraListParams).toEqual({ player_id: 9 });
+      expect(capturedConfig.extraListParams).toEqual({ player_user_id: 9 });
       expect(capturedConfig.extraListParams).not.toHaveProperty('queue');
       expect(capturedConfig.excludeFilterFields).toEqual(
-        expect.arrayContaining(['player_id'])
+        expect.arrayContaining(['player_user_id'])
       );
       expect(capturedConfig.title).toBe('Checkouts');
       expect(capturedConfig.sectionHref).toBe('/players/9/checkouts');

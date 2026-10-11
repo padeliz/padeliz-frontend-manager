@@ -35,7 +35,7 @@ export default function PlayerIdentitiesPage() {
   );
 
   const config = useResourcePageConfig<ApiPlayerIdentity>({
-    resourceName: 'PlayerIdentity',
+    resourceName: 'UserIdentity',
     resourceDisplayName: 'Identity',
     sectionLabel: 'Player identities',
     sectionHref: '/player-identities',

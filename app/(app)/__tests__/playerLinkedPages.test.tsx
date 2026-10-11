@@ -107,17 +107,17 @@ beforeEach(() => {
 
 describe('Player phones pages (full CRUD)', () => {
   it('lists phones with add, view and bulk delete', async () => {
-    mockGetPhones.mockResolvedValue({ data: [{ id_player_phone: 1 }], meta: {} });
+    mockGetPhones.mockResolvedValue({ data: [{ id_user_phone: 1 }], meta: {} });
     render(<PlayerPhonesPage />);
 
-    expect(mockListConfig.resourceName).toBe('PlayerPhone');
+    expect(mockListConfig.resourceName).toBe('UserPhone');
     expect(mockListConfig.bulkActions.map((a: any) => a.action)).toContain(
       'delete'
     );
 
     const res = await mockListConfig.fetchData({ page: 2 });
     expect(mockGetPhones).toHaveBeenCalledWith({ page: 2 });
-    expect(res.data).toEqual([{ id_player_phone: 1 }]);
+    expect(res.data).toEqual([{ id_user_phone: 1 }]);
 
     mockListConfig.onAdd();
     expect(mockPush).toHaveBeenCalledWith('/player-phones/add');
@@ -129,10 +129,10 @@ describe('Player phones pages (full CRUD)', () => {
   });
 
   it('creates a phone through the create page', async () => {
-    mockCreatePhone.mockResolvedValue({ data: { id_player_phone: 9 } });
+    mockCreatePhone.mockResolvedValue({ data: { id_user_phone: 9 } });
     render(<AddPlayerPhonePage />);
 
-    expect(mockCreateConfig.resourceName).toBe('PlayerPhone');
+    expect(mockCreateConfig.resourceName).toBe('UserPhone');
     await mockCreateConfig.createResource({ phone: '+40712345678' });
     expect(mockCreatePhone).toHaveBeenCalledWith({ phone: '+40712345678' });
     expect(mockCreateConfig.getViewPath(9)).toBe('/player-phones/9');
@@ -141,7 +141,7 @@ describe('Player phones pages (full CRUD)', () => {
   it('views and updates a phone by route id', async () => {
     render(<ViewPlayerPhonePage />);
 
-    expect(mockViewConfig.resourceName).toBe('PlayerPhone');
+    expect(mockViewConfig.resourceName).toBe('UserPhone');
     await mockViewConfig.fetchResource('12');
     expect(mockGetPhone).toHaveBeenCalledWith(12);
     await mockViewConfig.updateResource('12', { is_primary: true });
@@ -151,17 +151,17 @@ describe('Player phones pages (full CRUD)', () => {
 
 describe('Player emails pages (full CRUD)', () => {
   it('lists emails with add, view and bulk delete', async () => {
-    mockGetEmails.mockResolvedValue({ data: [{ id_player_email: 1 }], meta: {} });
+    mockGetEmails.mockResolvedValue({ data: [{ id_user_email: 1 }], meta: {} });
     render(<PlayerEmailsPage />);
 
-    expect(mockListConfig.resourceName).toBe('PlayerEmail');
+    expect(mockListConfig.resourceName).toBe('UserEmail');
     expect(mockListConfig.bulkActions.map((a: any) => a.action)).toContain(
       'delete'
     );
 
     const res = await mockListConfig.fetchData({ page: 1 });
     expect(mockGetEmails).toHaveBeenCalledWith({ page: 1 });
-    expect(res.data).toEqual([{ id_player_email: 1 }]);
+    expect(res.data).toEqual([{ id_user_email: 1 }]);
 
     mockListConfig.onAdd();
     expect(mockPush).toHaveBeenCalledWith('/player-emails/add');
@@ -173,10 +173,10 @@ describe('Player emails pages (full CRUD)', () => {
   });
 
   it('creates an email through the create page', async () => {
-    mockCreateEmail.mockResolvedValue({ data: { id_player_email: 9 } });
+    mockCreateEmail.mockResolvedValue({ data: { id_user_email: 9 } });
     render(<AddPlayerEmailPage />);
 
-    expect(mockCreateConfig.resourceName).toBe('PlayerEmail');
+    expect(mockCreateConfig.resourceName).toBe('UserEmail');
     await mockCreateConfig.createResource({ email: 'a@example.test' });
     expect(mockCreateEmail).toHaveBeenCalledWith({ email: 'a@example.test' });
     expect(mockCreateConfig.getViewPath(9)).toBe('/player-emails/9');
@@ -185,7 +185,7 @@ describe('Player emails pages (full CRUD)', () => {
   it('views and updates an email by route id', async () => {
     render(<ViewPlayerEmailPage />);
 
-    expect(mockViewConfig.resourceName).toBe('PlayerEmail');
+    expect(mockViewConfig.resourceName).toBe('UserEmail');
     await mockViewConfig.fetchResource('12');
     expect(mockGetEmail).toHaveBeenCalledWith(12);
     await mockViewConfig.updateResource('12', { is_primary: false });
@@ -195,10 +195,10 @@ describe('Player emails pages (full CRUD)', () => {
 
 describe('Player identities pages (no create)', () => {
   it('lists identities with view and delete but no add', async () => {
-    mockGetIdentities.mockResolvedValue({ data: [{ id_identity: 1 }], meta: {} });
+    mockGetIdentities.mockResolvedValue({ data: [{ id_user_identity: 1 }], meta: {} });
     render(<PlayerIdentitiesPage />);
 
-    expect(mockListConfig.resourceName).toBe('PlayerIdentity');
+    expect(mockListConfig.resourceName).toBe('UserIdentity');
     expect(mockListConfig.onAdd).toBeUndefined();
     expect(mockListConfig.bulkActions.map((a: any) => a.action)).toContain(
       'delete'
@@ -206,7 +206,7 @@ describe('Player identities pages (no create)', () => {
 
     const res = await mockListConfig.fetchData({ page: 1 });
     expect(mockGetIdentities).toHaveBeenCalledWith({ page: 1 });
-    expect(res.data).toEqual([{ id_identity: 1 }]);
+    expect(res.data).toEqual([{ id_user_identity: 1 }]);
 
     mockListConfig.onView(5);
     expect(mockPush).toHaveBeenCalledWith('/player-identities/5');
@@ -218,14 +218,14 @@ describe('Player identities pages (no create)', () => {
   it('views and edits an identity but keeps the provider link read-only', async () => {
     render(<ViewPlayerIdentityPage />);
 
-    expect(mockViewConfig.resourceName).toBe('PlayerIdentity');
+    expect(mockViewConfig.resourceName).toBe('UserIdentity');
     await mockViewConfig.fetchResource('12');
     expect(mockGetIdentity).toHaveBeenCalledWith(12);
     await mockViewConfig.updateResource('12', { display_name: 'Ace' });
     expect(mockUpdateIdentity).toHaveBeenCalledWith(12, { display_name: 'Ace' });
 
     expect(mockViewConfig.readOnlyFields).toEqual(
-      expect.arrayContaining(['player_id', 'provider', 'provider_subject'])
+      expect.arrayContaining(['user_id', 'provider', 'provider_subject'])
     );
   });
 

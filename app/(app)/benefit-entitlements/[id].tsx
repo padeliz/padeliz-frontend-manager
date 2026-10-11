@@ -150,7 +150,7 @@ export default function ViewBenefitEntitlementPage() {
             </Text>
             <Text className="text-sm text-gray-700">
               Player:{' '}
-              {entitlement.player?.name || `Player #${entitlement.player_id}`}
+              {entitlement.player?.name || `Player #${entitlement.player_user_id}`}
             </Text>
             <Text className="text-sm text-gray-700">
               Benefit:{' '}

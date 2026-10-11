@@ -44,7 +44,7 @@ export type ApiReviewStatus =
 
 export interface ApiPlayerLevel {
   id_player_level: number;
-  player_id: number;
+  player_user_id: number;
   level: string;
   band_name?: string | null;
   player_level_assessment_id?: number | null;
@@ -55,16 +55,16 @@ export interface ApiPlayerLevel {
 
 export interface ApiPlayerLevelAssessmentSubmission {
   id_player_custom_field_submission: number;
-  player_id: number;
+  player_user_id: number;
   submitted_via?: string | null;
-  submitted_by_player_id?: number | null;
+  submitted_by_player_user_id?: number | null;
   inserted_at?: number;
   values?: ApiPlayerCustomFieldValue[] | null;
 }
 
 export interface ApiPlayerLevelAssessment {
   id_player_level_assessment: number;
-  player_id: number;
+  player_user_id: number;
   player_custom_field_submission_id: number;
   submitted_at?: number | null;
   resubmitted_at?: number | null;
@@ -91,7 +91,7 @@ export interface ApiPlayerStudentProofFile {
 
 export interface ApiPlayerStudentProof {
   id_player_student_proof: number;
-  player_id: number;
+  player_user_id: number;
   student_until: string | null;
   sort_order?: number;
   ready_for_review: boolean;
@@ -123,6 +123,13 @@ export interface ApiDivision {
   updated_at?: number;
 }
 
+export interface ApiEventCoverImage {
+  id: number;
+  url: string;
+  aspect_ratio?: number | null;
+  sort_order: number;
+}
+
 export interface ApiEvent {
   id_event: number;
   location_id: number;
@@ -131,9 +138,12 @@ export interface ApiEvent {
   name: string;
   /** Server-generated; read-only — never sent on create/update. */
   slug?: string | null;
-  date: string;
-  arriving_time?: string;
-  closing_time?: string;
+  event_starts_at: number;
+  event_ends_at: number;
+  /** Inclusive Bucharest calendar days between starts and ends (read-only). */
+  event_nr_of_days?: number;
+  cover_url?: string | null;
+  cover_images?: ApiEventCoverImage[];
   finalized_at?: number | null;
   /** Unix timestamp until which players may register for this event. */
   registration_allowed_until: number;
@@ -164,8 +174,9 @@ export interface ApiEventDivision {
   level_min?: string | null;
   /** Strongest level accepted in this event division (2 decimals). */
   level_max?: string | null;
-  playing_start_time: string;
-  playing_end_time: string;
+  check_in_at?: number | null;
+  playing_starts_at: number;
+  playing_ends_at: number;
   inserted_at: number;
   updated_at?: number;
   event?: ApiEvent;
@@ -215,8 +226,8 @@ export interface ApiCachedPdfPlayerImage {
 export type ApiPlayerContactPurpose = 'contact' | 'login';
 
 export interface ApiPlayerPhone {
-  id_player_phone: number;
-  player_id: number;
+  id_user_phone: number;
+  user_id: number;
   phone: string;
   purposes: ApiPlayerContactPurpose[];
   is_primary: boolean;
@@ -226,8 +237,8 @@ export interface ApiPlayerPhone {
 }
 
 export interface ApiPlayerEmail {
-  id_player_email: number;
-  player_id: number;
+  id_user_email: number;
+  user_id: number;
   email: string;
   purposes: ApiPlayerContactPurpose[];
   is_primary: boolean;
@@ -239,8 +250,8 @@ export interface ApiPlayerEmail {
 export type ApiPlayerIdentityProvider = 'google' | 'apple' | 'sms' | 'dev';
 
 export interface ApiPlayerIdentity {
-  id_identity: number;
-  player_id: number;
+  id_user_identity: number;
+  user_id: number;
   provider: ApiPlayerIdentityProvider;
   provider_subject: string;
   email_id?: number | null;
@@ -255,12 +266,8 @@ export interface ApiPlayerIdentity {
 }
 
 export interface ApiPlayer {
-  id_player: number;
+  id_user: number;
   name: string;
-  google_id?: string;
-  google_name?: string;
-  google_email?: string;
-  google_avatar?: string;
   phone?: string;
   skill_division?: number;
   first_name?: string;
@@ -275,11 +282,11 @@ export interface ApiPlayer {
   facebook_username?: string;
   created_via?: 'app' | 'manager' | 'csv' | null;
   created_via_format?: string | null;
-  created_via_import_id?: number | null;
+  created_via_user_import_id?: number | null;
   pdf_avatar_url?: string | null;
   profile_image_url?: string | null;
-  emails?: { id_player_email: number; email: string; purposes?: string[]; is_primary?: boolean }[];
-  phones?: { id_player_phone: number; phone: string; purposes?: string[]; is_primary?: boolean }[];
+  emails?: { id_user_email: number; email: string; purposes?: string[]; is_primary?: boolean }[];
+  phones?: { id_user_phone: number; phone: string; purposes?: string[]; is_primary?: boolean }[];
   /** Only on the Manager player show payload; one row per `is_collecting_points` variant that is cached. */
   cached_pdf_images?: ApiCachedPdfPlayerImage[];
   inserted_at: number;
@@ -299,7 +306,7 @@ export interface ApiPlayer {
 export interface ApiEventParticipation {
   id_participation: number;
   event_id: number;
-  player_id: number;
+  player_user_id: number;
   event_division_id?: number;
   division_id: number;
   sort_order?: number;
@@ -492,7 +499,7 @@ export interface ApiBenefitDefinition {
 export interface ApiBenefitEntitlement {
   id_entitlement: number;
   benefit_definition_id: number;
-  player_id: number;
+  player_user_id: number;
   remaining_uses?: number | null;
   valid_from?: number | null;
   valid_until?: number | null;
@@ -525,8 +532,8 @@ export interface ApiEventReferralSetting {
 export interface ApiReferralTouchpoint {
   id_touchpoint: number;
   event_id: number;
-  referred_player_id: number;
-  referrer_player_id: number;
+  referred_player_user_id: number;
+  referrer_player_user_id: number;
   referral_code_id?: number | null;
   discount_eligible: boolean;
   touched_at?: number | null;
@@ -546,8 +553,8 @@ export type ApiReferralAttributionStatus =
 export interface ApiReferralAttribution {
   id_attribution: number;
   event_id: number;
-  referred_player_id: number;
-  referrer_player_id: number;
+  referred_player_user_id: number;
+  referrer_player_user_id: number;
   referral_code_id?: number | null;
   checkout_id?: number | null;
   status: ApiReferralAttributionStatus | string;
@@ -567,7 +574,7 @@ export interface ApiPricingPreviewQuote {
 export interface ApiEventRegistration {
   id_registration: number;
   event_id: number;
-  player_id: number;
+  player_user_id: number;
   event_division_id?: number | null;
   /** Latest checkout that includes this registration line. */
   checkout_id?: number | null;
@@ -630,7 +637,7 @@ export interface ApiEventRegistrationCheckoutAttempt {
 export interface ApiEventRegistrationCheckout {
   id_checkout: number;
   event_id: number;
-  player_id: number;
+  player_user_id: number;
   status: ApiCheckoutStatus | string;
   total_amount: number;
   payment_method?: ApiRegistrationPaymentMethod | null;
@@ -676,7 +683,7 @@ export interface ApiSponsor {
   id_sponsor: number;
   name: string;
   club_id?: number | null;
-  player_ids?: number[];
+  player_user_ids?: number[];
   inserted_at: number;
   updated_at?: number;
   club?: ApiClub;
@@ -759,24 +766,24 @@ export interface ApiEventLuckyOne {
   pdf_avatar_url?: string | null;
 }
 
-export interface ApiPlayerImportRow {
-  id_player_import_row: number;
-  player_import_id: number;
+export interface ApiUserImportRow {
+  id_user_import_row: number;
+  user_import_id: number;
   row_index: number;
   first_name?: string | null;
   middle_name?: string | null;
   last_name?: string | null;
   email?: string | null;
   phone?: string | null;
-  player_id?: number | null;
+  user_id?: number | null;
   action: 'created' | 'attached';
   inserted_at: number;
   updated_at?: number;
 }
 
-export interface ApiPlayerImport {
-  id_player_import: number;
-  imported_by_player_id?: number | null;
+export interface ApiUserImport {
+  id_user_import: number;
+  imported_by_manager_user_id?: number | null;
   format: string;
   original_filename: string;
   included_count: number;
@@ -785,10 +792,10 @@ export interface ApiPlayerImport {
   inserted_at: number;
   updated_at?: number;
   importedByPlayer?: ApiPlayer | null;
-  rows?: ApiPlayerImportRow[];
+  rows?: ApiUserImportRow[];
 }
 
-export interface ApiPlayerImportPreviewMapping {
+export interface ApiUserImportPreviewMapping {
   status: 'mapped' | 'unmapped' | 'conflict';
   matched_by: 'email' | 'phone' | null;
   player: ApiPlayer | null;
@@ -796,24 +803,24 @@ export interface ApiPlayerImportPreviewMapping {
   name_matches: ApiPlayer[];
 }
 
-export interface ApiPlayerImportPreviewRow {
+export interface ApiUserImportPreviewRow {
   index: number;
   first_name: string;
   middle_name: string | null;
   last_name: string | null;
   email: string;
   phone: string;
-  mapping: ApiPlayerImportPreviewMapping;
+  mapping: ApiUserImportPreviewMapping;
 }
 
 export interface ApiEventRegistrationImportPreviewRow
-  extends ApiPlayerImportPreviewRow {
+  extends ApiUserImportPreviewRow {
   already_registered: boolean;
 }
 
 export interface ApiEventRegistrationImportResultRow {
   index: number;
-  player_id: number | null;
+  player_user_id: number | null;
   action: string;
   registration_id: number | null;
 }
@@ -831,7 +838,7 @@ export interface ApiPlayerProfileImageImportRow {
   player_profile_image_import_id: number;
   row_index: number;
   original_filename: string;
-  player_id: number;
+  player_user_id: number;
   player_profile_image_id: number;
   is_pdf_primary: boolean;
   action: 'uploaded';
@@ -841,7 +848,7 @@ export interface ApiPlayerProfileImageImportRow {
 
 export interface ApiPlayerProfileImageImport {
   id_player_profile_image_import: number;
-  imported_by_player_id?: number | null;
+  imported_by_manager_user_id?: number | null;
   original_filename: string;
   included_count: number;
   uploaded_count: number;
@@ -917,7 +924,7 @@ export type PlayerCustomFieldValueReviewStatus =
 
 export interface ApiPlayerCustomFieldValue {
   id_player_custom_field_value: number;
-  player_id: number;
+  player_user_id: number;
   player_custom_field_id: number;
   event_id?: number | null;
   value_text?: string | null;
@@ -926,9 +933,9 @@ export interface ApiPlayerCustomFieldValue {
   value_date?: string | null;
   value_json?: unknown;
   value?: unknown;
-  submitted_by_player_id?: number | null;
+  submitted_by_player_user_id?: number | null;
   submitted_via: 'manager' | 'csv';
-  created_via_import_id?: number | null;
+  created_via_user_import_id?: number | null;
   /** `validated` is the current/authoritative value; others are history. */
   review_status: PlayerCustomFieldValueReviewStatus;
   reviewed_at?: number | null;
@@ -947,7 +954,7 @@ export interface ApiPlayerCustomFieldValueImportRow {
   full_name?: string | null;
   email?: string | null;
   phone?: string | null;
-  player_id: number;
+  player_user_id: number;
   action: 'imported';
   answers_json: Record<string, string>;
   inserted_at: number;
@@ -957,7 +964,7 @@ export interface ApiPlayerCustomFieldValueImportRow {
 
 export interface ApiPlayerCustomFieldValueImport {
   id_player_custom_field_value_import: number;
-  imported_by_player_id?: number | null;
+  imported_by_manager_user_id?: number | null;
   format: string;
   original_filename: string;
   event_id?: number | null;

@@ -3,6 +3,8 @@ const expoPreset = require('jest-expo/jest-preset');
 
 module.exports = {
   ...expoPreset,
+  // Must exceed RNTL asyncUtilTimeout (5s in jest.setup.js) under parallel workers.
+  testTimeout: 15000,
   // Polyfill before jest-expo preset setup (expo winter needs FormData)
   setupFiles: [
     '<rootDir>/jest.polyfills.js',

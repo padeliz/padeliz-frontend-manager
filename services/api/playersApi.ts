@@ -110,7 +110,7 @@ export class PlayersApiService extends BaseApiService {
     return this.bulkDelete<ApiResponse<ApiBulkDeleteResponse>>(
       '/players/bulk',
       {
-        player_ids: ids,
+        player_user_ids: ids,
       }
     );
   }
@@ -161,7 +161,7 @@ export class PlayersApiService extends BaseApiService {
       './resourceMetadataApi'
     );
     const metadataApi = new ApiResourceMetadataApiService();
-    const response = await metadataApi.getApiResourceMetadata('Player');
+    const response = await metadataApi.getApiResourceMetadata('User');
     return { data: response.data };
   }
 }

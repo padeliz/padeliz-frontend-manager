@@ -208,7 +208,7 @@ describe('SmashLivePanel', () => {
     liveBase.waiting = [
       {
         participation_id: 'p1',
-        player_id: '20',
+        player_user_id: '20',
         player_name: 'Player Alpha',
         session_tries: 0,
         record_hold_seconds: 0,
@@ -466,7 +466,7 @@ describe('SmashLivePanel', () => {
     liveBase.session.status = 'active';
     liveBase.waiting = Array.from({ length: 6 }, (_, i) => ({
       participation_id: `p${i}`,
-      player_id: String(i),
+      player_user_id: String(i),
       player_name: `Player ${i}`,
       session_tries: 0,
       record_hold_seconds: 0,
@@ -484,7 +484,7 @@ describe('SmashLivePanel', () => {
     liveBase.waiting = [
       {
         participation_id: 'p1',
-        player_id: '20',
+        player_user_id: '20',
         player_name: 'Player Alpha',
         session_tries: 0,
         record_hold_seconds: 0,
@@ -510,7 +510,7 @@ describe('SmashLivePanel', () => {
     liveBase.session.status = 'active';
     liveBase.court = {
       participation_id: 'c1',
-      player_id: '9',
+      player_user_id: '9',
       player_name: 'Court Ace',
       session_tries: 2,
       record_hold_seconds: 10,
@@ -519,7 +519,7 @@ describe('SmashLivePanel', () => {
     liveBase.leaderboard = [
       {
         position: 1,
-        player_id: '9',
+        player_user_id: '9',
         player_name: 'Court Ace',
         session_tries: 2,
         record_hold_seconds: 10,
@@ -584,7 +584,7 @@ describe('SmashLivePanel', () => {
     liveBase.waiting = [
       {
         participation_id: 'p1',
-        player_id: '20',
+        player_user_id: '20',
         player_name: 'Player Alpha',
         session_tries: 0,
         record_hold_seconds: 0,
@@ -600,7 +600,7 @@ describe('SmashLivePanel', () => {
     liveBase.session.status = 'active';
     liveBase.court = {
       participation_id: 'c1',
-      player_id: '9',
+      player_user_id: '9',
       player_name: 'Court Ace',
       session_tries: 1,
       record_hold_seconds: 0,
@@ -621,7 +621,7 @@ describe('SmashLivePanel', () => {
 
     liveBase.waiting = Array.from({ length: 6 }, (_, i) => ({
       participation_id: `p${i}`,
-      player_id: String(i),
+      player_user_id: String(i),
       player_name: `Player ${i}`,
       session_tries: 0,
       record_hold_seconds: 0,
@@ -638,7 +638,7 @@ describe('SmashLivePanel', () => {
     liveBase.leaderboard = [
       {
         position: 1,
-        player_id: 'r1',
+        player_user_id: 'r1',
         player_name: 'Removed',
         session_tries: 3,
         record_hold_seconds: 65,
@@ -647,7 +647,7 @@ describe('SmashLivePanel', () => {
       },
       {
         position: 2,
-        player_id: 'w1',
+        player_user_id: 'w1',
         player_name: 'Waiting',
         session_tries: 1,
         record_hold_seconds: 0,
@@ -658,7 +658,7 @@ describe('SmashLivePanel', () => {
     liveBase.waiting = [
       {
         participation_id: 'p1',
-        player_id: 'w1',
+        player_user_id: 'w1',
         player_name: 'Waiting',
         session_tries: 1,
         record_hold_seconds: 0,

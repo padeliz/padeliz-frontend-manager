@@ -34,7 +34,7 @@ describe('ResourceFieldEdit', () => {
 
     render(
       <ResourceFieldEdit
-        fieldKey="id_player"
+        fieldKey="id_user"
         fieldValue={61}
         metadata={playerMetadata}
         onChange={onChange}

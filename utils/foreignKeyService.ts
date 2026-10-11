@@ -16,9 +16,11 @@ const relatedMetadataCache: Record<string, ApiResourceMetadata> = {};
 const optionsCache: Record<string, Array<{ id: number; label: string }>> = {};
 
 export class ForeignKeyService {
-  /** event_division_id → eventDivision */
+  /** event_division_id → eventDivision; player_user_id → player (User FK, player embed). */
   static toCamelLinkedKey(fieldKey: string): string {
-    const withoutId = fieldKey.replace(/_id$/, '');
+    const withoutId = fieldKey.endsWith('_user_id')
+      ? fieldKey.slice(0, -'_user_id'.length)
+      : fieldKey.replace(/_id$/, '');
     return withoutId.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
   }
 
@@ -30,7 +32,9 @@ export class ForeignKeyService {
     if (!props) return null;
 
     const camel = this.toCamelLinkedKey(fieldKey);
-    const snake = fieldKey.replace(/_id$/, '');
+    const snake = fieldKey.endsWith('_user_id')
+      ? fieldKey.slice(0, -'_user_id'.length)
+      : fieldKey.replace(/_id$/, '');
     for (const key of [camel, snake]) {
       const def = props[key];
       if (def?.oneOf?.some((ref: any) => ref.$ref) || def?.$ref) {

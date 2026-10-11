@@ -84,6 +84,12 @@ jest.mock('react-native-gesture-handler', () => {
   };
 });
 
+import { productDateTimeToDate } from '@/utils/productDateTime';
+
+const day = '2026-08-24';
+const unixAt = (time: string) =>
+  Math.floor(productDateTimeToDate(day, time).getTime() / 1000);
+
 const divisions = [
   {
     id_event_division: 9,
@@ -92,8 +98,8 @@ const divisions = [
     division_title: 'Rookies',
     players_limit: 16,
     skill_order: 0,
-    playing_start_time: '10:00',
-    playing_end_time: '14:00',
+    playing_starts_at: unixAt('10:00:00'),
+    playing_ends_at: unixAt('14:00:00'),
     inserted_at: 1,
   },
   {
@@ -103,8 +109,8 @@ const divisions = [
     division_title: 'Open',
     players_limit: 12,
     skill_order: 1,
-    playing_start_time: '14:00',
-    playing_end_time: '18:00',
+    playing_starts_at: unixAt('14:00:00'),
+    playing_ends_at: unixAt('18:00:00'),
     inserted_at: 1,
   },
 ] as any;
@@ -126,11 +132,11 @@ function fillRequiredCreateFields(
   );
   fireEvent.changeText(
     getByTestId('divisions-start-input'),
-    overrides.start ?? '10:00'
+    overrides.start ?? `${day}T10:00`
   );
   fireEvent.changeText(
     getByTestId('divisions-end-input'),
-    overrides.end ?? '18:00'
+    overrides.end ?? `${day}T18:00`
   );
   fireEvent.changeText(
     getByTestId('divisions-entry-fee-input'),
@@ -203,8 +209,8 @@ describe('EventDivisionsTab', () => {
         division_id: 4,
         division_title: 'Kids',
         players_limit: 16,
-        playing_start_time: '10:00',
-        playing_end_time: '18:00',
+        playing_starts_at: unixAt('10:00:00'),
+        playing_ends_at: unixAt('18:00:00'),
         entry_fee: 55,
         level_min: '4.99',
         level_max: '4.67',
@@ -218,8 +224,8 @@ describe('EventDivisionsTab', () => {
 
     fillRequiredCreateFields(getByTestId, {
       players: '8',
-      start: '11:00',
-      end: '15:00',
+      start: `${day}T11:00`,
+      end: `${day}T15:00`,
       fee: '60',
     });
     fireEvent.press(getByTestId('dropdown-Division-option-4'));
@@ -228,8 +234,8 @@ describe('EventDivisionsTab', () => {
     await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
 
     expect(getByTestId('divisions-players-limit-input').props.value).toBe('8');
-    expect(getByTestId('divisions-start-input').props.value).toBe('11:00');
-    expect(getByTestId('divisions-end-input').props.value).toBe('15:00');
+    expect(getByTestId('divisions-start-input').props.value).toBe(`${day}T11:00`);
+    expect(getByTestId('divisions-end-input').props.value).toBe(`${day}T15:00`);
     expect(getByTestId('divisions-entry-fee-input').props.value).toBe('60');
     expect(getByTestId('divisions-title-input').props.value).toBe('');
     expect(getByTestId('divisions-level-min-input').props.value).toBe('');

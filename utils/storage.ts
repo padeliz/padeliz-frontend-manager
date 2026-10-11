@@ -118,7 +118,7 @@ export const storageUtils = {
   async get<T>(key: string): Promise<T | null> {
     try {
       const value = await storage.getItem(key);
-      if (value === null) return null;
+      if (value == null || value === '') return null;
       return JSON.parse(value) as T;
     } catch (error) {
       console.error('Storage get error:', error);

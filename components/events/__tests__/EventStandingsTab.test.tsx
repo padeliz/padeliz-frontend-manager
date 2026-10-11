@@ -286,6 +286,7 @@ describe('EventStandingsTab', () => {
     );
     await findByText(/Mara Lovelace/);
     fireEvent.press(getByText(/Recalculate/i));
+    await waitFor(() => expect(standingsApi.recalculate).toHaveBeenCalled());
     expect(await findByTestId('standings-recalculate-error')).toBeTruthy();
     expect(queryByText('Recalc boom')).toBeNull();
     expect(queryByText('Recalculate failed')).toBeNull();

@@ -20,7 +20,7 @@ describe('ResourceFieldDisplay', () => {
   it('renders read-only primary key and timestamp fields', () => {
     const { rerender } = render(
       <ResourceFieldDisplay
-        fieldKey="id_player"
+        fieldKey="id_user"
         fieldValue={61}
         metadata={playerMetadata}
       />

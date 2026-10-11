@@ -4,14 +4,14 @@ import { BaseApiService } from './baseApi';
 export type CreateReplacementPayload = {
   original_participation_id: number;
   substitute_participation_id?: number;
-  substitute_player_id?: number;
+  substitute_player_user_id?: number;
   match_id?: number | null;
 };
 
 export type PatchReplacementPayload = {
   original_participation_id?: number;
   substitute_participation_id?: number | null;
-  substitute_player_id?: number | null;
+  substitute_player_user_id?: number | null;
   match_id?: number | null;
 };
 

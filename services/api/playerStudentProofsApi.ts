@@ -12,7 +12,7 @@ export class PlayerStudentProofsApiService extends BaseApiService {
       per_page?: number;
       q?: string;
       filters?: {
-        player_id?: number;
+        player_user_id?: number;
         review_status?: ApiReviewStatus;
         ready_for_review?: 0 | 1;
       };

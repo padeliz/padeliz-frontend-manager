@@ -14,6 +14,7 @@ import {
   ApiBenefitDefinition,
 } from '@/types/api/entities';
 import { DropdownOption } from '@/types/ui/dropdowns';
+import { dayYmdFromUnix } from '@/utils/productDateTime';
 import {
   BENEFIT_AMOUNT_TYPE_OPTIONS,
   BENEFIT_CONDITION_TYPE_OPTIONS,
@@ -118,11 +119,11 @@ export default function BenefitEditorForm({
       })
       .catch(() => setClubOptions([]));
     void eventsApi
-      .getEvents({ page: 1, per_page: 100, sort_by: { date: 'desc' } })
+      .getEvents({ page: 1, per_page: 100, sort_by: { event_starts_at: 'desc' } })
       .then(res => {
         setEventOptions(
           (res.data || []).map(e => ({
-            label: `${e.name} (${e.date})`,
+            label: `${e.name} (${dayYmdFromUnix(e.event_starts_at)})`,
             value: e.id_event,
           }))
         );

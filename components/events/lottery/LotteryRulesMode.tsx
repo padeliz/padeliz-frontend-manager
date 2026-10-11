@@ -400,7 +400,7 @@ export default function LotteryRulesMode({
     });
   };
 
-  if (rulesQuery.isLoading && local.length === 0) {
+  if (rulesQuery.isPending && local.length === 0) {
     return <ActivityIndicator testID="lottery-rules-loading" />;
   }
 

@@ -61,13 +61,13 @@ export default function BenefitEntitlementsPage() {
         ),
       },
       {
-        key: 'player_id',
+        key: 'player_user_id',
         label: 'Player',
         sortable: true,
         width: 180,
         render: (item: ApiBenefitEntitlement) => (
           <Text className="text-gray-700 text-sm">
-            {item.player?.name || `Player #${item.player_id}`}
+            {item.player?.name || `Player #${item.player_user_id}`}
           </Text>
         ),
       },

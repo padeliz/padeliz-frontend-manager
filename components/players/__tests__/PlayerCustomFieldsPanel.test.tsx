@@ -121,7 +121,7 @@ describe('PlayerCustomFieldsPanel', () => {
       data: [
         {
           id_player_custom_field_value: 99,
-          player_id: 42,
+          player_user_id: 42,
           player_custom_field_id: 7,
           value: 'M',
           submitted_via: 'manager',
@@ -131,7 +131,7 @@ describe('PlayerCustomFieldsPanel', () => {
         },
         {
           id_player_custom_field_value: 100,
-          player_id: 42,
+          player_user_id: 42,
           player_custom_field_id: 7,
           value: 'S',
           submitted_via: 'csv',

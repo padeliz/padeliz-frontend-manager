@@ -19,7 +19,7 @@ export default function ViewPlayerEmailPage() {
   );
 
   const config = useResourceViewPageConfig<ApiPlayerEmail>({
-    resourceName: 'PlayerEmail',
+    resourceName: 'UserEmail',
     resourceDisplayName: 'Email',
     sectionLabel: 'Player emails',
     sectionHref: '/player-emails',

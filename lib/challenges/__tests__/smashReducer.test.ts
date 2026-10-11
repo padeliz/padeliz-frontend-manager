@@ -61,7 +61,7 @@ describe('smashReducer', () => {
       doc = addPlayer(doc, name, now);
     }
 
-    const firstId = (doc.state.waiting[0] as { player_id: string }).player_id;
+    const firstId = (doc.state.waiting[0] as { player_user_id: string }).player_user_id;
     let r = reduceSmash(
       doc.state,
       { type: 'jump_in', playerId: firstId },
@@ -97,7 +97,7 @@ describe('smashReducer', () => {
 
     const r = reduceSmash(
       doc.state,
-      { type: 'jump_in', playerId: p.player_id },
+      { type: 'jump_in', playerId: p.player_user_id },
       2,
       1_000_000
     );
@@ -112,7 +112,7 @@ describe('smashReducer', () => {
     let doc = smashDoc();
     const now = 1_000_000;
     doc = addPlayer(doc, 'Player Alpha', now);
-    const playerId = (doc.state.waiting[0] as { player_id: string }).player_id;
+    const playerId = (doc.state.waiting[0] as { player_user_id: string }).player_user_id;
     let r = reduceSmash(doc.state, { type: 'jump_in', playerId }, 2, now);
     if (!('state' in r)) throw new Error(r.message);
     doc = applyCommandResult(doc, r);
@@ -127,7 +127,7 @@ describe('smashReducer', () => {
     doc = applyCommandResult(doc, r);
 
     const p = (doc.state.participants as SmashParticipant[]).find(
-      x => x.player_id === playerId
+      x => x.player_user_id === playerId
     )!;
     expect(p.leaderboard_eligible).toBe(true);
     const lb = projectSmashViews(doc.state, now + 5).leaderboard as {
@@ -145,7 +145,7 @@ describe('smashReducer', () => {
     let doc = smashDoc();
     const now = 1_000_000;
     doc = addPlayer(doc, 'Player Alpha', now);
-    const playerId = (doc.state.waiting[0] as { player_id: string }).player_id;
+    const playerId = (doc.state.waiting[0] as { player_user_id: string }).player_user_id;
     let r = reduceSmash(doc.state, { type: 'jump_in', playerId }, 2, now);
     if (!('state' in r)) throw new Error(r.message);
     doc = applyCommandResult(doc, r);
@@ -159,7 +159,7 @@ describe('smashReducer', () => {
     doc = applyCommandResult(doc, r);
     expect(
       (doc.state.participants as SmashParticipant[]).find(
-        p => p.player_id === playerId
+        p => p.player_user_id === playerId
       )!.leaderboard_eligible
     ).toBe(true);
   });
@@ -167,7 +167,7 @@ describe('smashReducer', () => {
   it('remove from waiting only stays off LB', () => {
     let doc = smashDoc();
     doc = addPlayer(doc, 'Player Alpha');
-    const playerId = (doc.state.waiting[0] as { player_id: string }).player_id;
+    const playerId = (doc.state.waiting[0] as { player_user_id: string }).player_user_id;
     const r = reduceSmash(doc.state, { type: 'remove_player', playerId }, 2);
     if (!('state' in r)) throw new Error(r.message);
     doc = applyCommandResult(doc, r);
@@ -190,7 +190,7 @@ describe('smashReducer', () => {
       duplicate: { location: 'waiting' },
     });
 
-    const playerId = (doc.state.waiting[0] as { player_id: string }).player_id;
+    const playerId = (doc.state.waiting[0] as { player_user_id: string }).player_user_id;
     r = reduceSmash(doc.state, { type: 'remove_player', playerId }, 2);
     if (!('state' in r)) throw new Error(r.message);
     doc = applyCommandResult(doc, r);
@@ -201,7 +201,7 @@ describe('smashReducer', () => {
     expect(
       (doc.state.participants as SmashParticipant[]).find(
         p => p.name_normalized === normalizeChallengeName('Player Alpha')
-      )!.player_id
+      )!.player_user_id
     ).toBe(playerId);
 
     doc = smashDoc();
@@ -256,8 +256,8 @@ describe('smashReducer', () => {
     doc = smashDoc();
     doc = addPlayer(doc, 'Player Alpha');
     doc = addPlayer(doc, 'Player Bravo');
-    const before = (doc.state.waiting as { player_id: string }[]).map(
-      w => w.player_id
+    const before = (doc.state.waiting as { player_user_id: string }[]).map(
+      w => w.player_user_id
     );
     r = reduceSmash(
       doc.state,
@@ -271,7 +271,7 @@ describe('smashReducer', () => {
     );
     doc = applyCommandResult(doc, r);
     expect(
-      (doc.state.waiting as { player_id: string }[]).map(w => w.player_id)
+      (doc.state.waiting as { player_user_id: string }[]).map(w => w.player_user_id)
     ).toEqual([before[1], before[0]]);
     expect(applyUndo(doc).ok).toBe(true);
   });
@@ -289,7 +289,7 @@ describe('smashReducer', () => {
     if (!('state' in r)) throw new Error(r.message);
     doc = applyCommandResult(doc, r);
 
-    const playerId = (doc.state.waiting[0] as { player_id: string }).player_id;
+    const playerId = (doc.state.waiting[0] as { player_user_id: string }).player_user_id;
     r = reduceSmash(doc.state, { type: 'jump_in', playerId }, 2, t0);
     if (!('state' in r)) throw new Error(r.message);
     doc = applyCommandResult(doc, r);
@@ -333,7 +333,7 @@ describe('smashReducer', () => {
     );
     if (!('state' in r)) throw new Error(r.message);
     doc = applyCommandResult(doc, r);
-    const bravo = (doc.state.waiting[0] as { player_id: string }).player_id;
+    const bravo = (doc.state.waiting[0] as { player_user_id: string }).player_user_id;
 
     r = reduceSmash(doc.state, { type: 'jump_in', playerId: bravo }, 7, t0 + 120);
     if (!('state' in r)) throw new Error(r.message);
@@ -361,7 +361,7 @@ describe('smashReducer', () => {
     );
     if (!('state' in r)) throw new Error(r.message);
     doc = applyCommandResult(doc, r);
-    const charlie = (doc.state.waiting[0] as { player_id: string }).player_id;
+    const charlie = (doc.state.waiting[0] as { player_user_id: string }).player_user_id;
     const heldBefore = (doc.state.participants as SmashParticipant[]).find(
       p => p.is_record_holder
     )!.record_held_since;
@@ -381,11 +381,11 @@ describe('smashReducer', () => {
     const t0 = 3_000_000;
     doc = addPlayer(doc, 'Player Alpha', t0);
     doc = addPlayer(doc, 'Player Bravo', t0);
-    const [a, b] = doc.state.waiting as { player_id: string }[];
+    const [a, b] = doc.state.waiting as { player_user_id: string }[];
 
     let r = reduceSmash(
       doc.state,
-      { type: 'jump_in', playerId: a.player_id },
+      { type: 'jump_in', playerId: a.player_user_id },
       doc.state_sequence + 1,
       t0
     );
@@ -401,8 +401,8 @@ describe('smashReducer', () => {
     if (!('state' in r)) throw new Error(r.message);
     doc = applyCommandResult(doc, r);
 
-    const onCourtId = (doc.state.court as { player_id: string }).player_id;
-    expect(onCourtId).toBe(b.player_id);
+    const onCourtId = (doc.state.court as { player_user_id: string }).player_user_id;
+    expect(onCourtId).toBe(b.player_user_id);
 
     r = reduceSmash(
       doc.state,
@@ -416,14 +416,14 @@ describe('smashReducer', () => {
 
     expect(doc.state.court).toBeNull();
     const returned = (doc.state.participants as SmashParticipant[]).find(
-      p => p.player_id === onCourtId
+      p => p.player_user_id === onCourtId
     )!;
     expect(returned.slot).toBe('waiting');
     expect(returned.session_tries).toBe(0);
     expect(returned.leaderboard_eligible).toBe(false);
 
     const holder = (doc.state.participants as SmashParticipant[]).find(
-      p => p.player_id === a.player_id
+      p => p.player_user_id === a.player_user_id
     )!;
     expect(holder.is_record_holder).toBe(true);
     expect(holder.record_held_since).toBe(t0 + 10);
@@ -449,7 +449,7 @@ describe('smashReducer', () => {
     doc = applyCommandResult(doc, r);
 
     const removed = (doc.state.participants as SmashParticipant[]).find(
-      p => p.player_id === onCourtId
+      p => p.player_user_id === onCourtId
     )!;
     expect(removed.slot).toBe('removed');
     expect(removed.leaderboard_eligible).toBe(true);
@@ -465,7 +465,7 @@ describe('smashReducer', () => {
     expect(r.action.action_type).toBe('participant_requeued');
     doc = applyCommandResult(doc, r);
     const requeued = (doc.state.participants as SmashParticipant[]).find(
-      p => p.player_id === onCourtId
+      p => p.player_user_id === onCourtId
     )!;
     expect(requeued.slot).toBe('waiting');
     expect(requeued.queue_position).toBe(waitingLen + 1);
@@ -476,7 +476,7 @@ describe('smashReducer', () => {
     let doc = smashDoc();
     const t0 = 4_000_000;
     doc = addPlayer(doc, 'Player Alpha', t0);
-    const alpha = (doc.state.waiting[0] as { player_id: string }).player_id;
+    const alpha = (doc.state.waiting[0] as { player_user_id: string }).player_user_id;
 
     let r = reduceSmash(doc.state, { type: 'jump_in', playerId: alpha }, 2, t0);
     if (!('state' in r)) throw new Error(r.message);
@@ -492,7 +492,7 @@ describe('smashReducer', () => {
     doc = applyCommandResult(doc, r);
 
     const holder = (doc.state.participants as SmashParticipant[]).find(
-      p => p.player_id === alpha
+      p => p.player_user_id === alpha
     )!;
     expect(holder.is_record_holder).toBe(true);
     expect(holder.record_hold_seconds).toBe(0);
@@ -503,7 +503,7 @@ describe('smashReducer', () => {
     const t0 = 4_000_000;
     doc = addPlayer(doc, 'Player Alpha', t0);
     doc = addPlayer(doc, 'Player Bravo', t0);
-    const alpha = (doc.state.waiting[0] as { player_id: string }).player_id;
+    const alpha = (doc.state.waiting[0] as { player_user_id: string }).player_user_id;
 
     let r = reduceSmash(doc.state, { type: 'jump_in', playerId: alpha }, 2, t0);
     if (!('state' in r)) throw new Error(r.message);
@@ -520,7 +520,7 @@ describe('smashReducer', () => {
 
     r = reduceSmash(
       doc.state,
-      { type: 'return_to_waiting', playerId: (doc.state.court as { player_id: string }).player_id },
+      { type: 'return_to_waiting', playerId: (doc.state.court as { player_user_id: string }).player_user_id },
       4,
       t0 + 15
     );
@@ -536,7 +536,7 @@ describe('smashReducer', () => {
     doc = applyCommandResult(doc, r);
 
     const holder = (doc.state.participants as SmashParticipant[]).find(
-      p => p.player_id === alpha
+      p => p.player_user_id === alpha
     )!;
     expect(holder.is_record_holder).toBe(true);
     holder.record_hold_seconds = 120;
@@ -551,7 +551,7 @@ describe('smashReducer', () => {
     doc = applyCommandResult(doc, r);
 
     const stillHolder = (doc.state.participants as SmashParticipant[]).find(
-      p => p.player_id === alpha
+      p => p.player_user_id === alpha
     )!;
     expect(stillHolder.is_record_holder).toBe(true);
     expect(stillHolder.record_hold_seconds).toBe(120);
@@ -562,7 +562,7 @@ describe('smashReducer', () => {
     const t0 = 5_000_000;
     doc = addPlayer(doc, 'Player Alpha', t0);
     doc = addPlayer(doc, 'Player Bravo', t0);
-    const alpha = (doc.state.waiting[0] as { player_id: string }).player_id;
+    const alpha = (doc.state.waiting[0] as { player_user_id: string }).player_user_id;
 
     let r = reduceSmash(doc.state, { type: 'jump_in', playerId: alpha }, 2, t0);
     if (!('state' in r)) throw new Error(r.message);
@@ -586,7 +586,7 @@ describe('smashReducer', () => {
     doc = applyCommandResult(doc, r);
 
     const formerHolder = (doc.state.participants as SmashParticipant[]).find(
-      p => p.player_id === alpha
+      p => p.player_user_id === alpha
     )!;
     expect(formerHolder.is_record_holder).toBe(false);
 
@@ -606,7 +606,7 @@ describe('smashReducer', () => {
     doc = applyCommandResult(doc, r);
 
     const reclaimed = (doc.state.participants as SmashParticipant[]).find(
-      p => p.player_id === alpha
+      p => p.player_user_id === alpha
     )!;
     expect(reclaimed.is_record_holder).toBe(true);
     expect(reclaimed.record_hold_seconds).toBe(0);

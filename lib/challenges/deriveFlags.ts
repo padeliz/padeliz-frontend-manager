@@ -212,7 +212,7 @@ export function projectSmashViews(
     .sort((a, b) => (a.queue_position ?? 0) - (b.queue_position ?? 0))
     .map(p => ({
       participation_id: p.participation_id,
-      player_id: p.player_id,
+      player_user_id: p.player_user_id,
       player_name: p.player_name,
       session_tries: p.session_tries,
       record_hold_seconds: liveHoldSeconds(p, now),
@@ -223,7 +223,7 @@ export function projectSmashViews(
   const court = onCourt
     ? {
         participation_id: onCourt.participation_id,
-        player_id: onCourt.player_id,
+        player_user_id: onCourt.player_user_id,
         player_name: onCourt.player_name,
         session_tries: onCourt.session_tries,
         record_hold_seconds: liveHoldSeconds(onCourt, now),
@@ -236,7 +236,7 @@ export function projectSmashViews(
     .sort((a, b) => smashLeaderboardTier(a, b, now))
     .map((p, i) => ({
       position: i + 1,
-      player_id: p.player_id,
+      player_user_id: p.player_user_id,
       player_name: p.player_name,
       session_tries: p.session_tries,
       record_hold_seconds: liveHoldSeconds(p, now),

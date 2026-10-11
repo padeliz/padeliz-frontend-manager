@@ -166,6 +166,7 @@ describe('Division form: bands (M2M) + independent bounds', () => {
     fireEvent.press(await findByText('Edit'));
     const minInput = await findByDisplayValue('4.99');
     fireEvent.changeText(minInput, '5.10');
+    await waitFor(() => expect(getByText('Save')).toBeTruthy());
     fireEvent.press(getByText('Save'));
 
     await waitFor(() => expect(mockUpdateDivision).toHaveBeenCalledTimes(1));

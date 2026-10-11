@@ -35,7 +35,7 @@ function playerLabel(p: any): string {
   return (
     player.name ||
     [player.first_name, player.last_name].filter(Boolean).join(' ') ||
-    `Player #${player.id_player}`
+    `Player #${player.id_user}`
   );
 }
 
@@ -43,7 +43,7 @@ function playerNameFromApi(player: any): string {
   return (
     player?.name ||
     [player?.first_name, player?.last_name].filter(Boolean).join(' ') ||
-    `Player #${player?.id_player}`
+    `Player #${player?.id_user}`
   );
 }
 
@@ -259,7 +259,7 @@ export default function EventReplacementsTab({
       const payload: {
         original_participation_id: number;
         substitute_participation_id?: number;
-        substitute_player_id?: number;
+        substitute_player_user_id?: number;
         match_id?: number;
       } = {
         original_participation_id: originalId,
@@ -268,7 +268,7 @@ export default function EventReplacementsTab({
         payload.substitute_participation_id = substituteParticipationId;
       }
       if (substitutePlayerId != null) {
-        payload.substitute_player_id = substitutePlayerId;
+        payload.substitute_player_user_id = substitutePlayerId;
       }
       if (matchId && matchId !== NONE_MATCH) {
         payload.match_id = matchId;
@@ -291,7 +291,7 @@ export default function EventReplacementsTab({
       return replacementsApi.patch(editingId, {
         original_participation_id: originalId,
         substitute_participation_id: substituteParticipationId ?? null,
-        substitute_player_id: substitutePlayerId ?? null,
+        substitute_player_user_id: substitutePlayerId ?? null,
         match_id: matchId && matchId !== NONE_MATCH ? matchId : null,
       });
     },
@@ -328,13 +328,13 @@ export default function EventReplacementsTab({
     if (r.substitute_player) {
       return playerNameFromApi(r.substitute_player);
     }
-    if (r.substitute_player_id) {
+    if (r.substitute_player_user_id) {
       const opt = playerPicker.options.find(
-        o => o.value === r.substitute_player_id
+        o => o.value === r.substitute_player_user_id
       );
       return opt
         ? opt.label
-        : `guest player #${r.substitute_player_id}`;
+        : `guest player #${r.substitute_player_user_id}`;
     }
     return '—';
   };
@@ -509,7 +509,7 @@ export default function EventReplacementsTab({
                   }
                   onReload={() => {
                     const playerId = Number(
-                      r.original_participation?.player?.id_player
+                      r.original_participation?.player?.id_user
                     );
                     void reloadAvatar({
                       key: r.id_replacement * 10 + 1,
@@ -537,9 +537,9 @@ export default function EventReplacementsTab({
                   }
                   onReload={() => {
                     const playerId = Number(
-                      r.substitute_participation?.player?.id_player ??
-                        r.substitute_player?.id_player ??
-                        r.substitute_player_id
+                      r.substitute_participation?.player?.id_user ??
+                        r.substitute_player?.id_user ??
+                        r.substitute_player_user_id
                     );
                     const collecting = r.substitute_participation
                       ? Boolean(
@@ -576,8 +576,8 @@ export default function EventReplacementsTab({
                     setOriginalId(r.original_participation_id);
                     if (r.substitute_participation_id) {
                       setSubstituteKey(`part:${r.substitute_participation_id}`);
-                    } else if (r.substitute_player_id) {
-                      setSubstituteKey(`player:${r.substitute_player_id}`);
+                    } else if (r.substitute_player_user_id) {
+                      setSubstituteKey(`player:${r.substitute_player_user_id}`);
                     } else {
                       setSubstituteKey(NONE_SUBSTITUTE);
                     }

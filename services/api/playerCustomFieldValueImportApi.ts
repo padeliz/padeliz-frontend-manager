@@ -14,7 +14,7 @@ export type PlayerCustomFieldValueImportSaveRow = {
   full_name?: string | null;
   email?: string | null;
   phone?: string | null;
-  player_id: number;
+  player_user_id: number;
   answers: Record<string, string>;
 };
 

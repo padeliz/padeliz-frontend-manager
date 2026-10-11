@@ -27,7 +27,7 @@ const api = new PlayerCustomFieldValueImportApiService();
 const eventsApi = new EventsApiService();
 
 type DraftRow = ApiPlayerCustomFieldValueImportPreviewRow & {
-  player_id: number | null;
+  player_user_id: number | null;
   seedOptions: DropdownOption[];
   errors: string[];
 };
@@ -42,8 +42,8 @@ function seedOptionsFromPreview(
   const seen = new Set<number>();
   const options: DropdownOption[] = [];
   for (const player of players) {
-    if (seen.has(player.id_player)) continue;
-    seen.add(player.id_player);
+    if (seen.has(player.id_user)) continue;
+    seen.add(player.id_user);
     options.push(playerToDropdownOption(player));
   }
   return options;
@@ -119,7 +119,7 @@ export default function PlayerCustomFieldValueImportPanel() {
       setRows(
         previewRows.map(row => ({
           ...row,
-          player_id: row.mapping.player?.id_player ?? null,
+          player_user_id: row.mapping.player?.id_user ?? null,
           seedOptions: seedOptionsFromPreview(row),
           errors: [],
         }))
@@ -166,7 +166,7 @@ export default function PlayerCustomFieldValueImportPanel() {
   };
 
   const clientValidate = (row: DraftRow): string[] => {
-    if (row.player_id != null) return [];
+    if (row.player_user_id != null) return [];
     return ['Select a player for each included row.'];
   };
 
@@ -190,7 +190,7 @@ export default function PlayerCustomFieldValueImportPanel() {
         full_name: row.full_name || null,
         email: row.email || null,
         phone: row.phone || null,
-        player_id: row.player_id!,
+        player_user_id: row.player_user_id!,
         answers: row.answers,
       })
     );
@@ -320,10 +320,10 @@ export default function PlayerCustomFieldValueImportPanel() {
                 <View testID={`cf-import-player-${row.index}`} className="min-w-[220px]">
                   <SingleSelectDropdown
                     options={options}
-                    selectedValue={row.player_id}
+                    selectedValue={row.player_user_id}
                     onSelectionChange={value =>
                       updateRow(row.index, {
-                        player_id: value == null ? null : Number(value),
+                        player_user_id: value == null ? null : Number(value),
                       })
                     }
                     placeholder="Map player"

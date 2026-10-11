@@ -35,14 +35,14 @@ function file(id: number, url: string) {
 function proof(overrides: Record<string, unknown> = {}) {
   return {
     id_player_student_proof: 3,
-    player_id: 42,
+    player_user_id: 42,
     student_until: '2027-06-30',
     ready_for_review: true,
     review_status: 'pending',
     submitted_at: 1700000000,
     files: [file(11, 'https://example.com/proof.jpg')],
     inserted_at: 1,
-    player: { id_player: 42, name: 'Mara Lovelace' },
+    player: { id_user: 42, name: 'Mara Lovelace' },
     ...overrides,
   };
 }

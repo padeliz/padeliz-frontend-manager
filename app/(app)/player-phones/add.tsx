@@ -12,7 +12,7 @@ export default function AddPlayerPhonePage() {
   }, []);
 
   const config = useResourceCreatePageConfig<ApiPlayerPhone>({
-    resourceName: 'PlayerPhone',
+    resourceName: 'UserPhone',
     resourceDisplayName: 'Phone',
     sectionLabel: 'Player phones',
     sectionHref: '/player-phones',

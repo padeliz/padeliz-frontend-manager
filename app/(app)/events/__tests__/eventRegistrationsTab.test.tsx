@@ -123,11 +123,11 @@ describe('Event registrations tab', () => {
 
     await capturedConfig.fetchData({
       page: 1,
-      filters: { player_id: 3, event_id: 999 },
+      filters: { player_user_id: 3, event_id: 999 },
     });
     expect(mockGetRegistrations).toHaveBeenCalledWith(
       expect.objectContaining({
-        filters: { player_id: 3, event_id: 7 },
+        filters: { player_user_id: 3, event_id: 7 },
       })
     );
     expect(mockGetRegistrations.mock.calls[0][0].queue).toBeUndefined();

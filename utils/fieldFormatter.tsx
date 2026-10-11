@@ -14,6 +14,10 @@ import { Text } from 'react-native';
 import { ForeignKeyService } from './foreignKeyService';
 import { isNestedRelationProperty } from './nestedRelationProperty';
 import { isRichTextField } from './richtextMetadata';
+import {
+  bucharestDatetimeLocalToUnix,
+  unixToBucharestDatetimeLocal,
+} from './productDateTime';
 
 // Constants for better maintainability
 const NULL_DISPLAY = '-';
@@ -355,6 +359,7 @@ function formatNumberField(
   // Handle timestamp format specially - check this BEFORE numValue validation
   if (fieldDefinition.format === 'timestamp') {
     const numValue = Number(fieldValue);
+    const useProductWallTime = !fieldDefinition.readOnly;
 
     if (mode === 'display' || mode === 'both') {
       const formattedText = formatTimestamp(numValue);
@@ -367,25 +372,25 @@ function formatNumberField(
       result.inputType = 'datetime';
       result.keyboardType = 'default';
 
-      // Handle both Unix timestamp (number) and formatted date string
       if (typeof fieldValue === 'number' && !isNaN(fieldValue)) {
-        // Unix timestamp - convert to readable date string for form input
-        const date = new Date(fieldValue * 1000);
-        result.inputValue = date.toISOString().slice(0, 16); // YYYY-MM-DDTHH:MM format
-        result.apiValue = fieldValue; // Keep original Unix timestamp for API
+        result.inputValue = useProductWallTime
+          ? unixToBucharestDatetimeLocal(fieldValue)
+          : new Date(fieldValue * 1000).toISOString().slice(0, 16);
+        result.apiValue = fieldValue;
       } else if (typeof fieldValue === 'string' && fieldValue) {
-        // Already formatted date string - use as is
         result.inputValue = fieldValue;
-        // Convert back to Unix timestamp for API
-        const date = new Date(fieldValue);
-        result.apiValue = Math.floor(date.getTime() / 1000);
+        if (useProductWallTime) {
+          result.apiValue = bucharestDatetimeLocalToUnix(fieldValue);
+        } else {
+          const date = new Date(fieldValue);
+          result.apiValue = Math.floor(date.getTime() / 1000);
+        }
       } else {
-        // Empty or invalid value
         result.inputValue = '';
         result.apiValue = null;
       }
     }
-    return result; // Return early for timestamp fields
+    return result;
   }
 
   // For non-timestamp fields, validate the number value

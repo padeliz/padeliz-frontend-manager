@@ -31,7 +31,7 @@ jest.mock('@/hooks/useResourceMetadata', () => ({
         properties: {
           id_registration: { type: 'integer', format: 'int64', readOnly: true },
           event_id: { type: 'integer', format: 'int64', title: 'Event' },
-          player_id: { type: 'integer', format: 'int64', title: 'Player' },
+          player_user_id: { type: 'integer', format: 'int64', title: 'Player' },
         },
       },
       filterable_fields: {},

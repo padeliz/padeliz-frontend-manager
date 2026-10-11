@@ -102,7 +102,7 @@ function playerLabel(p: ApiEventParticipation): string {
   return (
     pl?.name ||
     [pl?.first_name, pl?.last_name].filter(Boolean).join(' ') ||
-    `Player #${p.player_id}`
+    `Player #${p.player_user_id}`
   );
 }
 
@@ -680,7 +680,7 @@ export default function EventParticipationsTab({
       await participationsApi.createParticipation({
         event_id: eventId,
         event_division_id: edId,
-        player_id: playerId,
+        player_user_id: playerId,
       });
       setPlayerId(null);
       if (selectedDivisionId == null) setTargetEdId(null);
@@ -782,7 +782,7 @@ export default function EventParticipationsTab({
         await participationsApi.updateParticipation(p.id_participation, {
           event_id: p.event_id,
           event_division_id: p.event_division_id,
-          player_id: p.player_id,
+          player_user_id: p.player_user_id,
           is_collecting_points: !!p.is_collecting_points,
         });
       }
@@ -1119,7 +1119,7 @@ export default function EventParticipationsTab({
                             onReload={() =>
                               void reloadAvatar({
                                 key: p.id_participation,
-                                playerId: Number(p.player_id),
+                                playerId: Number(p.player_user_id),
                                 collecting: Boolean(p.is_collecting_points),
                               })
                             }

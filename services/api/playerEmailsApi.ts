@@ -13,7 +13,7 @@ export class PlayerEmailsApiService extends BaseApiService {
       per_page?: number;
       q?: string;
       filters?: {
-        player_id?: number;
+        user_id?: number;
         is_primary?: 0 | 1;
       };
       sort_by?: Record<string, 'asc' | 'desc'>;

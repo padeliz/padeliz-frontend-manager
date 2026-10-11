@@ -86,11 +86,11 @@ export class ReferralApiService extends BaseApiService {
   }
 
   async previewPricing(data: {
-    player_id: number;
+    player_user_id: number;
     event_id: number;
     event_division_id: number;
     selected_benefit_ids?: number[];
-    referrer_player_id?: number | null;
+    referrer_player_user_id?: number | null;
   }): Promise<{ data: ApiPricingPreviewQuote }> {
     return this.post<{ data: ApiPricingPreviewQuote }>(
       '/pricing/preview',

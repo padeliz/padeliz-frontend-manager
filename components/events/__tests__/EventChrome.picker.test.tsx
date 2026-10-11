@@ -19,7 +19,12 @@ const mockGetEvent = jest.fn(async () => ({
   data: {
     id_event: 1,
     name: 'Test Event',
-    date: '2026-08-24',
+    event_starts_at: Math.floor(
+      new Date('2026-08-24T09:00:00+03:00').getTime() / 1000
+    ),
+    event_ends_at: Math.floor(
+      new Date('2026-08-24T22:00:00+03:00').getTime() / 1000
+    ),
     finalized_at: null,
   },
 }));

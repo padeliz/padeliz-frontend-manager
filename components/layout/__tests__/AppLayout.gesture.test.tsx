@@ -15,7 +15,7 @@ import { renderWithAppShell } from './renderWithAppShell';
 jest.mock('@/context/managerAuth', () => ({
   useAuth: () => ({
     user: {
-      id_player: 1,
+      id_user: 1,
       name: 'Manager',
       first_name: 'M',
       last_name: 'G',

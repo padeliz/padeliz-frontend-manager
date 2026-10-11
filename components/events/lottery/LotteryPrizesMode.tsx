@@ -332,7 +332,7 @@ export default function LotteryPrizesMode({
     });
   };
 
-  if (linesQuery.isLoading && local.length === 0) {
+  if (linesQuery.isPending && local.length === 0) {
     return <ActivityIndicator testID="lottery-prizes-loading" />;
   }
 

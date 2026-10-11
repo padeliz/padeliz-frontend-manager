@@ -32,7 +32,7 @@ export default function PlayerProfileImagesPanel({ playerId }: Props) {
   const [busy, setBusy] = useState(false);
 
   const playerQuery = useQuery({
-    queryKey: queryKeys.resourceDetail('Player', playerId),
+    queryKey: queryKeys.resourceDetail('User', playerId),
     queryFn: async () => {
       const res = await playersApi.getPlayer(playerId);
       return res.data;

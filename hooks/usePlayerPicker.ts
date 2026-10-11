@@ -15,14 +15,14 @@ function playerName(player: ApiPlayer): string {
   return (
     player?.name ||
     [player?.first_name, player?.last_name].filter(Boolean).join(' ') ||
-    `Player #${player?.id_player}`
+    `Player #${player?.id_user}`
   );
 }
 
 function toOption(player: ApiPlayer): DropdownOption {
   return {
     label: playerName(player),
-    value: player.id_player,
+    value: player.id_user,
     imageUrl: player.pdf_avatar_url ?? null,
   };
 }
@@ -83,7 +83,7 @@ export function usePlayerPicker({
   const selectedMissing =
     selectedId != null &&
     Number.isFinite(selectedId) &&
-    !(listQuery.data || []).some(p => p.id_player === selectedId);
+    !(listQuery.data || []).some(p => p.id_user === selectedId);
 
   const selectedQuery = useQuery({
     queryKey: ['player', selectedId],

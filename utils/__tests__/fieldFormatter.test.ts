@@ -1,11 +1,13 @@
+import { eventMetadata } from '@/__tests__/fixtures/eventMetadata';
 import { playerMetadata } from '@/__tests__/fixtures/playerMetadata';
 import { formatField } from '@/utils/fieldFormatter';
+import { productDateTimeToDate } from '@/utils/productDateTime';
 
 describe('formatField', () => {
   it('marks read-only fields as non-editable with readonly input type', () => {
     const result = formatField({
       metadata: playerMetadata,
-      fieldKey: 'id_player',
+      fieldKey: 'id_user',
       fieldValue: 61,
       mode: 'form',
     });
@@ -56,6 +58,21 @@ describe('formatField', () => {
     expect(result.inputValue).toBe('Mara Lovelace');
     expect(result.apiValue).toBe('Mara Lovelace');
     expect(result.inputType).toBe('text');
+  });
+
+  it('formats editable unix timestamps as Bucharest datetime-local (no UTC skew)', () => {
+    const unix = Math.floor(
+      productDateTimeToDate('2026-01-20', '18:00:00').getTime() / 1000
+    );
+    const result = formatField({
+      metadata: eventMetadata,
+      fieldKey: 'event_starts_at',
+      fieldValue: unix,
+      mode: 'form',
+    });
+
+    expect(result.inputValue).toBe('2026-01-20T18:00');
+    expect(result.apiValue).toBe(unix);
   });
 
   it('formats timestamp read-only fields instead of raw unix seconds', () => {

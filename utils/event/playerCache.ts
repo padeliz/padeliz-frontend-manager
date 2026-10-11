@@ -7,7 +7,7 @@ export { normalizeSearchText } from '@/utils/textNormalize';
 
 export function filterPlayersLocally<
   T extends {
-    id_player: number;
+    id_user: number;
     name?: string | null;
     first_name?: string | null;
     last_name?: string | null;
@@ -19,7 +19,7 @@ export function filterPlayersLocally<
     const label = normalizeSearchText(
       p.name || `${p.first_name || ''} ${p.last_name || ''}`
     );
-    return label.includes(q) || String(p.id_player).includes(q);
+    return label.includes(q) || String(p.id_user).includes(q);
   });
 }
 

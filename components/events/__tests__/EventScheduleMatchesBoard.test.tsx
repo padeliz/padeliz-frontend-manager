@@ -102,11 +102,11 @@ function sidePlayer(
 ) {
   return {
     participation_id: participationId,
-    player_id: playerId,
-    player: { id_player: playerId, name: `MP#${playerId}` },
+    player_user_id: playerId,
+    player: { id_user: playerId, name: `MP#${playerId}` },
     participation: {
       id_participation: participationId,
-      player: { id_player: playerId, name },
+      player: { id_user: playerId, name },
     },
   };
 }
@@ -121,28 +121,28 @@ function boardState(overrides: Record<string, unknown> = {}) {
     participations: [
       {
         id_participation: 1,
-        player_id: 101,
+        player_user_id: 101,
         sort_order: 0,
-        player: { id_player: 101, name: 'Alice Wonder' },
+        player: { id_user: 101, name: 'Alice Wonder' },
       },
       {
         id_participation: 2,
-        player_id: 102,
+        player_user_id: 102,
         sort_order: 1,
-        player: { id_player: 102, name: 'Bob Builder' },
+        player: { id_user: 102, name: 'Bob Builder' },
       },
     ],
     players_board: [
       {
         participation_id: 1,
-        player_id: 101,
+        player_user_id: 101,
         short_name: 'A. Wonder',
         pdf_avatar_url: 'https://example.com/a.png',
         is_collecting_points: true,
       },
       {
         participation_id: 2,
-        player_id: 102,
+        player_user_id: 102,
         short_name: 'B. Builder',
         pdf_avatar_url: null,
         is_collecting_points: true,
@@ -353,7 +353,7 @@ describe('EventScheduleMatchesBoard', () => {
               players: [
                 {
                   participation_id: 1,
-                  player_id: 101,
+                  player_user_id: 101,
                   participation: { id_participation: 1, player: null },
                 },
               ],
@@ -397,7 +397,7 @@ describe('EventScheduleMatchesBoard', () => {
       players_board: [
         {
           participation_id: 1,
-          player_id: 101,
+          player_user_id: 101,
           short_name: 'A. Wonder',
           pdf_avatar_url: 'https://example.com/a.png',
           is_collecting_points: true,

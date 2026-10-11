@@ -12,7 +12,7 @@ export default function AddPlayerEmailPage() {
   }, []);
 
   const config = useResourceCreatePageConfig<ApiPlayerEmail>({
-    resourceName: 'PlayerEmail',
+    resourceName: 'UserEmail',
     resourceDisplayName: 'Email',
     sectionLabel: 'Player emails',
     sectionHref: '/player-emails',

@@ -224,8 +224,14 @@ function identifyForeignKeyMappings(
     if (ForeignKeyService.isForeignKeyField(key, field, metadata)) {
       const filterRelated =
         metadata.filterable_fields?.[key]?.related_schema_name || null;
-      const linkedResourceField = key.replace(/_id$/, '');
-      const linkedResourceDefinition = properties[linkedResourceField];
+      const linked = ForeignKeyService.resolveLinkedProperty(key, metadata);
+      const linkedResourceField =
+        linked?.key ??
+        (key.endsWith('_user_id')
+          ? key.slice(0, -'_user_id'.length)
+          : key.replace(/_id$/, ''));
+      const linkedResourceDefinition =
+        properties[linkedResourceField] ?? linked?.definition;
       const ref: string | undefined = linkedResourceDefinition?.oneOf?.find(
         (entry: any) => entry?.$ref
       )?.$ref;
@@ -478,7 +484,9 @@ export function generateColumnsFromMetadata(
     }
     const [relation, ...rest] = path.split('.');
     const leaf = rest.join('.');
-    const fkKey = `${relation}_id`;
+    const fkKey = foreignKeyMappings.has(`${relation}_user_id`)
+      ? `${relation}_user_id`
+      : `${relation}_id`;
     const fkMapping = foreignKeyMappings.get(fkKey);
     const linkedMeta =
       fkMapping?.linkedSchemaName != null

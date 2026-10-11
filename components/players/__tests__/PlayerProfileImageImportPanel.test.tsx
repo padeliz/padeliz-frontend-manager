@@ -37,7 +37,7 @@ jest.mock('@/hooks/usePlayerPicker', () => ({
   }),
   playerToDropdownOption: (player: any) => ({
     label: player.name,
-    value: player.id_player,
+    value: player.id_user,
     imageUrl: player.pdf_avatar_url ?? null,
   }),
 }));
@@ -127,7 +127,7 @@ const previewRows = [
       status: 'mapped',
       matched_by: 'email',
       player: {
-        id_player: 12,
+        id_user: 12,
         name: 'Mara Popescu',
         uploaded_profile_images: [
           { id: 1, url: 'https://example.test/1.jpg', is_pdf_primary: true },
@@ -177,7 +177,7 @@ describe('PlayerProfileImageImportPanel', () => {
     mockSave.mockResolvedValue({ message: 'ok', data: {} });
     mockGetPlayer.mockResolvedValue({
       data: {
-        id_player: 12,
+        id_user: 12,
         name: 'Mara Popescu',
         uploaded_profile_images: [],
       },
@@ -252,7 +252,7 @@ describe('PlayerProfileImageImportPanel', () => {
             mapping: {
               ...previewRows[0].mapping,
               player: {
-                id_player: 12,
+                id_user: 12,
                 name: 'Mara Popescu',
                 uploaded_profile_images: [],
               },
@@ -283,7 +283,7 @@ describe('PlayerProfileImageImportPanel', () => {
     expect(payload.rows[0]).toMatchObject({
       index: 0,
       filename: 'mara@example.test.jpg',
-      player_id: 12,
+      player_user_id: 12,
       is_pdf_primary: true,
     });
     expect(payload.filesByIndex[0]).toMatchObject({
@@ -347,7 +347,7 @@ describe('PlayerProfileImageImportPanel', () => {
     });
     mockGetPlayer.mockResolvedValueOnce({
       data: {
-        id_player: 12,
+        id_user: 12,
         name: 'Mara Popescu',
         uploaded_profile_images: [
           { id: 9, url: 'https://example.test/existing.jpg', is_pdf_primary: true },
@@ -387,7 +387,7 @@ describe('PlayerProfileImageImportPanel', () => {
     });
     mockGetPlayer.mockResolvedValueOnce({
       data: {
-        id_player: 12,
+        id_user: 12,
         name: 'Mara Popescu',
         uploaded_profile_images: [
           { id: 9, url: 'https://example.test/existing.jpg', is_pdf_primary: true },

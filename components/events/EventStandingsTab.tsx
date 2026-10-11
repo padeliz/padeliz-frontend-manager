@@ -34,7 +34,7 @@ function playerLabel(participation: any): string {
   return (
     player.name ||
     [player.first_name, player.last_name].filter(Boolean).join(' ') ||
-    `Player #${player.id_player}`
+    `Player #${player.id_user}`
   );
 }
 

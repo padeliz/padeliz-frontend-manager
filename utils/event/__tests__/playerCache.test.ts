@@ -11,11 +11,11 @@ describe('playerCache', () => {
 
   it('filters locally with min 2 chars', () => {
     const players = [
-      { id_player: 1, name: 'Ana Pop' },
-      { id_player: 2, name: 'Ion Ionescu' },
+      { id_user: 1, name: 'Ana Pop' },
+      { id_user: 2, name: 'Ion Ionescu' },
     ];
     expect(filterPlayersLocally(players, 'a')).toEqual([]);
-    expect(filterPlayersLocally(players, 'an').map(p => p.id_player)).toEqual([
+    expect(filterPlayersLocally(players, 'an').map(p => p.id_user)).toEqual([
       1,
     ]);
   });
@@ -24,11 +24,11 @@ describe('playerCache', () => {
     const fetchPage = jest
       .fn()
       .mockResolvedValueOnce({
-        data: [{ id_player: 1 }],
+        data: [{ id_user: 1 }],
         meta: { last_page: 2, current_page: 1 },
       })
       .mockResolvedValueOnce({
-        data: [{ id_player: 2 }],
+        data: [{ id_user: 2 }],
         meta: { last_page: 2, current_page: 2 },
       });
     const all = await loadAllPlayersPages(fetchPage, 100);

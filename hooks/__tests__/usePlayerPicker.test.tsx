@@ -51,10 +51,10 @@ describe('usePlayerPicker', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockGetPlayers.mockResolvedValue({
-      data: [{ id_player: 1, name: 'Alice' }],
+      data: [{ id_user: 1, name: 'Alice' }],
     });
     mockGetPlayer.mockResolvedValue({
-      data: { id_player: 99, name: 'Zed' },
+      data: { id_user: 99, name: 'Zed' },
     });
   });
 
@@ -105,7 +105,7 @@ describe('usePlayerPicker', () => {
     expect(mockGetPlayers.mock.calls[0][0].q).toBeUndefined();
 
     mockGetPlayers.mockResolvedValue({
-      data: [{ id_player: 2, name: 'Alice Two' }],
+      data: [{ id_user: 2, name: 'Alice Two' }],
     });
     await act(async () => {
       result.current.onSearch('alice');
@@ -135,7 +135,7 @@ describe('usePlayerPicker', () => {
     await waitFor(() => expect(mockGetPlayers).toHaveBeenCalledTimes(1));
 
     mockGetPlayers.mockResolvedValue({
-      data: [{ id_player: 3, name: 'Bob' }],
+      data: [{ id_user: 3, name: 'Bob' }],
     });
 
     jest.useFakeTimers({ advanceTimers: true });

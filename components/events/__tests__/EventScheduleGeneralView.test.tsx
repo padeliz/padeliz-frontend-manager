@@ -158,8 +158,8 @@ describe('EventScheduleGeneralView matches cards', () => {
           points_per_match_print: 16,
         },
         event_division: {
-          playing_start_time: '14:00',
-          playing_end_time: '17:00',
+          playing_starts_at: 1_700_000_000,
+          playing_ends_at: 1_700_010_800,
         },
       },
     });

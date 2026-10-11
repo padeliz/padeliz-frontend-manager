@@ -105,10 +105,10 @@ function prizeLinesWithLuckiesFixture(extraLuckies: any[] = []) {
             },
             drawn_participation: {
               id_participation: 9,
-              player_id: 101,
+              player_user_id: 101,
               is_collecting_points: true,
               player: {
-                id_player: 101,
+                id_user: 101,
                 name: 'Alice Wonder',
                 phones: [{ phone: '+40111' }, { phone: '+40222' }],
               },
@@ -135,10 +135,10 @@ function prizeLinesWithLuckiesFixture(extraLuckies: any[] = []) {
             },
             drawn_participation: {
               id_participation: 10,
-              player_id: 102,
+              player_user_id: 102,
               is_collecting_points: false,
               player: {
-                id_player: 102,
+                id_user: 102,
                 name: 'Bob Builder',
                 phones: [{ phone: '+40999' }],
               },

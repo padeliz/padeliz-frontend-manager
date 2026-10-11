@@ -41,7 +41,7 @@ describe('uploadMetadata', () => {
         accept: ['image/png'],
         upload: {
           method: 'POST',
-          path: '/api/v1/manager/events/{id}/cover',
+          path: '/api/v1/manager/events/{id}/cover-images',
         },
       },
     });

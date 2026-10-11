@@ -91,9 +91,9 @@ describe('Tools templates chrome', () => {
     expect(src).toContain('activationMode="handle"');
     expect(src).toContain('CachedPdfImageReload');
     expect(src).toContain('useCachedPdfAvatarReload');
-    expect(src).toContain('tools-player-avatar-${p.id_player}');
+    expect(src).toContain('tools-player-avatar-${p.id_user}');
     expect(src).toContain('albums-outline');
-    expect(src).toContain('tools-collecting-tip-${p.id_player}');
+    expect(src).toContain('tools-collecting-tip-${p.id_user}');
     expect(src).toContain(
       'If player is collecting points from the matches and they appear on the Ranking poster.'
     );

@@ -278,7 +278,7 @@ export function KotcLeaderboardTable({
 
 export type SmashLeaderboardRow = {
   position: number;
-  player_id: string;
+  player_user_id: string;
   player_name: string;
   session_tries: number;
   record_hold_seconds: number;
@@ -322,7 +322,7 @@ export function SmashLeaderboardTable({
         render: r => (
           <View className="flex-row items-center gap-1">
             {r.is_record_holder ? (
-              <View testID={`smash-leaderboard-star-${r.player_id}`}>
+              <View testID={`smash-leaderboard-star-${r.player_user_id}`}>
                 <Ionicons
                   name={CHALLENGE_ICONS.star.name}
                   size={LEADERBOARD_BODY_FONT_SIZE}
@@ -365,9 +365,9 @@ export function SmashLeaderboardTable({
           if (row.slot !== 'removed') return null;
           return (
             <RequeueAction
-              testID={`smash-requeue-${row.player_id}`}
+              testID={`smash-requeue-${row.player_user_id}`}
               waitingFull={waitingFull}
-              onPress={() => onRequeue(row.player_id)}
+              onPress={() => onRequeue(row.player_user_id)}
             />
           );
         }
@@ -378,7 +378,7 @@ export function SmashLeaderboardTable({
       testID="smash-leaderboard-table"
       rows={rows}
       columns={columns}
-      rowKey={r => r.player_id}
+      rowKey={r => r.player_user_id}
       renderRowActions={actions}
     />
   );

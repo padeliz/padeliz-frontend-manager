@@ -54,7 +54,7 @@ function playerDisplayName(player: ApiPlayer): string {
   return (
     player.name ||
     [player.first_name, player.last_name].filter(Boolean).join(' ') ||
-    `Player #${player.id_player}`
+    `Player #${player.id_user}`
   );
 }
 
@@ -261,12 +261,12 @@ export default function ToolsTemplatesPage() {
     if (!Number.isFinite(id)) return;
 
     setSelectedPlayers(prev => {
-      if (prev.some(p => p.id_player === id)) {
+      if (prev.some(p => p.id_user === id)) {
         return prev;
       }
       const option = playerPicker.options.find(o => Number(o.value) === id);
       const player: ApiPlayer = {
-        id_player: id,
+        id_user: id,
         name: option?.label ?? `Player #${id}`,
         first_name: option?.label ?? '',
         last_name: '',
@@ -282,7 +282,7 @@ export default function ToolsTemplatesPage() {
   };
 
   const removePlayer = (playerId: number) => {
-    setSelectedPlayers(prev => prev.filter(p => p.id_player !== playerId));
+    setSelectedPlayers(prev => prev.filter(p => p.id_user !== playerId));
     setCollectingPlayerIds(ids => ids.filter(id => id !== playerId));
   };
 
@@ -302,7 +302,7 @@ export default function ToolsTemplatesPage() {
   };
 
   const scratchPayload = () => ({
-    player_ids: selectedPlayers.map(p => p.id_player),
+    player_user_ids: selectedPlayers.map(p => p.id_user),
     court_names: courts,
     time_start: timeStart,
     time_end: timeEnd,
@@ -314,7 +314,7 @@ export default function ToolsTemplatesPage() {
     color: selectedColor,
     organizer_id: organizerId === NO_ORGANIZER ? null : organizerId,
     club_id: clubId === NO_CLUB ? null : clubId,
-    collecting_player_ids: collectingPlayerIds,
+    collecting_player_user_ids: collectingPlayerIds,
   });
 
   const runPreview = async () => {
@@ -676,47 +676,47 @@ export default function ToolsTemplatesPage() {
           Selected players ({selectedPlayers.length})
         </Text>
         {selectedPlayers.map((p, index) => {
-          const collecting = collectingPlayerIds.includes(p.id_player);
+          const collecting = collectingPlayerIds.includes(p.id_user);
           return (
             <SortableRow
-              key={`sel-${p.id_player}`}
+              key={`sel-${p.id_user}`}
               index={index}
               count={selectedPlayers.length}
               locked={false}
               rowHeight={SORTABLE_ROW_HEIGHT}
               activationMode="handle"
               onReorder={reorderPlayers}
-              testID={`tools-player-row-${p.id_player}`}
+              testID={`tools-player-row-${p.id_user}`}
             >
               <View
                 className="flex-row items-center"
                 style={{ height: SORTABLE_ROW_HEIGHT, gap: 6 }}
               >
                 <SortableDragHandle
-                  testID={`tools-player-drag-${p.id_player}`}
+                  testID={`tools-player-drag-${p.id_user}`}
                 />
                 <CachedPdfImageReload
-                  testIdPrefix={`tools-player-avatar-${p.id_player}`}
+                  testIdPrefix={`tools-player-avatar-${p.id_user}`}
                   imageUrl={avatarUrlFor(
-                    p.id_player,
+                    p.id_user,
                     p.pdf_avatar_url ?? null
                   )}
                   size={28}
-                  spinning={Boolean(avatarSpinning[p.id_player])}
-                  errorReason={avatarErrors[p.id_player] || null}
+                  spinning={Boolean(avatarSpinning[p.id_user])}
+                  errorReason={avatarErrors[p.id_user] || null}
                   onReload={() =>
                     void reloadAvatar({
-                      key: p.id_player,
-                      playerId: p.id_player,
+                      key: p.id_user,
+                      playerId: p.id_user,
                       collecting,
                     })
                   }
                 />
                 <View className="flex-row items-center">
                   <Pressable
-                    onPress={() => toggleCollecting(p.id_player)}
+                    onPress={() => toggleCollecting(p.id_user)}
                     className="flex-row items-center"
-                    testID={`tools-collecting-${p.id_player}`}
+                    testID={`tools-collecting-${p.id_user}`}
                     accessibilityLabel="Collecting points"
                   >
                     <Ionicons
@@ -727,7 +727,7 @@ export default function ToolsTemplatesPage() {
                   </Pressable>
                   <Tooltip
                     content={COLLECTING_POINTS_TOOLTIP}
-                    testID={`tools-collecting-tip-${p.id_player}`}
+                    testID={`tools-collecting-tip-${p.id_user}`}
                   >
                     <Ionicons
                       name="albums-outline"
@@ -741,9 +741,9 @@ export default function ToolsTemplatesPage() {
                   {playerDisplayName(p)}
                 </Text>
                 <Pressable
-                  onPress={() => removePlayer(p.id_player)}
+                  onPress={() => removePlayer(p.id_user)}
                   className="p-1"
-                  testID={`tools-remove-player-${p.id_player}`}
+                  testID={`tools-remove-player-${p.id_user}`}
                   accessibilityLabel={`Remove ${playerDisplayName(p)}`}
                 >
                   <Ionicons name="close-circle" size={20} color="#9ca3af" />

@@ -179,6 +179,7 @@ describe('LotteryRulesMode', () => {
     const { findByTestId, queryByTestId } = renderWithClient(
       <LotteryRulesMode eventId={1} lotteryId={3} />
     );
+    await waitFor(() => expect(mockGetRules).toHaveBeenCalled());
     expect(await findByTestId('lottery-rule-row-8')).toBeTruthy();
     expect(await findByTestId('lottery-rule-row-7')).toBeTruthy();
     expect(await findByTestId('lottery-rule-name-8')).toHaveTextContent('Mug');

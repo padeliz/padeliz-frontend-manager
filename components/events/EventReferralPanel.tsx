@@ -23,7 +23,7 @@ function formatTs(ts?: number | null): string {
 }
 
 function playerLabel(
-  player: { name?: string; id_player?: number } | null | undefined,
+  player: { name?: string; id_user?: number } | null | undefined,
   fallbackId: number
 ): string {
   return player?.name || `Player #${fallbackId}`;
@@ -164,8 +164,8 @@ export default function EventReferralPanel({ eventId }: Props) {
               >
                 <Text className="text-sm text-gray-800">
                   #{row.id_touchpoint} ·{' '}
-                  {playerLabel(row.referrer_player, row.referrer_player_id)} →{' '}
-                  {playerLabel(row.referred_player, row.referred_player_id)}
+                  {playerLabel(row.referrer_player, row.referrer_player_user_id)} →{' '}
+                  {playerLabel(row.referred_player, row.referred_player_user_id)}
                 </Text>
                 <Text className="text-xs text-gray-500 mt-1">
                   {formatTs(row.touched_at)} · eligible:{' '}
@@ -198,8 +198,8 @@ export default function EventReferralPanel({ eventId }: Props) {
               >
                 <Text className="text-sm text-gray-800">
                   #{row.id_attribution} ·{' '}
-                  {playerLabel(row.referrer_player, row.referrer_player_id)} →{' '}
-                  {playerLabel(row.referred_player, row.referred_player_id)}
+                  {playerLabel(row.referrer_player, row.referrer_player_user_id)} →{' '}
+                  {playerLabel(row.referred_player, row.referred_player_user_id)}
                 </Text>
                 <Text className="text-xs text-gray-500 mt-1">
                   {String(row.status).replace(/_/g, ' ')} ·{' '}

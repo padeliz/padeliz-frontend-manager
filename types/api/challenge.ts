@@ -96,7 +96,7 @@ export interface SmashLiveState {
   court_count: number;
   waiting: Array<{
     participation_id: string;
-    player_id: string;
+    player_user_id: string;
     player_name: string;
     session_tries: number;
     record_hold_seconds: number;
@@ -104,14 +104,14 @@ export interface SmashLiveState {
   }>;
   court: {
     participation_id: string;
-    player_id: string;
+    player_user_id: string;
     player_name: string;
     session_tries: number;
     record_hold_seconds: number;
     is_record_holder: boolean;
   } | null;
   leaderboard: Array<{
-    player_id: string;
+    player_user_id: string;
     player_name: string;
     session_tries: number;
     record_hold_seconds: number;

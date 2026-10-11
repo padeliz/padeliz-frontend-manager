@@ -111,12 +111,12 @@ describe('EventScoresTab', () => {
                 side: 'LEFT',
                 score: 0,
                 couple_image_url: 'https://example.com/c.png',
-                players: [{ player_id: 1, player: { name: 'Alice' } }],
+                players: [{ player_user_id: 1, player: { name: 'Alice' } }],
               },
               {
                 side: 'RIGHT',
                 score: 0,
-                players: [{ player_id: 2, player: { name: 'Bob' } }],
+                players: [{ player_user_id: 2, player: { name: 'Bob' } }],
               },
             ],
           },
@@ -200,8 +200,8 @@ describe('EventScoresTab', () => {
       data: {
         is_finalized: false,
         participations: [
-          { id_participation: 10, player_id: 1, is_collecting_points: true },
-          { id_participation: 11, player_id: 2, is_collecting_points: false },
+          { id_participation: 10, player_user_id: 1, is_collecting_points: true },
+          { id_participation: 11, player_user_id: 2, is_collecting_points: false },
         ],
         matches: [
           {
@@ -213,8 +213,8 @@ describe('EventScoresTab', () => {
                 side: 'LEFT',
                 score: 0,
                 players: [
-                  { participation_id: 10, player_id: 1 },
-                  { participation_id: 11, player_id: 2 },
+                  { participation_id: 10, player_user_id: 1 },
+                  { participation_id: 11, player_user_id: 2 },
                 ],
               },
               { side: 'RIGHT', score: 0, players: [] },
@@ -255,9 +255,9 @@ describe('EventScoresTab', () => {
               {
                 side: 'LEFT',
                 score: 0,
-                players: [{ player_id: 5 }, { player_id: 6 }],
+                players: [{ player_user_id: 5 }, { player_user_id: 6 }],
               },
-              { side: 'RIGHT', score: 0, players: [{ player_id: 7 }] },
+              { side: 'RIGHT', score: 0, players: [{ player_user_id: 7 }] },
             ],
           },
         ],

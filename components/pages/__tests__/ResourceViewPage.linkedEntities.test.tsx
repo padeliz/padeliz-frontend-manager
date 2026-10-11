@@ -142,7 +142,7 @@ describe('ResourceViewPage linked entity exclusions', () => {
     const { findByTestId } = render(
       <ResourceViewPage
         config={{
-          resourceName: 'Player',
+          resourceName: 'User',
           resourceDisplayName: 'Player',
           fetchResource,
           embedded: true,

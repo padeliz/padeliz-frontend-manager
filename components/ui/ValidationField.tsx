@@ -20,6 +20,11 @@ import YearFormInput from './YearFormInput';
 import SingleSelectDropdown from './SingleSelectDropdown';
 import RichTextEditor from './RichTextEditor';
 import { parseClockStringToDate } from '@/utils/parseClockStringToDate';
+import {
+  bucharestDatetimeLocalToUnix,
+  productDateTimeToDate,
+  unixToBucharestDatetimeLocal,
+} from '@/utils/productDateTime';
 
 export default function ValidationField({
   field,
@@ -94,6 +99,13 @@ export default function ValidationField({
     if (typeof dateValue === 'string') {
       const clock = parseClockStringToDate(dateValue);
       if (clock) return clock;
+      if (field.format === 'timestamp' && dateValue.includes('T')) {
+        const unix = bucharestDatetimeLocalToUnix(dateValue);
+        if (unix != null) return new Date(unix * 1000);
+      }
+      if (field.format === 'timestamp' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+        return productDateTimeToDate(dateValue, '00:00:00');
+      }
       const parsed = new Date(dateValue);
       return isNaN(parsed.getTime()) ? null : parsed;
     }
@@ -104,24 +116,32 @@ export default function ValidationField({
     }
 
     return null;
-  }, []);
+  }, [field.format]);
+
+  const isProductTimestampField =
+    field.format === 'timestamp' && field.readOnly !== true;
 
   const formatDateForAPI = useCallback(
     (date: Date, inputType: string): string | number => {
       if (!date || isNaN(date.getTime())) return '';
 
+      if (inputType === 'datetime' && isProductTimestampField) {
+        const unix = Math.floor(date.getTime() / 1000);
+        return unixToBucharestDatetimeLocal(unix);
+      }
+
       switch (inputType) {
         case 'date':
-          return date.toISOString().split('T')[0]; // YYYY-MM-DD
+          return date.toISOString().split('T')[0];
         case 'time':
-          return date.toTimeString().split(' ')[0]; // HH:MM:SS
+          return date.toTimeString().split(' ')[0];
         case 'datetime':
-          return date.toISOString(); // Full ISO string
+          return date.toISOString();
         default:
           return date.toISOString();
       }
     },
-    []
+    [isProductTimestampField]
   );
 
   // Initialize selected date from value

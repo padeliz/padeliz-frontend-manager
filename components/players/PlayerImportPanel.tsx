@@ -11,12 +11,12 @@ import { playerToDropdownOption, usePlayerPicker } from '@/hooks/usePlayerPicker
 import { queryKeys } from '@/lib/queryClient';
 import { ApiError } from '@/services/api/baseApi';
 import {
-  PlayerImportApiService,
-  PlayerImportSaveRow,
-} from '@/services/api/playerImportApi';
+  UserImportApiService,
+  UserImportSaveRow,
+} from '@/services/api/userImportApi';
 import {
   ApiPlayer,
-  ApiPlayerImportPreviewRow,
+  ApiUserImportPreviewRow,
 } from '@/types/api/entities';
 import { DropdownOption } from '@/types/ui/dropdowns';
 import { confirmDiscardDirty } from '@/utils/softDirtyNav';
@@ -29,11 +29,11 @@ import {
   View,
 } from 'react-native';
 
-const api = new PlayerImportApiService();
+const api = new UserImportApiService();
 
-type DraftRow = ApiPlayerImportPreviewRow & {
+type DraftRow = ApiUserImportPreviewRow & {
   included: boolean;
-  player_id: number | null;
+  player_user_id: number | null;
   seedOptions: DropdownOption[];
   errors: string[];
 };
@@ -42,16 +42,16 @@ function snapshotLabel(row: {
   first_name: string | null;
   middle_name?: string | null;
   last_name?: string | null;
-  player_id?: number | null;
+  player_user_id?: number | null;
 }): string {
   const name = [row.first_name, row.middle_name, row.last_name]
     .filter(part => part != null && part !== '')
     .join(' ');
   if (name) return name;
-  return row.player_id != null ? `Player #${row.player_id}` : 'Player';
+  return row.player_user_id != null ? `Player #${row.player_user_id}` : 'Player';
 }
 
-function seedOptionsFromPreview(row: ApiPlayerImportPreviewRow): DropdownOption[] {
+function seedOptionsFromPreview(row: ApiUserImportPreviewRow): DropdownOption[] {
   const players: ApiPlayer[] = [];
   if (row.mapping.player) players.push(row.mapping.player);
   players.push(...(row.mapping.candidates || []));
@@ -59,8 +59,8 @@ function seedOptionsFromPreview(row: ApiPlayerImportPreviewRow): DropdownOption[
   const seen = new Set<number>();
   const options: DropdownOption[] = [];
   for (const player of players) {
-    if (seen.has(player.id_player)) continue;
-    seen.add(player.id_player);
+    if (seen.has(player.id_user)) continue;
+    seen.add(player.id_user);
     options.push(playerToDropdownOption(player));
   }
   return options;
@@ -90,12 +90,12 @@ export default function PlayerImportPanel() {
   const includedCount = rows.filter(row => row.included).length;
   const picker = usePlayerPicker({ selectedValue: null });
 
-  const applyPreview = useCallback((previewRows: ApiPlayerImportPreviewRow[]) => {
+  const applyPreview = useCallback((previewRows: ApiUserImportPreviewRow[]) => {
     setRows(
       previewRows.map(row => ({
         ...row,
         included: true,
-        player_id: row.mapping.player?.id_player ?? null,
+        player_user_id: row.mapping.player?.id_user ?? null,
         seedOptions: seedOptionsFromPreview(row),
         errors: [],
       }))
@@ -138,7 +138,7 @@ export default function PlayerImportPanel() {
   };
 
   const clientValidate = (row: DraftRow): string[] => {
-    if (row.player_id != null) return [];
+    if (row.player_user_id != null) return [];
     const errors: string[] = [];
     if (!row.first_name?.trim()) {
       errors.push('First name is required to create a player.');
@@ -163,14 +163,14 @@ export default function PlayerImportPanel() {
       throw new Error('Import validation failed');
     }
 
-    const payloadRows: PlayerImportSaveRow[] = included.map(row => ({
+    const payloadRows: UserImportSaveRow[] = included.map(row => ({
       index: row.index,
       first_name: row.first_name || null,
       middle_name: row.middle_name,
       last_name: row.last_name,
       email: row.email || null,
       phone: row.phone || null,
-      player_id: row.player_id,
+      player_user_id: row.player_user_id,
     }));
 
     setSaving(true);
@@ -184,25 +184,25 @@ export default function PlayerImportPanel() {
       setRows(prev =>
         prev.map(row => {
           const match = saved.find(item => item.row_index === row.index);
-          if (!match?.player_id) return { ...row, errors: [] };
+          if (!match?.player_user_id) return { ...row, errors: [] };
           const label = snapshotLabel({
             first_name: match.first_name ?? row.first_name,
             middle_name: match.middle_name ?? row.middle_name,
             last_name: match.last_name ?? row.last_name,
-            player_id: match.player_id,
+            player_user_id: match.player_user_id,
           });
           const option: DropdownOption = {
             label,
-            value: match.player_id,
+            value: match.player_user_id,
             imageUrl: null,
           };
           const seedOptions = [
             option,
-            ...row.seedOptions.filter(opt => Number(opt.value) !== match.player_id),
+            ...row.seedOptions.filter(opt => Number(opt.value) !== match.player_user_id),
           ];
           return {
             ...row,
-            player_id: match.player_id,
+            player_user_id: match.player_user_id,
             seedOptions,
             errors: [],
           };
@@ -210,9 +210,9 @@ export default function PlayerImportPanel() {
       );
       setDirty(false);
       showSuccess('Import saved', response.message || 'Players imported');
-      await queryClient.invalidateQueries({ queryKey: ['resourceList', 'Player'] });
+      await queryClient.invalidateQueries({ queryKey: ['resourceList', 'User'] });
       await queryClient.invalidateQueries({
-        queryKey: ['resourceList', 'PlayerImport'],
+        queryKey: ['resourceList', 'UserImport'],
       });
       await queryClient.invalidateQueries({ queryKey: queryKeys.playersPicker() });
     } catch (err: any) {
@@ -274,7 +274,7 @@ export default function PlayerImportPanel() {
       ) : (
         <View>
           {rows.map(row => {
-            const locked = row.player_id != null;
+            const locked = row.player_user_id != null;
             const options = mergeOptions(row.seedOptions, picker.options);
             return (
               <View
@@ -341,10 +341,10 @@ export default function PlayerImportPanel() {
                   <View testID={`import-player-${row.index}`} className="min-w-[220px]">
                     <SingleSelectDropdown
                       options={options}
-                      selectedValue={row.player_id}
+                      selectedValue={row.player_user_id}
                       onSelectionChange={value =>
                         updateRow(row.index, {
-                          player_id: value == null ? null : Number(value),
+                          player_user_id: value == null ? null : Number(value),
                         })
                       }
                       placeholder="Map player"

@@ -5,16 +5,11 @@
 
 import { ApiPlayer } from './entities';
 
-export interface ApiAuthUser {
-  id: number;
-  name: string;
-  email: string;
-  userType: string;
-  google_avatar?: string;
-}
+/** Manager session user — same wire shape as `UserResource` / login `user`. */
+export type ApiAuthUser = ApiPlayer;
 
 export interface ApiLoginResponse {
   token: string;
-  player: ApiPlayer;
+  user: ApiPlayer;
   user_type: string;
 }

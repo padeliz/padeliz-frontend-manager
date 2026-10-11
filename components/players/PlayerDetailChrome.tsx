@@ -41,11 +41,11 @@ export function PlayerDetailChrome() {
     successHoldMs: 4000,
     resetKey: pathname,
   });
-  const { getMetadata } = useResourceMetadata(['Player']);
-  const metadata = getMetadata('Player');
+  const { getMetadata } = useResourceMetadata(['User']);
+  const metadata = getMetadata('User');
 
   const playerQuery = useQuery({
-    queryKey: queryKeys.resourceDetail('Player', numericPlayerId),
+    queryKey: queryKeys.resourceDetail('User', numericPlayerId),
     queryFn: async () => {
       const res = await playersApi.getPlayer(numericPlayerId);
       return res.data;

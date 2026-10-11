@@ -219,7 +219,7 @@ export default function SmashLivePanel({ sessionId, onFooterReady }: Props) {
 
   const court = live.court as {
     participation_id: string;
-    player_id: string;
+    player_user_id: string;
     player_name: string;
     session_tries: number;
     record_hold_seconds: number;
@@ -234,7 +234,7 @@ export default function SmashLivePanel({ sessionId, onFooterReady }: Props) {
 
   const leaderboard = live.leaderboard as Array<{
     position: number;
-    player_id: string;
+    player_user_id: string;
     player_name: string;
     session_tries: number;
     record_hold_seconds: number;
@@ -243,7 +243,7 @@ export default function SmashLivePanel({ sessionId, onFooterReady }: Props) {
   }>;
 
   const lbPositionById = new Map(
-    leaderboard.map(row => [row.player_id, row.position])
+    leaderboard.map(row => [row.player_user_id, row.position])
   );
 
   const completeButton = (
@@ -261,7 +261,7 @@ export default function SmashLivePanel({ sessionId, onFooterReady }: Props) {
     />
   );
 
-  const courtFlashing = court && flashId === court.player_id;
+  const courtFlashing = court && flashId === court.player_user_id;
   const courtControlsVisible = detailOpen;
 
   return (
@@ -332,7 +332,7 @@ export default function SmashLivePanel({ sessionId, onFooterReady }: Props) {
               courtFlashing ? 'border-red-500 bg-red-50' : 'border-gray-200'
             }`}
             testID={
-              court ? `smash-court-${court.player_id}` : 'smash-court-vacant'
+              court ? `smash-court-${court.player_user_id}` : 'smash-court-vacant'
             }
           >
             <Text className="font-semibold mb-2">In the Court</Text>
@@ -355,7 +355,7 @@ export default function SmashLivePanel({ sessionId, onFooterReady }: Props) {
                       }`}
                     >
                       <ActionButton
-                        testID={`smash-return-${court.player_id}`}
+                        testID={`smash-return-${court.player_user_id}`}
                         startIcon={CHALLENGE_ICONS.returnToWaiting.name}
                         iconColor={CHALLENGE_ICONS.returnToWaiting.color}
                         iconSize={CHALLENGE_ROW_ICON_SIZE}
@@ -367,7 +367,7 @@ export default function SmashLivePanel({ sessionId, onFooterReady }: Props) {
                         onPress={() =>
                           void runSmash({
                             type: 'return_to_waiting',
-                            playerId: court.player_id,
+                            playerId: court.player_user_id,
                           })
                         }
                       />
@@ -434,7 +434,7 @@ export default function SmashLivePanel({ sessionId, onFooterReady }: Props) {
                 </View>
                 <Text className="text-sm text-gray-600 mt-1">
                   {formatSmashPlayerStats({
-                    leaderboardPosition: lbPositionById.get(court.player_id),
+                    leaderboardPosition: lbPositionById.get(court.player_user_id),
                     sessionTries: court.session_tries,
                     isRecordHolder: court.is_record_holder,
                   })}
@@ -474,16 +474,16 @@ export default function SmashLivePanel({ sessionId, onFooterReady }: Props) {
             {live.waiting.map((w, index) => {
               const row = w as {
                 participation_id: string;
-                player_id: string;
+                player_user_id: string;
                 player_name: string;
                 session_tries: number;
                 record_hold_seconds: number;
                 queue_position: number;
                 is_record_holder?: boolean;
               };
-              const flashing = flashId === row.player_id;
+              const flashing = flashId === row.player_user_id;
               const lbRow = leaderboard.find(
-                l => l.player_id === row.player_id
+                l => l.player_user_id === row.player_user_id
               );
               return (
                 <SortableRow
@@ -507,12 +507,12 @@ export default function SmashLivePanel({ sessionId, onFooterReady }: Props) {
                         ? 'border-red-500 bg-red-50'
                         : 'border-gray-100'
                     }`}
-                    testID={`smash-waiting-${row.player_id}`}
+                    testID={`smash-waiting-${row.player_user_id}`}
                   >
                     <View className="flex-row items-center">
                       {!readOnly ? (
                         <SortableDragHandle
-                          testID={`smash-drag-${row.player_id}`}
+                          testID={`smash-drag-${row.player_user_id}`}
                         />
                       ) : null}
                       <View className="flex-1">
@@ -527,7 +527,7 @@ export default function SmashLivePanel({ sessionId, onFooterReady }: Props) {
                             <View className="flex-row gap-2 opacity-100 web:opacity-0 web:group-hover:opacity-100">
                               {live.can_manual_jump_in ? (
                                 <ActionButton
-                                  testID={`smash-jump-in-${row.player_id}`}
+                                  testID={`smash-jump-in-${row.player_user_id}`}
                                   startIcon={CHALLENGE_ICONS.jumpIn.name}
                                   iconColor={CHALLENGE_ICONS.jumpIn.color}
                                   iconSize={CHALLENGE_ROW_ICON_SIZE}
@@ -538,13 +538,13 @@ export default function SmashLivePanel({ sessionId, onFooterReady }: Props) {
                                   onPress={() =>
                                     void runSmash({
                                       type: 'jump_in',
-                                      playerId: row.player_id,
+                                      playerId: row.player_user_id,
                                     })
                                   }
                                 />
                               ) : null}
                               <ActionButton
-                                testID={`smash-remove-${row.player_id}`}
+                                testID={`smash-remove-${row.player_user_id}`}
                                 startIcon={CHALLENGE_ICONS.remove.name}
                                 iconColor={CHALLENGE_ICONS.remove.color}
                                 iconSize={CHALLENGE_ROW_ICON_SIZE}
@@ -555,7 +555,7 @@ export default function SmashLivePanel({ sessionId, onFooterReady }: Props) {
                                 onPress={() =>
                                   void runSmash({
                                     type: 'remove_player',
-                                    playerId: row.player_id,
+                                    playerId: row.player_user_id,
                                   })
                                 }
                               />

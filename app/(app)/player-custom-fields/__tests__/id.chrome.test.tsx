@@ -11,7 +11,7 @@ jest.mock('@/context/ToastContext', () => ({
 
 jest.mock('@/context/managerAuth', () => ({
   useAuth: () => ({
-    user: { id_player: 1, name: 'Mgr' },
+    user: { id_user: 1, name: 'Mgr' },
   }),
 }));
 

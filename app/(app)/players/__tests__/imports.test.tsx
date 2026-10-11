@@ -40,8 +40,8 @@ jest.mock('@/components/chrome/PageChromeProvider', () => ({
   useRegisterPageActions: jest.fn(),
 }));
 
-jest.mock('@/services/api/playerImportApi', () => ({
-  PlayerImportApiService: jest.fn().mockImplementation(() => ({
+jest.mock('@/services/api/userImportApi', () => ({
+  UserImportApiService: jest.fn().mockImplementation(() => ({
     getImports: jest.fn(),
     getImport: jest.fn(),
   })),

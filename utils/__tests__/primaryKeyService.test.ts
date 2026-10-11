@@ -3,9 +3,9 @@ import { PrimaryKeyService } from '@/utils/primaryKeyService';
 
 describe('PrimaryKeyService', () => {
   describe('detectPrimaryKey', () => {
-    it('detects id_player from Player-like metadata', () => {
+    it('detects id_user from Player-like metadata', () => {
       expect(PrimaryKeyService.detectPrimaryKey(playerMetadata)).toBe(
-        'id_player'
+        'id_user'
       );
     });
 
@@ -21,7 +21,7 @@ describe('PrimaryKeyService', () => {
   describe('extractId', () => {
     it('extracts the numeric primary key value', () => {
       expect(
-        PrimaryKeyService.extractId({ id_player: 61, name: 'Mara' }, playerMetadata)
+        PrimaryKeyService.extractId({ id_user: 61, name: 'Mara' }, playerMetadata)
       ).toBe(61);
     });
 

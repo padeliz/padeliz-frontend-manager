@@ -12,7 +12,7 @@ export default function AddPlayerPage() {
   }, []);
 
   const config = useResourceCreatePageConfig<ApiPlayer>({
-    resourceName: 'Player',
+    resourceName: 'User',
     resourceDisplayName: 'Player',
     createResource,
     excludeFields: ['password', 'internal_notes'],

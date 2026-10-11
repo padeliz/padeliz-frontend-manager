@@ -14,6 +14,10 @@ import { confirmAction } from '@/utils/confirmAction';
 import { boundOrNull } from '@/utils/playerLevel';
 import { sortBySkillOrder } from '@/utils/event/eventDivisionOrder';
 import { openInNewWindow } from '@/utils/openInNewWindow';
+import {
+  bucharestDatetimeLocalToUnix,
+  formatDivisionPlayingWindow,
+} from '@/utils/productDateTime';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -41,8 +45,9 @@ type NewDivisionDraft = {
   division_id: number | null;
   division_title: string;
   players_limit: string;
-  playing_start_time: string;
-  playing_end_time: string;
+  /** Bucharest datetime-local (YYYY-MM-DDTHH:mm). */
+  playing_starts_at_local: string;
+  playing_ends_at_local: string;
   entry_fee: string;
   /** Weakest accepted level for this event division (optional, 2 decimals). */
   level_min: string;
@@ -54,8 +59,8 @@ const EMPTY_DRAFT: NewDivisionDraft = {
   division_id: null,
   division_title: '',
   players_limit: '',
-  playing_start_time: '',
-  playing_end_time: '',
+  playing_starts_at_local: '',
+  playing_ends_at_local: '',
   entry_fee: '',
   level_min: '',
   level_max: '',
@@ -206,8 +211,19 @@ export default function EventDivisionsTab({
       if (!Number.isFinite(playersLimit) || playersLimit < 1) {
         throw new Error('Players limit must be a positive number.');
       }
-      if (!draft.playing_start_time.trim() || !draft.playing_end_time.trim()) {
-        throw new Error('Start and end times are required.');
+      const playingStartsAt = bucharestDatetimeLocalToUnix(
+        draft.playing_starts_at_local.trim()
+      );
+      const playingEndsAt = bucharestDatetimeLocalToUnix(
+        draft.playing_ends_at_local.trim()
+      );
+      if (playingStartsAt == null || playingEndsAt == null) {
+        throw new Error(
+          'Playing start and end (Europe/Bucharest) are required (YYYY-MM-DDTHH:mm).'
+        );
+      }
+      if (playingStartsAt >= playingEndsAt) {
+        throw new Error('Playing end must be after playing start.');
       }
       const entryFeeRaw = draft.entry_fee.trim();
       if (entryFeeRaw === '') {
@@ -222,8 +238,8 @@ export default function EventDivisionsTab({
         division_id: draft.division_id,
         division_title: draft.division_title.trim() || undefined,
         players_limit: playersLimit,
-        playing_start_time: draft.playing_start_time,
-        playing_end_time: draft.playing_end_time,
+        playing_starts_at: playingStartsAt,
+        playing_ends_at: playingEndsAt,
         entry_fee: entryFee,
         ...(boundOrNull(draft.level_min) != null
           ? { level_min: boundOrNull(draft.level_min)! }
@@ -236,8 +252,8 @@ export default function EventDivisionsTab({
       setDraft(prev => ({
         ...EMPTY_DRAFT,
         players_limit: prev.players_limit,
-        playing_start_time: prev.playing_start_time,
-        playing_end_time: prev.playing_end_time,
+        playing_starts_at_local: prev.playing_starts_at_local,
+        playing_ends_at_local: prev.playing_ends_at_local,
         entry_fee: prev.entry_fee,
       }));
       await onRefresh();
@@ -320,26 +336,32 @@ export default function EventDivisionsTab({
                 keyboardType="numeric"
               />
             </View>
-            <View style={{ minWidth: 110 }}>
-              <Text className="text-xs text-gray-500 mb-1">Start (HH:MM)</Text>
+            <View style={{ minWidth: 180 }}>
+              <Text className="text-xs text-gray-500 mb-1">
+                Playing starts (Bucharest)
+              </Text>
               <AppTextInput
                 testID="divisions-start-input"
                 className="border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
-                value={draft.playing_start_time}
+                value={draft.playing_starts_at_local}
                 onChangeText={v =>
-                  setDraft(prev => ({ ...prev, playing_start_time: v }))
+                  setDraft(prev => ({ ...prev, playing_starts_at_local: v }))
                 }
+                placeholder="YYYY-MM-DDTHH:mm"
               />
             </View>
-            <View style={{ minWidth: 110 }}>
-              <Text className="text-xs text-gray-500 mb-1">End (HH:MM)</Text>
+            <View style={{ minWidth: 180 }}>
+              <Text className="text-xs text-gray-500 mb-1">
+                Playing ends (Bucharest)
+              </Text>
               <AppTextInput
                 testID="divisions-end-input"
                 className="border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
-                value={draft.playing_end_time}
+                value={draft.playing_ends_at_local}
                 onChangeText={v =>
-                  setDraft(prev => ({ ...prev, playing_end_time: v }))
+                  setDraft(prev => ({ ...prev, playing_ends_at_local: v }))
                 }
+                placeholder="YYYY-MM-DDTHH:mm"
               />
             </View>
             <View style={{ minWidth: 100 }}>
@@ -422,8 +444,12 @@ export default function EventDivisionsTab({
                   testID={`division-meta-${ed.id_event_division}`}
                   className="text-xs text-gray-500"
                 >
-                  limit {ed.players_limit} · {ed.playing_start_time || '—'} –{' '}
-                  {ed.playing_end_time || '—'} · skill_order{' '}
+                  limit {ed.players_limit} ·{' '}
+                  {formatDivisionPlayingWindow(
+                    ed.playing_starts_at,
+                    ed.playing_ends_at
+                  )}{' '}
+                  · skill_order{' '}
                   {ed.skill_order ?? 0}
                   {ed.level_min != null || ed.level_max != null
                     ? ` · level ${ed.level_min ?? '—'} → ${ed.level_max ?? '—'}`

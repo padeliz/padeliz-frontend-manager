@@ -40,13 +40,13 @@ function isPdf(url: string): boolean {
 }
 
 export function proofPlayerLabel(
-  proof: Pick<ApiPlayerStudentProof, 'player' | 'player_id'>
+  proof: Pick<ApiPlayerStudentProof, 'player' | 'player_user_id'>
 ): string {
   const p = proof.player;
   return (
     p?.name ||
     [p?.first_name, p?.last_name].filter(Boolean).join(' ') ||
-    `Player #${proof.player_id}`
+    `Player #${proof.player_user_id}`
   );
 }
 

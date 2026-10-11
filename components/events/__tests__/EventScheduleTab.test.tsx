@@ -11,6 +11,11 @@ import path from 'path';
 import React from 'react';
 import { Pressable } from 'react-native';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { productDateTimeToDate } from '@/utils/productDateTime';
+
+const schedDay = '2026-08-24';
+const at = (time: string) =>
+  Math.floor(productDateTimeToDate(schedDay, time).getTime() / 1000);
 
 const mockGetSchedule = jest.fn();
 const mockUpdateForm = jest.fn(async () => ({ data: {} }));
@@ -97,8 +102,8 @@ function schedulePayload(overrides: Record<string, unknown> = {}) {
       ],
       event_division: {
         id_event_division: 9,
-        playing_start_time: '10:00',
-        playing_end_time: '18:00',
+        playing_starts_at: at('10:00:00'),
+        playing_ends_at: at('18:00:00'),
       },
       schedule: {
         id_event_division_schedule: 1,
@@ -167,7 +172,10 @@ describe('EventScheduleTab', () => {
         section="knobs"
       />
     );
-    expect(await findByText(/Current points_per_match: 15/)).toBeTruthy();
+    await findByText('Schedule knobs');
+    await waitFor(() =>
+      expect(getByText(/Current points_per_match: 15/)).toBeTruthy()
+    );
     fireEvent.press(getByText('Preview'));
     expect(await findByText(/Points\/match:\s*16/)).toBeTruthy();
     expect(queryByText(/Points\/match:\s*15/)).toBeNull();
@@ -428,15 +436,15 @@ describe('EventScheduleTab', () => {
         return schedulePayload({
           has_regular_matches: false,
           event_division: {
-            playing_start_time: '11:00',
-            playing_end_time: '17:00',
+            playing_starts_at: at('11:00:00'),
+            playing_ends_at: at('17:00:00'),
           },
         });
       }
       return schedulePayload({
         event_division: {
-          playing_start_time: '10:00',
-          playing_end_time: '18:00',
+          playing_starts_at: at('10:00:00'),
+          playing_ends_at: at('18:00:00'),
         },
       });
     });
@@ -481,8 +489,8 @@ describe('EventScheduleTab', () => {
       expect(mockUpdateForm).toHaveBeenCalled();
     });
     const saveBody = mockUpdateForm.mock.calls[0][1];
-    expect(saveBody).not.toHaveProperty('playing_start_time');
-    expect(saveBody).not.toHaveProperty('playing_end_time');
+    expect(saveBody).not.toHaveProperty('playing_starts_at');
+    expect(saveBody).not.toHaveProperty('playing_ends_at');
     expect(saveBody).not.toHaveProperty('include_club_host_on_pdf');
   });
 

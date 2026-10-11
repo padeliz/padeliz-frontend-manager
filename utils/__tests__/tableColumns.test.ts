@@ -5,7 +5,7 @@ describe('tableColumns', () => {
     display_field: 'name',
     swagger_schema: {
       properties: {
-        id_player: {
+        id_user: {
           type: 'integer',
           format: 'int64',
           readOnly: true,
@@ -42,7 +42,7 @@ describe('tableColumns', () => {
       display_field: null,
     };
     const columns = generateColumnsFromMetadata(metadata, { onView });
-    const pkCol = columns.find((c: any) => c.key === 'id_player');
+    const pkCol = columns.find((c: any) => c.key === 'id_user');
     expect(pkCol).toBeTruthy();
     expect(typeof pkCol.render).toBe('function');
   });

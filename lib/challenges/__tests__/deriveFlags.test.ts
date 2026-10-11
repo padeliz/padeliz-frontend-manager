@@ -36,10 +36,10 @@ function smashState(
 }
 
 function baseSmash(
-  overrides: Partial<SmashParticipant> & Pick<SmashParticipant, 'player_id' | 'player_name'>
+  overrides: Partial<SmashParticipant> & Pick<SmashParticipant, 'player_user_id' | 'player_name'>
 ): SmashParticipant {
   return {
-    participation_id: `part-${overrides.player_id}`,
+    participation_id: `part-${overrides.player_user_id}`,
     name_normalized: overrides.player_name.toLowerCase(),
     slot: 'removed',
     queue_position: null,
@@ -58,36 +58,36 @@ describe('projectSmashViews leaderboard tiers', () => {
   it('orders holder, then ex by tries ASC hold DESC name, then others by tries DESC name', () => {
     const participants = [
       baseSmash({
-        player_id: 'other-hi',
+        player_user_id: 'other-hi',
         player_name: 'Zulu',
         session_tries: 5,
       }),
       baseSmash({
-        player_id: 'ex-b',
+        player_user_id: 'ex-b',
         player_name: 'Bravo',
         session_tries: 2,
         record_hold_seconds: 30,
       }),
       baseSmash({
-        player_id: 'holder',
+        player_user_id: 'holder',
         player_name: 'Ace',
         session_tries: 1,
         is_record_holder: true,
         record_held_since: now - 10,
       }),
       baseSmash({
-        player_id: 'ex-a',
+        player_user_id: 'ex-a',
         player_name: 'Alpha',
         session_tries: 2,
         record_hold_seconds: 40,
       }),
       baseSmash({
-        player_id: 'other-lo',
+        player_user_id: 'other-lo',
         player_name: 'Mike',
         session_tries: 5,
       }),
       baseSmash({
-        player_id: 'zero-ex',
+        player_user_id: 'zero-ex',
         player_name: 'Zero',
         session_tries: 3,
         record_hold_seconds: 0,
@@ -96,12 +96,12 @@ describe('projectSmashViews leaderboard tiers', () => {
 
     const lb = projectSmashViews(smashState(participants), now)
       .leaderboard as Array<{
-      player_id: string;
+      player_user_id: string;
       position: number;
       slot: string;
     }>;
 
-    expect(lb.map(r => r.player_id)).toEqual([
+    expect(lb.map(r => r.player_user_id)).toEqual([
       'holder',
       'ex-a',
       'ex-b',
@@ -116,20 +116,20 @@ describe('projectSmashViews leaderboard tiers', () => {
   it('skips tier 1 when no holder', () => {
     const participants = [
       baseSmash({
-        player_id: 'o1',
+        player_user_id: 'o1',
         player_name: 'Ann',
         session_tries: 1,
       }),
       baseSmash({
-        player_id: 'ex1',
+        player_user_id: 'ex1',
         player_name: 'Bob',
         session_tries: 4,
         record_hold_seconds: 10,
       }),
     ];
     const lb = projectSmashViews(smashState(participants), now)
-      .leaderboard as Array<{ player_id: string }>;
-    expect(lb.map(r => r.player_id)).toEqual(['ex1', 'o1']);
+      .leaderboard as Array<{ player_user_id: string }>;
+    expect(lb.map(r => r.player_user_id)).toEqual(['ex1', 'o1']);
   });
 
   it('filters ineligible and includes slot on kotc rows', () => {
@@ -189,7 +189,7 @@ describe('projectSmashViews leaderboard tiers', () => {
 
   it('liveHoldSeconds grows with clock', () => {
     const p = baseSmash({
-      player_id: 'h',
+      player_user_id: 'h',
       player_name: 'Holder',
       is_record_holder: true,
       record_held_since: now,

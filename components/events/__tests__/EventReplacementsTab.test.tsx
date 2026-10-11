@@ -25,7 +25,7 @@ const mockCreate = jest.fn();
 const mockPatch = jest.fn();
 const mockDestroy = jest.fn();
 const mockGetPlayers = jest.fn(async () => ({
-  data: [{ id_player: 5, name: 'Guest Eve', pdf_avatar_url: 'https://cdn.example/eve.png' }],
+  data: [{ id_user: 5, name: 'Guest Eve', pdf_avatar_url: 'https://cdn.example/eve.png' }],
 }));
 const mockGeneratePdfAvatar = jest.fn();
 const mockPlaySuccess = jest.fn(async () => undefined);
@@ -52,7 +52,7 @@ jest.mock('@/services/api/playersApi', () => ({
     getPlayers: (...args: unknown[]) => mockGetPlayers(...args),
     getPlayer: jest.fn(async () => ({
       data: {
-        id_player: 5,
+        id_user: 5,
         name: 'Guest Eve',
         pdf_avatar_url: 'https://cdn.example/eve.png',
       },
@@ -171,7 +171,7 @@ describe('EventReplacementsTab', () => {
           id_replacement: 8,
           original_participation_id: 1,
           substitute_participation_id: 2,
-          substitute_player_id: null,
+          substitute_player_user_id: null,
           match_id: null,
         },
       ],
@@ -286,7 +286,7 @@ describe('EventReplacementsTab', () => {
     const payload = mockCreate.mock.calls[0][1] as Record<string, unknown>;
     expect(payload.original_participation_id).toBe(1);
     expect(payload).not.toHaveProperty('substitute_participation_id');
-    expect(payload).not.toHaveProperty('substitute_player_id');
+    expect(payload).not.toHaveProperty('substitute_player_user_id');
     expect(await findByTestId('replacements-create-success')).toBeTruthy();
     expect(mockPlaySuccess).toHaveBeenCalled();
   });
@@ -337,7 +337,7 @@ describe('EventReplacementsTab', () => {
           id_replacement: 8,
           original_participation_id: 1,
           substitute_participation_id: 2,
-          substitute_player_id: null,
+          substitute_player_user_id: null,
           match_id: 44,
         },
       ],
@@ -358,7 +358,7 @@ describe('EventReplacementsTab', () => {
       expect.objectContaining({
         original_participation_id: 1,
         substitute_participation_id: null,
-        substitute_player_id: null,
+        substitute_player_user_id: null,
       })
     );
     expect(mockPlaySuccess).toHaveBeenCalled();
@@ -566,7 +566,7 @@ describe('EventReplacementsTab', () => {
             id_participation: 1,
             is_collecting_points: true,
             player: {
-              id_player: 1,
+              id_user: 1,
               name: 'Original Alice',
               pdf_avatar_url: 'https://cdn.example/a.png',
             },
@@ -575,7 +575,7 @@ describe('EventReplacementsTab', () => {
             id_participation: 2,
             is_collecting_points: false,
             player: {
-              id_player: 2,
+              id_user: 2,
               name: 'Sub Bob',
               pdf_avatar_url: 'https://cdn.example/b.png',
             },
@@ -604,14 +604,14 @@ describe('EventReplacementsTab', () => {
         {
           id_replacement: 8,
           original_participation_id: 1,
-          substitute_player_id: 5,
+          substitute_player_user_id: 5,
           original_participation: {
             id_participation: 1,
             is_collecting_points: true,
-            player: { id_player: 1, name: 'Original Alice', pdf_avatar_url: null },
+            player: { id_user: 1, name: 'Original Alice', pdf_avatar_url: null },
           },
           substitute_player: {
-            id_player: 5,
+            id_user: 5,
             name: 'Guest Eve',
             pdf_avatar_url: null,
           },

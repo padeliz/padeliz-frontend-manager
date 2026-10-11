@@ -34,15 +34,7 @@ export class AuthService extends BaseApiService {
       // Store the JWT token
       await this.setAuthToken(response.data.token);
 
-      // Convert player data to AuthUser format
-      const authUser: ApiAuthUser = {
-        id: response.data.player.id_player,
-        name: response.data.player.name,
-        email: response.data.player.google_email || '',
-        userType: response.data.user_type,
-        google_avatar: response.data.player.google_avatar || undefined,
-      };
-
+      const authUser = response.data.user;
       await this.storeUser(authUser);
 
       return {

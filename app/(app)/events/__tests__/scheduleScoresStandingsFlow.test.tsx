@@ -36,12 +36,12 @@ const scheduleState = {
         {
           side: 'LEFT',
           score: null,
-          players: [{ player_id: 1, player: { name: 'Mara Lovelace' } }],
+          players: [{ player_user_id: 1, player: { name: 'Mara Lovelace' } }],
         },
         {
           side: 'RIGHT',
           score: null,
-          players: [{ player_id: 2, player: { name: 'Bob' } }],
+          players: [{ player_user_id: 2, player: { name: 'Bob' } }],
         },
       ],
     },
@@ -121,6 +121,19 @@ jest.mock('@/services/api/standingsApi', () => ({
     recalculate: (...args: unknown[]) => mockRecalculate(...args),
     updateStanding: jest.fn(),
   },
+}));
+
+jest.mock('@/services/api/eventParticipationsApi', () => ({
+  EventParticipationsApiService: jest.fn().mockImplementation(() => ({
+    getParticipationLevel: jest.fn(async () => ({ data: null })),
+    upsertParticipationLevel: jest.fn(async () => ({ data: {} })),
+  })),
+}));
+
+jest.mock('@/services/api/levelsApi', () => ({
+  LevelsApiService: jest.fn().mockImplementation(() => ({
+    getAllLevels: jest.fn(async () => []),
+  })),
 }));
 
 function renderWithProviders(ui: React.ReactElement) {

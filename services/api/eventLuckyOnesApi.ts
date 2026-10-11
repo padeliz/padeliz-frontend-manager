@@ -12,12 +12,12 @@ export class EventLuckyOnesApiService extends BaseApiService {
       per_page?: number;
       q?: string;
       filters?: {
-        player_id?: number;
+        player_user_id?: number;
         event_id?: number;
         lottery_id?: number;
       };
       sort_by?: {
-        player_id?: 'asc' | 'desc';
+        player_user_id?: 'asc' | 'desc';
         event_id?: 'asc' | 'desc';
         lottery_id?: 'asc' | 'desc';
         inserted_at?: 'asc' | 'desc';

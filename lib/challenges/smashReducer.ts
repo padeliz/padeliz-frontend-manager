@@ -158,7 +158,7 @@ export function reduceSmash(
           message: '',
           code: 'duplicate_active',
           duplicate: {
-            id: active.player_id,
+            id: active.player_user_id,
             location: active.slot === 'waiting' ? 'waiting' : 'court',
           },
         };
@@ -177,13 +177,13 @@ export function reduceSmash(
         draft => {
           const list = draft.participants as SmashParticipant[];
           if (existing) {
-            const p = list.find(x => x.player_id === existing.player_id)!;
+            const p = list.find(x => x.player_user_id === existing.player_user_id)!;
             p.slot = 'waiting';
             p.queue_position = waitingCount(list) + 1;
           } else {
             list.push({
               participation_id: newClientId(),
-              player_id: newClientId(),
+              player_user_id: newClientId(),
               player_name: name,
               name_normalized: normalized,
               slot: 'waiting',
@@ -206,7 +206,7 @@ export function reduceSmash(
     case 'remove_player': {
       const participants = state.participants as SmashParticipant[];
       const player = participants.find(
-        p => p.player_id === command.playerId && p.slot === 'waiting'
+        p => p.player_user_id === command.playerId && p.slot === 'waiting'
       );
       if (!player) return { message: 'Waiting player not found.' };
 
@@ -214,7 +214,7 @@ export function reduceSmash(
         state,
         draft => {
           const list = draft.participants as SmashParticipant[];
-          const p = list.find(x => x.player_id === command.playerId);
+          const p = list.find(x => x.player_user_id === command.playerId);
           if (p) {
             p.slot = 'removed';
             p.queue_position = null;
@@ -222,7 +222,7 @@ export function reduceSmash(
           renumberWaiting(list);
         },
         'participant_removed',
-        { name: player.player_name, player_id: player.player_id },
+        { name: player.player_name, player_user_id: player.player_user_id },
         nextSequence,
         now
       );
@@ -230,7 +230,7 @@ export function reduceSmash(
     case 'jump_in': {
       const participants = state.participants as SmashParticipant[];
       const player = participants.find(
-        p => p.player_id === command.playerId && p.slot === 'waiting'
+        p => p.player_user_id === command.playerId && p.slot === 'waiting'
       );
       if (!player) return { message: 'Waiting player not found.' };
       if (participants.some(p => p.slot === 'on_court')) {
@@ -242,7 +242,7 @@ export function reduceSmash(
         draft => {
           const list = draft.participants as SmashParticipant[];
           const courtWasEmpty = !list.some(p => p.slot === 'on_court');
-          const p = list.find(x => x.player_id === command.playerId);
+          const p = list.find(x => x.player_user_id === command.playerId);
           if (p) {
             p.slot = 'on_court';
             p.queue_position = null;
@@ -253,7 +253,7 @@ export function reduceSmash(
           }
         },
         'participant_jumped_in',
-        { name: player.player_name, player_id: player.player_id },
+        { name: player.player_name, player_user_id: player.player_user_id },
         nextSequence,
         now
       );
@@ -303,7 +303,7 @@ export function reduceSmash(
         },
         'smash_attempt_recorded',
         {
-          player_id: onCourt.player_id,
+          player_user_id: onCourt.player_user_id,
           got_new_record: command.gotNewRecord,
           detail: command.detail || null,
         },
@@ -344,7 +344,7 @@ export function reduceSmash(
     case 'return_to_waiting': {
       const participants = state.participants as SmashParticipant[];
       const player = participants.find(
-        p => p.player_id === command.playerId && p.slot === 'on_court'
+        p => p.player_user_id === command.playerId && p.slot === 'on_court'
       );
       if (!player) return { message: 'Court player not found.' };
       if (waitingCount(participants) >= WAITING_MAX) {
@@ -355,7 +355,7 @@ export function reduceSmash(
         state,
         draft => {
           const list = draft.participants as SmashParticipant[];
-          const p = list.find(x => x.player_id === command.playerId);
+          const p = list.find(x => x.player_user_id === command.playerId);
           if (p) {
             const nextPos = waitingCount(list) + 1;
             p.slot = 'waiting';
@@ -364,14 +364,14 @@ export function reduceSmash(
           renumberWaiting(list);
         },
         'participant_returned_to_waiting',
-        { name: player.player_name, player_id: player.player_id },
+        { name: player.player_name, player_user_id: player.player_user_id },
         nextSequence,
         now
       );
     }
     case 'requeue': {
       const participants = state.participants as SmashParticipant[];
-      const player = participants.find(p => p.player_id === command.playerId);
+      const player = participants.find(p => p.player_user_id === command.playerId);
       if (!player) return { message: 'Player not found.' };
       if (!player.leaderboard_eligible) {
         return { message: 'Player is not on the leaderboard.' };
@@ -387,7 +387,7 @@ export function reduceSmash(
         state,
         draft => {
           const list = draft.participants as SmashParticipant[];
-          const p = list.find(x => x.player_id === command.playerId);
+          const p = list.find(x => x.player_user_id === command.playerId);
           if (p) {
             const nextPos = waitingCount(list) + 1;
             p.slot = 'waiting';
@@ -396,7 +396,7 @@ export function reduceSmash(
           renumberWaiting(list);
         },
         'participant_requeued',
-        { name: player.player_name, player_id: player.player_id },
+        { name: player.player_name, player_user_id: player.player_user_id },
         nextSequence,
         now
       );

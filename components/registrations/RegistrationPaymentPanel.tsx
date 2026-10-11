@@ -26,6 +26,7 @@ import {
   ApiRegistrationPaymentProof,
 } from '@/types/api/entities';
 import { useQueryClient } from '@tanstack/react-query';
+import { classifyTiming } from '@/utils/productDateTime';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 
@@ -93,9 +94,13 @@ function todayYmd(): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-export function isEventPast(event?: { date?: string } | null): boolean {
-  if (!event?.date) return false;
-  return event.date < todayYmd();
+export function isEventPast(
+  event?: { event_starts_at?: number; event_ends_at?: number } | null
+): boolean {
+  if (event?.event_starts_at == null || event?.event_ends_at == null) {
+    return false;
+  }
+  return classifyTiming(event.event_starts_at, event.event_ends_at) === 'past';
 }
 
 export function isEventFinalized(

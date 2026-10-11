@@ -42,8 +42,8 @@ describe('EventReferralPanel', () => {
         {
           id_touchpoint: 1,
           event_id: 5,
-          referred_player_id: 2,
-          referrer_player_id: 3,
+          referred_player_user_id: 2,
+          referrer_player_user_id: 3,
           discount_eligible: true,
           touched_at: 1_700_000_000,
           inserted_at: 1,

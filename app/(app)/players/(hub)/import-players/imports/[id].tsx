@@ -1,13 +1,13 @@
 import { useRegisterPageActions } from '@/components/chrome/PageChromeProvider';
 import ResourceViewPage from '@/components/pages/ResourceViewPage';
 import { useResourceViewPageConfig } from '@/hooks/useResourceViewPageConfig';
-import { PlayerImportApiService } from '@/services/api/playerImportApi';
-import { ApiPlayerImport } from '@/types/api/entities';
+import { UserImportApiService } from '@/services/api/userImportApi';
+import { ApiUserImport } from '@/types/api/entities';
 import { useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
 import { View } from 'react-native';
 
-const importsApi = new PlayerImportApiService();
+const importsApi = new UserImportApiService();
 
 export default function PlayerImportViewPage() {
   const params = useLocalSearchParams<{ id: string }>();
@@ -18,8 +18,8 @@ export default function PlayerImportViewPage() {
     return importsApi.getImport(Number(id));
   }, []);
 
-  const config = useResourceViewPageConfig<ApiPlayerImport>({
-    resourceName: 'PlayerImport',
+  const config = useResourceViewPageConfig<ApiUserImport>({
+    resourceName: 'UserImport',
     resourceDisplayName: 'Import',
     fetchResource,
     embedded: true,

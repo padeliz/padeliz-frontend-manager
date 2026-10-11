@@ -64,7 +64,7 @@ jest.mock('@/services/api/playersApi', () => ({
   PlayersApiService: jest.fn().mockImplementation(() => ({
     getPlayer: async () => ({
       data: {
-        id_player: 42,
+        id_user: 42,
         name: 'Ace Player',
       },
     }),
@@ -75,7 +75,7 @@ jest.mock('@/hooks/useResourceMetadata', () => ({
   useResourceMetadata: () => ({
     getMetadata: () => ({
       display_field: 'name',
-      primary_key: 'id_player',
+      primary_key: 'id_user',
     }),
   }),
 }));

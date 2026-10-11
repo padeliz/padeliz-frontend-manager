@@ -35,7 +35,7 @@ export default function PlayerPhonesPage() {
   );
 
   const config = useResourcePageConfig<ApiPlayerPhone>({
-    resourceName: 'PlayerPhone',
+    resourceName: 'UserPhone',
     resourceDisplayName: 'Phone',
     sectionLabel: 'Player phones',
     sectionHref: '/player-phones',

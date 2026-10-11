@@ -261,6 +261,11 @@ export default function ManagerFileUpload({
           </Text>
           {isLive && config.delete?.path && item.id != null && !disabled && (
             <Pressable
+              testID={
+                item.id != null
+                  ? `manager-file-upload-delete-${item.id}`
+                  : undefined
+              }
               onPress={() => void handleDeleteExisting(item)}
               className="px-2 py-1"
             >

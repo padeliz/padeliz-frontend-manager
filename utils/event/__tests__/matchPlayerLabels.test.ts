@@ -20,7 +20,7 @@ describe('matchPlayerLabels', () => {
     expect(
       resolveMatchPlayerLabel(
         {
-          player_id: 1,
+          player_user_id: 1,
           participation_id: 10,
           player: { name: 'Nested Name' },
         },
@@ -33,7 +33,7 @@ describe('matchPlayerLabels', () => {
     expect(
       resolveMatchPlayerLabel(
         {
-          player_id: null as any,
+          player_user_id: null as any,
           participation_id: 10,
           player: null,
         },

@@ -22,7 +22,7 @@ function metadata(
 const baseProperties = {
   id_registration: { type: 'integer', format: 'int64', readOnly: true },
   event_id: { type: 'integer', format: 'int64' },
-  player_id: { type: 'integer', format: 'int64' },
+  player_user_id: { type: 'integer', format: 'int64' },
   is_minor: { type: 'boolean' },
   note: { type: 'string', nullable: true },
   status: { type: 'string', readOnly: true },
@@ -59,17 +59,17 @@ describe('seedFormValuesFromQuery', () => {
   it('accepts writable schema fields when seedFromQuery is true', () => {
     expect(
       seedFormValuesFromQuery(
-        { event_id: '4', player_id: '9', is_minor: '1' },
+        { event_id: '4', player_user_id: '9', is_minor: '1' },
         metadata(baseProperties),
         { seedFromQuery: true }
       )
-    ).toEqual({ event_id: 4, player_id: 9, is_minor: true });
+    ).toEqual({ event_id: 4, player_user_id: 9, is_minor: true });
   });
 
   it('intersects a string[] allowlist with writable fields', () => {
     expect(
       seedFormValuesFromQuery(
-        { event_id: '4', player_id: '9' },
+        { event_id: '4', player_user_id: '9' },
         metadata(baseProperties),
         { seedFromQuery: ['event_id'] }
       )
@@ -111,13 +111,13 @@ describe('seedFormValuesFromQuery', () => {
   it('does not overwrite a value already typed', () => {
     expect(
       seedFormValuesFromQuery(
-        { event_id: '4', player_id: '9' },
+        { event_id: '4', player_user_id: '9' },
         metadata(baseProperties),
         {
           seedFromQuery: true,
           currentValues: { event_id: 99 },
         }
       )
-    ).toEqual({ player_id: 9 });
+    ).toEqual({ player_user_id: 9 });
   });
 });

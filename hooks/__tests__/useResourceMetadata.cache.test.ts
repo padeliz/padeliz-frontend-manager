@@ -21,9 +21,9 @@ import {
   useResourceMetadata,
 } from '../useResourceMetadata';
 
-const playerMeta = {
+const userMeta = {
   version: 'v1',
-  schema_name: 'Player',
+  schema_name: 'User',
   resource_path: 'players',
   swagger_schema: { required: [], properties: {} },
   request_body: {},
@@ -36,27 +36,27 @@ describe('useResourceMetadata module cache', () => {
   beforeEach(() => {
     __resetResourceMetadataModuleCache();
     mockGet.mockReset();
-    mockGet.mockResolvedValue({ data: playerMeta });
+    mockGet.mockResolvedValue({ data: userMeta });
   });
 
   it('dedupes in-flight and reuses shared cache across hook instances', async () => {
     const { result: first, unmount } = renderHook(() =>
-      useResourceMetadata(['Player'])
+      useResourceMetadata(['User'])
     );
 
     await waitFor(() => {
-      expect(first.current.getMetadata('Player')).not.toBeNull();
+      expect(first.current.getMetadata('User')).not.toBeNull();
     });
     expect(mockGet).toHaveBeenCalledTimes(1);
 
     unmount();
 
     const { result: second } = renderHook(() =>
-      useResourceMetadata(['Player'])
+      useResourceMetadata(['User'])
     );
 
     await waitFor(() => {
-      expect(second.current.getMetadata('Player')?.schema_name).toBe('Player');
+      expect(second.current.getMetadata('User')?.schema_name).toBe('User');
     });
     // Second mount should hit module cache — no extra network call
     expect(mockGet).toHaveBeenCalledTimes(1);

@@ -12,7 +12,7 @@ export type EventRegistrationImportSaveRow = {
   last_name: string | null;
   email: string | null;
   phone: string | null;
-  player_id: number | null;
+  player_user_id: number | null;
   status: string | null;
 };
 

@@ -43,7 +43,7 @@ function playerLabelFromParticipation(p: any): string {
   return (
     player.name ||
     [player.first_name, player.last_name].filter(Boolean).join(' ') ||
-    `Player #${player.id_player ?? player.player_id}`
+    `Player #${player.id_user ?? player.player_user_id}`
   );
 }
 
@@ -221,9 +221,9 @@ export default function LotteryLuckiesMode({
     const participation =
       lucky.drawn_participation || lucky.drawnParticipation;
     const playerId = Number(
-      participation?.player_id ??
-        participation?.player?.id_player ??
-        participation?.player?.player_id
+      participation?.player_user_id ??
+        participation?.player?.id_user ??
+        participation?.player?.player_user_id
     );
     const collecting = Boolean(participation?.is_collecting_points ?? false);
     await reloadAvatarState({
@@ -239,7 +239,7 @@ export default function LotteryLuckiesMode({
     header: prizeLuckiesHeader(line),
   }));
 
-  if (prizesQuery.isLoading) {
+  if (prizesQuery.isPending) {
     return <ActivityIndicator testID="lottery-luckies-loading" />;
   }
 
