@@ -48,6 +48,14 @@ Expo is a React framework for universal native apps — write once for iOS, Andr
    copy .env.local.example .env.local
    ```
 
+   Set `JWT_SECRET` in `.env.local` to a long random string (used by the `/api/auth/*` BFF to sign session JWTs). Generate one with:
+
+   ```bash
+   openssl rand -base64 48
+   ```
+
+   Use a different value than the Player App / staging / production. Also fill Google OAuth credentials from `.env.local.example`.
+
 ### Useful Commands
 
 Press CTRL+` inside VSCode to open the terminal. Make sure you're inside the dev container.

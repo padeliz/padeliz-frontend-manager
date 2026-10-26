@@ -1,0 +1,75 @@
+name: padeliz-frontend-manager-prod
+region: fra
+alerts:
+  - rule: DEPLOYMENT_FAILED
+  - rule: DOMAIN_FAILED
+
+domains:
+  - domain: manager.padeliz.ro
+    type: PRIMARY
+
+envs:
+  - key: NODE_ENV
+    value: production
+    scope: RUN_TIME
+  - key: EXPO_PUBLIC_BASE_URL
+    value: https://manager.padeliz.ro
+    scope: RUN_TIME
+  - key: EXPO_PUBLIC_SCHEME
+    value: padeliz-manager://
+    scope: RUN_TIME
+  - key: EXPO_PUBLIC_API_BASE_URL
+    value: https://backend.padeliz.ro
+    scope: RUN_TIME
+  - key: EXPO_PUBLIC_API_VERSION
+    value: v1
+    scope: RUN_TIME
+  - key: EXPO_PUBLIC_API_MANAGER_PREFIX
+    value: /api/v1/manager
+    scope: RUN_TIME
+  - key: EXPO_PUBLIC_APP_NAME
+    value: Padeliz Manager
+    scope: RUN_TIME
+  - key: EXPO_PUBLIC_APP_VERSION
+    value: "1.0"
+    scope: RUN_TIME
+  - key: EXPO_PUBLIC_DEBUG_MODE
+    value: "0"
+    scope: RUN_TIME
+  - key: EXPO_PUBLIC_LOG_LEVEL
+    value: info
+    scope: RUN_TIME
+  - key: GOOGLE_CLIENT_ID
+    type: SECRET
+    scope: RUN_TIME
+  - key: GOOGLE_CLIENT_SECRET
+    type: SECRET
+    scope: RUN_TIME
+  - key: JWT_SECRET
+    type: SECRET
+    scope: RUN_TIME
+
+services:
+  - name: web
+    image:
+      registry_type: DOCR
+      repository: padeliz/padeliz-frontend-manager
+      digest: ${IMAGE_DIGEST}
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-1gb
+    http_port: 8080
+    health_check:
+      http_path: /
+      initial_delay_seconds: 20
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 6
+
+ingress:
+  rules:
+    - component:
+        name: web
+      match:
+        path:
+          prefix: /
