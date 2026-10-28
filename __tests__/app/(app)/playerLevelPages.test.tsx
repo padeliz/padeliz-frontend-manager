@@ -79,7 +79,7 @@ jest.mock('@/services/api/levelsApi', () => ({
   })),
 }));
 
-const APP_DIR = path.join(__dirname, '..');
+const APP_DIR = path.join(process.cwd(), 'app', '(app)');
 
 describe('Level assessments list page (review-only)', () => {
   beforeEach(() => {

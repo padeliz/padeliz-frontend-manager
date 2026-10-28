@@ -111,7 +111,7 @@ jest.mock('@/components/playerCustomFields/PlayerCustomFieldOptionsPanel', () =>
 describe('player-custom-fields/[id]', () => {
   it('uses formatted Page Header, raw crumb label, no wrapper ScrollView', async () => {
     const src = fs.readFileSync(
-      path.join(__dirname, '..', '[id].tsx'),
+      path.join(process.cwd(), 'app', '(app)', 'player-custom-fields', '[id].tsx'),
       'utf8'
     );
     expect(src).not.toMatch(/ScrollView/);
