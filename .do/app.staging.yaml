@@ -1,3 +1,6 @@
+# Bootstrap / contract reference for App Platform (not applied by daily CI).
+# GitHub deploys update image digests only; secret values live in the App
+# Platform UI. Apply this file only for bootstrap or rare manual/spec sync.
 name: padeliz-frontend-manager-staging
 region: fra
 alerts:
