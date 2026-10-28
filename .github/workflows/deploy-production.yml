@@ -59,3 +59,16 @@ jobs:
         with:
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
           app_name: padeliz-frontend-manager-prod
+
+  smoke:
+    name: smoke-web
+    needs: deploy
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Smoke web
+        env:
+          SMOKE_URL: https://manager.padeliz.ro
+          SMOKE_MARKER: Padeliz Manager
+        run: bash scripts/ci/smoke-web.sh

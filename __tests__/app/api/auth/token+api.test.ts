@@ -49,7 +49,7 @@ function setAuthEnv(overrides: Record<string, string | undefined> = {}) {
 
 function loadToken() {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  return require('../token+api') as {
+  return require('@/app/api/auth/token+api') as {
     POST: (request: Request) => Promise<Response>;
   };
 }

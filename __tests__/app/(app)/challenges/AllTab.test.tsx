@@ -1,4 +1,4 @@
-import ChallengesAllTab from '../(hub)/all';
+import ChallengesAllTab from '@/app/(app)/challenges/(hub)/all';
 import {
   createTestQueryClient,
   disposeTestQueryClient,

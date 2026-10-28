@@ -5,12 +5,16 @@
 | Trigger | Action |
 |---|---|
 | Pull request | CI tests only |
-| Push to `main` | Test → build/push DOCR → deploy **staging** (image digests only) |
-| GitHub Release published | Build/push DOCR → deploy **production** (image digests only; approval required) |
+| Push to `main` | Test → build/push DOCR → deploy **staging** (image digests only) → smoke web |
+| GitHub Release published | Build/push DOCR → deploy **production** (image digests only; approval required) → smoke web |
+
+Post-deploy smoke (`scripts/ci/smoke-web.sh`) checks HTTP 200, rejects the default nginx welcome page, and requires the `Padeliz Manager` marker. Failure fails the workflow only (no automatic App Platform rollback).
 
 Image: `registry.digitalocean.com/padeliz/padeliz-frontend-manager`
 
 Router origin follows `EXPO_PUBLIC_BASE_URL` via `app.config.js` (staging/production set as Docker build-args).
+
+`app/` is Expo Router routes only. Route and API tests live under `__tests__/app/` (not colocated under `app/`), so production `expo export` never treats tests as routes.
 
 Daily deploys do **not** push [`.do/app.*.yaml`](../.do/). They only update the `web` component image digest on the existing App Platform app so encrypted secrets in the DigitalOcean UI are never wiped.
 

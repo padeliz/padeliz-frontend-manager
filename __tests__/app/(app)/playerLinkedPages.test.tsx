@@ -96,7 +96,7 @@ jest.mock('@/services/api/playerIdentitiesApi', () => ({
   })),
 }));
 
-const APP_DIR = path.join(__dirname, '..');
+const APP_DIR = path.join(process.cwd(), 'app', '(app)');
 
 beforeEach(() => {
   jest.clearAllMocks();

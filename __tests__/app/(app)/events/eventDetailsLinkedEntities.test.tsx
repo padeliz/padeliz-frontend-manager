@@ -48,7 +48,7 @@ describe('Event Details linked entities', () => {
 
   it('route wrapper uses View only without stray text nodes', () => {
     const src = fs.readFileSync(
-      path.join(__dirname, '..', '[id]', 'details.tsx'),
+      path.join(process.cwd(), 'app', '(app)', 'events', '[id]', 'details.tsx'),
       'utf8'
     );
     expect(src).not.toMatch(/>\s*\.\s*</);

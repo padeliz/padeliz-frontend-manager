@@ -49,7 +49,15 @@ describe('Schedule nested tabs', () => {
 
   it('does not render a local EventTabsBar in layout source', () => {
     const src = fs.readFileSync(
-      path.join(__dirname, '..', '[id]', 'schedule', '_layout.tsx'),
+      path.join(
+        process.cwd(),
+        'app',
+        '(app)',
+        'events',
+        '[id]',
+        'schedule',
+        '_layout.tsx'
+      ),
       'utf8'
     );
     expect(src).toContain('useSubTabBar');
@@ -58,7 +66,15 @@ describe('Schedule nested tabs', () => {
 
   it('stabilizes onBeforeNavigate via actionsRef', () => {
     const src = fs.readFileSync(
-      path.join(__dirname, '..', '[id]', 'schedule', '_layout.tsx'),
+      path.join(
+        process.cwd(),
+        'app',
+        '(app)',
+        'events',
+        '[id]',
+        'schedule',
+        '_layout.tsx'
+      ),
       'utf8'
     );
     expect(src).toContain('usePageChromeActionsRef');

@@ -6,7 +6,7 @@ import path from 'path';
 
 describe('Tools templates chrome', () => {
   const src = fs.readFileSync(
-    path.join(__dirname, '..', 'templates.tsx'),
+    path.join(process.cwd(), 'app', '(app)', 'tools', 'templates.tsx'),
     'utf8'
   );
 

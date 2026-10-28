@@ -12,7 +12,7 @@ function setAuthEnv() {
 
 function loadCallback() {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  return require('../callback+api') as {
+  return require('@/app/api/auth/callback+api') as {
     GET: (request: Request) => Promise<Response>;
   };
 }

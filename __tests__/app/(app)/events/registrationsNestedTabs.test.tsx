@@ -47,8 +47,10 @@ describe('Registrations nested tabs', () => {
   it('does not render a local EventTabsBar in layout source', () => {
     const src = fs.readFileSync(
       path.join(
-        __dirname,
-        '..',
+        process.cwd(),
+        'app',
+        '(app)',
+        'events',
         '[id]',
         'registrations',
         '_layout.tsx'
@@ -62,8 +64,10 @@ describe('Registrations nested tabs', () => {
   it('stabilizes onBeforeNavigate via actionsRef', () => {
     const src = fs.readFileSync(
       path.join(
-        __dirname,
-        '..',
+        process.cwd(),
+        'app',
+        '(app)',
+        'events',
         '[id]',
         'registrations',
         '_layout.tsx'

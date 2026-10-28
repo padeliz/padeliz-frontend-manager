@@ -20,7 +20,7 @@ function setAuthEnv(overrides: Record<string, string | undefined> = {}) {
 
 function loadAuthorize() {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  return require('../authorize+api') as {
+  return require('@/app/api/auth/authorize+api') as {
     GET: (request: Request) => Promise<Response>;
   };
 }
