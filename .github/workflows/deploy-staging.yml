@@ -79,10 +79,21 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Resolve image digest for App Platform
+        id: image_digest
+        run: |
+          set -euo pipefail
+          IMAGE="registry.digitalocean.com/padeliz/padeliz-frontend-manager:sha-${{ github.sha }}"
+          DIGEST="$(docker buildx imagetools inspect "$IMAGE" --raw \
+            | jq -r '.manifests[] | select(.platform.os=="linux" and .platform.architecture=="amd64") | .digest' \
+            | head -n1)"
+          test -n "$DIGEST"
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+
       - name: Deploy to App Platform
         uses: digitalocean/app_action/deploy@v2
         env:
-          IMAGE_DIGEST_WEB: ${{ steps.build.outputs.digest }}
+          IMAGE_DIGEST_WEB: ${{ steps.image_digest.outputs.digest }}
         with:
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
           app_name: padeliz-frontend-manager-staging

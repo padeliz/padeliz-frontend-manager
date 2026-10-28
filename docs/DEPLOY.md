@@ -12,6 +12,8 @@ Post-deploy smoke (`scripts/ci/smoke-web.sh`) checks HTTP 200, rejects the defau
 
 Image: `registry.digitalocean.com/padeliz/padeliz-frontend-manager`
 
+Buildx may push an OCI index (image + provenance attestations). App Platform pins the `linux/amd64` **image** manifest digest from that index (not the index digest from `build-push-action`), so attestations stay enabled.
+
 Router origin follows `EXPO_PUBLIC_BASE_URL` via `app.config.js` (staging/production set as Docker build-args).
 
 `app/` is Expo Router routes only. Route and API tests live under `__tests__/app/` (not colocated under `app/`), so production `expo export` never treats tests as routes.
