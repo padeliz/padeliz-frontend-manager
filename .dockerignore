@@ -1,18 +1,17 @@
-# Exclude VCS and local tooling
 .git
-.gitignore
+.github
 .devcontainer
+.cursor
 .vscode
-
-# Node artifacts
-node_modules
-npm-debug.log*
-
-# Expo/Metro caches
 .expo
-.expo-shared
-.cache
-
-# OS / editor junk
-*.DS_Store
-Thumbs.db
+node_modules
+npm-debug.log
+coverage
+__tests__
+.env
+.env.*
+!.env.local.example
+*.md
+Dockerfile*
+.dockerignore
+eas.json
