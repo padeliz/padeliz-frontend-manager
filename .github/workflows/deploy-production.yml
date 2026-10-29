@@ -56,12 +56,14 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Deploy to App Platform
-        uses: digitalocean/app_action/deploy@v2
         env:
-          IMAGE_DIGEST_WEB: ${{ steps.build.outputs.digest }}
-        with:
-          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-          app_name: padeliz-frontend-manager-prod
+          APP_NAME: padeliz-frontend-manager-prod
+          IMAGE_REPOSITORY: padeliz/padeliz-frontend-manager
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+          COMPONENTS: web
+        run: |
+          python3 -m pip install --user pyyaml
+          bash scripts/ci/deploy-app-platform.sh
 
   smoke:
     name: smoke-web
