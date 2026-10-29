@@ -57,7 +57,7 @@ services:
     image:
       registry_type: DOCR
       repository: padeliz/padeliz-frontend-manager
-      digest: ${IMAGE_DIGEST}
+      digest: ${IMAGE_DIGEST_WEB}
     instance_count: 1
     instance_size_slug: apps-s-1vcpu-1gb
     http_port: 8080

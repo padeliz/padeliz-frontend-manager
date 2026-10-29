@@ -12,7 +12,7 @@ Post-deploy smoke (`scripts/ci/smoke-web.sh`) checks HTTP 200, rejects the defau
 
 Image: `registry.digitalocean.com/padeliz/padeliz-frontend-manager`
 
-Buildx may push an OCI index (image + provenance attestations). App Platform pins the `linux/amd64` **image** manifest digest from that index (not the index digest from `build-push-action`), so attestations stay enabled.
+CI builds `linux/amd64` only with provenance/SBOM attestations disabled on the DOCR push so the tag points at a single image manifest. App Platform pins that digest via `IMAGE_DIGEST_WEB` from `build-push-action` (attestation indexes / nested manifests are not pullable by App Platform).
 
 Router origin follows `EXPO_PUBLIC_BASE_URL` via `app.config.js` (staging/production set as Docker build-args).
 
