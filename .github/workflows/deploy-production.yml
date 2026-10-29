@@ -75,5 +75,4 @@ jobs:
       - name: Smoke web
         env:
           SMOKE_URL: https://manager.padeliz.ro
-          SMOKE_MARKER: Padeliz Manager
         run: bash scripts/ci/smoke-web.sh

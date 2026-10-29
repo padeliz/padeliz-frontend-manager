@@ -8,7 +8,7 @@
 | Push to `main` | Test → build/push DOCR → live-spec reconcile **staging** → smoke web |
 | GitHub Release published | Build/push DOCR → live-spec reconcile **production** (approval required) → smoke web |
 
-Post-deploy smoke (`scripts/ci/smoke-web.sh`) checks HTTP 200, rejects the default nginx welcome page, and requires the `Padeliz Manager` marker. Failure fails the workflow only (no automatic App Platform rollback).
+Post-deploy smoke (`scripts/ci/smoke-web.sh`) checks HTTP 200, `Content-Type: text/html`, rejects the default nginx welcome page, and requires an Expo web shell signal (`__EXPO_ROUTER_HYDRATE__` or `/_expo/static/`). Failure fails the workflow only (no automatic App Platform rollback).
 
 Image: `registry.digitalocean.com/padeliz/padeliz-frontend-manager`
 
