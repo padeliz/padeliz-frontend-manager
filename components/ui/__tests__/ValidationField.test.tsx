@@ -184,4 +184,35 @@ describe('ValidationField', () => {
 
     expect(getByTestId('datetime-form-input-value').props.children).toBe('');
   });
+
+  it('renders multi_select for enum string array purposes', () => {
+    const purposesMetadata = {
+      ...timeMetadata,
+      swagger_schema: {
+        ...timeMetadata.swagger_schema,
+        properties: {
+          purposes: {
+            type: 'array',
+            title: 'Purposes',
+            items: { type: 'string', enum: ['contact', 'login'] },
+          },
+        },
+      },
+    };
+
+    const { getByText } = render(
+      <ValidationField
+        field={{
+          name: 'purposes',
+          type: 'array',
+          items: { type: 'string', enum: ['contact', 'login'] },
+        }}
+        metadata={purposesMetadata}
+        value={['contact']}
+        onChange={jest.fn()}
+      />
+    );
+
+    expect(getByText('contact')).toBeTruthy();
+  });
 });

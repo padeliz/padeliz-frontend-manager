@@ -73,13 +73,13 @@ CI=false npm start
 Unit and component tests use Jest, jest-expo, and React Native Testing Library (RNTL v13).
 
 ```bash
-## run unit/component tests once
+## parallel local run (Jest caps workers / recycles on memory pressure)
 npm test
 
 ## watch mode
 npm run test:watch
 
-## CI-style single run (no coverage gate)
+## full suite in Docker / CI — prefer this (single worker, no coverage gate)
 npm run test:ci
 ```
 

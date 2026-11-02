@@ -61,6 +61,7 @@ export const queryKeys = {
     q?: string;
     page?: number;
     per_page?: number;
+    role?: 'player' | 'manager';
   } = {}) =>
     [
       'playersPicker',
@@ -68,6 +69,7 @@ export const queryKeys = {
         q: params.q,
         page: params.page ?? 1,
         per_page: params.per_page,
+        role: params.role ?? 'player',
       },
     ] as const,
 };

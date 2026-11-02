@@ -52,6 +52,34 @@ describe('ResourceFieldDisplay', () => {
     expect(screen.queryByText('Participations')).toBeNull();
   });
 
+  it('renders enum string array purposes as joined text', () => {
+    const metadata = {
+      ...playerMetadata,
+      swagger_schema: {
+        ...playerMetadata.swagger_schema,
+        properties: {
+          ...playerMetadata.swagger_schema.properties,
+          purposes: {
+            title: 'Purposes',
+            type: 'array',
+            items: { type: 'string', enum: ['contact', 'login'] },
+          },
+        },
+      },
+    };
+
+    render(
+      <ResourceFieldDisplay
+        fieldKey="purposes"
+        fieldValue={['contact', 'login']}
+        metadata={metadata}
+      />
+    );
+
+    expect(screen.getByText('Purposes')).toBeTruthy();
+    expect(screen.getByText('contact, login')).toBeTruthy();
+  });
+
   it('does not render excluded fields', () => {
     render(
       <ResourceFieldDisplay

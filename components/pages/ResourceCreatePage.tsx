@@ -15,6 +15,7 @@ import { useResourceMetadata } from '@/hooks/useResourceMetadata';
 import { ResourceCreatePageProps } from '@/types/ui/pages';
 import { buildResourceBreadcrumbs } from '@/utils/buildResourceBreadcrumbs';
 import { formatField } from '@/utils/fieldFormatter';
+import { isEnumStringArray } from '@/utils/enumStringArray';
 import { isNestedRelationProperty } from '@/utils/nestedRelationProperty';
 import { PrimaryKeyService } from '@/utils/primaryKeyService';
 import { seedFormValuesFromQuery } from '@/utils/seedFormValuesFromQuery';
@@ -102,7 +103,13 @@ export default function ResourceCreatePage<
       const def = metadata.swagger_schema.properties[key];
       if (getUploadConfig(def)) return true;
       if (isNestedRelationProperty(def)) return false;
-      if (def?.type === 'array' && !getUploadConfig(def)) return false;
+      if (
+        def?.type === 'array' &&
+        !getUploadConfig(def) &&
+        !isEnumStringArray(def)
+      ) {
+        return false;
+      }
       return true;
     });
   }, [metadata, excludeFields]);
@@ -289,7 +296,8 @@ export default function ResourceCreatePage<
             }
 
             if (def.readOnly) return null;
-            if (def.type === 'array' || def.type === 'object') return null;
+            if (def.type === 'object') return null;
+            if (def.type === 'array' && !isEnumStringArray(def)) return null;
 
             return (
               <ResourceFieldEdit

@@ -3,6 +3,9 @@ const expoPreset = require('jest-expo/jest-preset');
 
 module.exports = {
   ...expoPreset,
+  // Cap parallelism / recycle workers before OOM in Docker parallel `npm test`.
+  maxWorkers: '50%',
+  workerIdleMemoryLimit: '512MB',
   // Must exceed RNTL asyncUtilTimeout (5s in jest.setup.js) under parallel workers.
   testTimeout: 15000,
   // Polyfill before jest-expo preset setup (expo winter needs FormData)

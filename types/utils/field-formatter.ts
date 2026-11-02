@@ -69,6 +69,7 @@ export type FormInputType =
   | 'year'
   | 'color'
   | 'select'
+  | 'multi_select'
   | 'checkbox'
   | 'foreign_key_selector'
   | 'readonly';

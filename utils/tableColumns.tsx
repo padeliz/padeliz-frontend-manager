@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Image, Pressable, Text, View } from 'react-native';
+import { isEnumStringArray } from './enumStringArray';
 import { formatField } from './fieldFormatter';
 import { ForeignKeyService } from './foreignKeyService';
 import {
@@ -540,7 +541,7 @@ export function generateColumnsFromMetadata(
       return;
     }
 
-    if (field.type === 'array') {
+    if (field.type === 'array' && !isEnumStringArray(field)) {
       return;
     }
 

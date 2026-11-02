@@ -3,6 +3,7 @@
  */
 
 import { ApiResourceMetadata } from '@/types/api/metadata';
+import { isEnumStringArray } from '@/utils/enumStringArray';
 import { isNestedRelationProperty } from '@/utils/nestedRelationProperty';
 import { PrimaryKeyService } from '@/utils/primaryKeyService';
 import { getUploadConfig } from '@/utils/uploadMetadata';
@@ -30,7 +31,8 @@ export function isWritableCreateField(
   if (pk && key === pk) return false;
   if (getUploadConfig(def)) return false;
   if (isNestedRelationProperty(def)) return false;
-  if (def.type === 'array' || def.type === 'object') return false;
+  if (def.type === 'object') return false;
+  if (def.type === 'array' && !isEnumStringArray(def)) return false;
   return true;
 }
 

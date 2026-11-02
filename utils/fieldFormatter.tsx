@@ -11,6 +11,7 @@ import {
 } from '@/types/utils/field-formatter';
 import React from 'react';
 import { Text } from 'react-native';
+import { isEnumStringArray } from './enumStringArray';
 import { ForeignKeyService } from './foreignKeyService';
 import { isNestedRelationProperty } from './nestedRelationProperty';
 import { isRichTextField } from './richtextMetadata';
@@ -147,29 +148,36 @@ export function formatField({
       result.formattedText = NULL_DISPLAY;
     }
     if (mode === 'form' || mode === 'both') {
-      result.inputValue = '';
-      result.apiValue = null;
-      if (
-        fieldDefinition.enum?.length &&
-        fieldDefinition.type !== 'array' &&
-        !isForeignKey
-      ) {
-        result.inputType = 'select';
-        result.constraints.enum = fieldDefinition.enum;
-      } else if (fieldDefinition.format === 'time') {
-        result.inputType = 'time';
-      } else if (fieldDefinition.format === 'date') {
-        result.inputType = 'date';
-      } else if (fieldDefinition.format === 'date-time') {
-        result.inputType = 'datetime';
-      } else if (fieldDefinition.format === 'timestamp') {
-        result.inputType = 'datetime';
-      } else if (fieldDefinition.format === 'year') {
-        result.inputType = 'year';
-      } else if (fieldDefinition.format === 'color') {
-        result.inputType = 'color';
-      } else if (isRichTextField(fieldDefinition)) {
-        result.inputType = 'richtext';
+      if (isEnumStringArray(fieldDefinition)) {
+        result.inputType = 'multi_select';
+        result.inputValue = [];
+        result.apiValue = [];
+        result.constraints.enum = fieldDefinition.items.enum;
+      } else {
+        result.inputValue = '';
+        result.apiValue = null;
+        if (
+          fieldDefinition.enum?.length &&
+          fieldDefinition.type !== 'array' &&
+          !isForeignKey
+        ) {
+          result.inputType = 'select';
+          result.constraints.enum = fieldDefinition.enum;
+        } else if (fieldDefinition.format === 'time') {
+          result.inputType = 'time';
+        } else if (fieldDefinition.format === 'date') {
+          result.inputType = 'date';
+        } else if (fieldDefinition.format === 'date-time') {
+          result.inputType = 'datetime';
+        } else if (fieldDefinition.format === 'timestamp') {
+          result.inputType = 'datetime';
+        } else if (fieldDefinition.format === 'year') {
+          result.inputType = 'year';
+        } else if (fieldDefinition.format === 'color') {
+          result.inputType = 'color';
+        } else if (isRichTextField(fieldDefinition)) {
+          result.inputType = 'richtext';
+        }
       }
     }
     if (isReadOnly) {
@@ -306,9 +314,9 @@ function isFieldEditable(
 ): boolean {
   const fieldDefinition = metadata.swagger_schema.properties[fieldKey];
 
-  // Skip array fields (relationships)
+  // Relation / plain arrays are not editable; enum string arrays (purposes) are.
   if (fieldDefinition.type === 'array') {
-    return false;
+    return isEnumStringArray(fieldDefinition);
   }
 
   // Read-only fields are still included but marked as non-editable
@@ -619,35 +627,37 @@ function formatArrayField(
   result: FieldFormatterResult,
   mode: 'display' | 'form' | 'both'
 ): FieldFormatterResult {
+  const enumArray = isEnumStringArray(fieldDefinition);
   let inputValue: any = fieldValue;
 
-  // Handle array value formatting
   if (mode === 'form' || mode === 'both') {
-    // For form input, ensure array format
     if (inputValue === null || inputValue === undefined) {
       inputValue = [];
     } else if (!Array.isArray(inputValue)) {
       inputValue = [inputValue];
     }
 
-    result.inputType = 'select'; // Multi-select dropdown
-    result.inputValue = inputValue;
-
-    // For API, ensure proper array format
-    if (inputValue === '' || inputValue === null || inputValue === undefined) {
-      result.apiValue = [];
-    } else if (Array.isArray(inputValue)) {
-      result.apiValue = inputValue;
+    if (enumArray) {
+      result.inputType = 'multi_select';
+      result.constraints.enum = fieldDefinition.items.enum;
+      result.isEditable = true;
     } else {
-      // Convert single value to array if needed
-      result.apiValue = [inputValue];
+      result.inputType = 'readonly';
+      result.isEditable = false;
     }
+
+    result.inputValue = inputValue;
+    result.apiValue = Array.isArray(inputValue) ? inputValue : [];
   }
 
   if (mode === 'display' || mode === 'both') {
-    const displayText = Array.isArray(fieldValue) ? fieldValue.join(', ') : String(fieldValue);
-    result.displayValue = <Text className={TEXT_STYLES.default}>{displayText}</Text>;
-    result.formattedText = displayText;
+    const displayText = Array.isArray(fieldValue)
+      ? fieldValue.join(', ')
+      : String(fieldValue ?? NULL_DISPLAY);
+    result.displayValue = (
+      <Text className={TEXT_STYLES.default}>{displayText || NULL_DISPLAY}</Text>
+    );
+    result.formattedText = displayText || NULL_DISPLAY;
   }
 
   return result;

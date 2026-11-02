@@ -17,6 +17,7 @@ import { Pressable, Text, View } from 'react-native';
 import DateTimeFormInput from './DateTimeFormInput';
 import ColorFormInput from './ColorFormInput';
 import YearFormInput from './YearFormInput';
+import MultiSelectDropdown from './MultiSelectDropdown';
 import SingleSelectDropdown from './SingleSelectDropdown';
 import RichTextEditor from './RichTextEditor';
 import { parseClockStringToDate } from '@/utils/parseClockStringToDate';
@@ -313,6 +314,31 @@ export default function ValidationField({
             title={fieldPlaceholder}
             disabled={disabled}
             clearable={field.nullable === true}
+            minWidth={280}
+          />
+        );
+      }
+
+      case 'multi_select': {
+        const enumOptions = (fieldInfo.constraints.enum ?? []).map(v => ({
+          value: v,
+          label: String(v),
+        }));
+        const selectedValues = Array.isArray(fieldInfo.inputValue)
+          ? fieldInfo.inputValue
+          : [];
+
+        return (
+          <MultiSelectDropdown
+            options={enumOptions}
+            selectedValues={selectedValues}
+            onSelectionChange={values => {
+              handleChange(values);
+              handleBlur();
+            }}
+            placeholder={fieldPlaceholder}
+            title={fieldPlaceholder}
+            disabled={disabled}
             minWidth={280}
           />
         );

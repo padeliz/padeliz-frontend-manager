@@ -181,4 +181,41 @@ describe('formatField', () => {
     expect(result.inputValue).toBe('<p>Hello</p>');
     expect(result.apiValue).toBe('<p>Hello</p>');
   });
+
+  it('maps enum string arrays to multi_select with string[] apiValue', () => {
+    const metadata = {
+      ...playerMetadata,
+      swagger_schema: {
+        ...playerMetadata.swagger_schema,
+        required: ['purposes'],
+        properties: {
+          ...playerMetadata.swagger_schema.properties,
+          purposes: {
+            title: 'Purposes',
+            type: 'array',
+            items: { type: 'string', enum: ['contact', 'login'] },
+          },
+        },
+      },
+    };
+
+    const form = formatField({
+      metadata,
+      fieldKey: 'purposes',
+      fieldValue: ['contact'],
+      mode: 'form',
+    });
+    expect(form.inputType).toBe('multi_select');
+    expect(form.isEditable).toBe(true);
+    expect(form.constraints.enum).toEqual(['contact', 'login']);
+    expect(form.apiValue).toEqual(['contact']);
+
+    const display = formatField({
+      metadata,
+      fieldKey: 'purposes',
+      fieldValue: ['contact', 'login'],
+      mode: 'display',
+    });
+    expect(display.formattedText).toBe('contact, login');
+  });
 });

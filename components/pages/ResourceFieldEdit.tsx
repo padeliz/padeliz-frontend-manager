@@ -5,6 +5,7 @@
 
 import ManagerFileUpload from '@/components/ui/ManagerFileUpload';
 import { ApiResourceMetadata } from '@/types/api/metadata';
+import { isEnumStringArray } from '@/utils/enumStringArray';
 import { formatField } from '@/utils/fieldFormatter';
 import { isNestedRelationProperty } from '@/utils/nestedRelationProperty';
 import { getUploadConfig } from '@/utils/uploadMetadata';
@@ -63,7 +64,7 @@ export default function ResourceFieldEdit({
     );
   }
 
-  if (fieldDefinition.type === 'array') {
+  if (fieldDefinition.type === 'array' && !isEnumStringArray(fieldDefinition)) {
     return null;
   }
 
@@ -99,12 +100,15 @@ export default function ResourceFieldEdit({
 
   return (
     <View className="mb-4">
-      <Text className="text-sm font-medium text-gray-700 mb-1">
-        {fieldInfo.label}
-        {fieldDefinition.required && (
-          <Text className="text-red-500 ml-1">*</Text>
+      <View className="flex-row items-center mb-1">
+        <Text className="text-sm font-medium text-gray-700">
+          {fieldInfo.label}
+        </Text>
+        {(fieldDefinition.required === true ||
+          metadata.swagger_schema.required?.includes(fieldKey)) && (
+          <Text className="text-sm text-red-500 ml-1">*</Text>
         )}
-      </Text>
+      </View>
 
       <View>
         {fieldInfo.inputType === 'foreign_key_selector' ? (
