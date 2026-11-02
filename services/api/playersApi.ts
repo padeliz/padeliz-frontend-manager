@@ -26,6 +26,7 @@ export class PlayersApiService extends BaseApiService {
         rankedin_id?: string;
         instagram_username?: string;
         facebook_username?: string;
+        has_user_type?: 'player' | 'manager';
       };
       sort_by?: {
         name?: 'asc' | 'desc';

@@ -160,8 +160,14 @@ describe('usePlayerPicker', () => {
           q: undefined,
           page: 1,
           per_page: 100,
+          role: 'player',
         }),
-        queryKeys.playersPicker({ q: 'bob', page: 1, per_page: 100 }),
+        queryKeys.playersPicker({
+          q: 'bob',
+          page: 1,
+          per_page: 100,
+          role: 'player',
+        }),
       ])
     );
 

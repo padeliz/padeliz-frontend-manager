@@ -61,6 +61,37 @@ describe('ResourceFieldEdit', () => {
     expect(screen.queryByText('Participations')).toBeNull();
   });
 
+  it('renders enum string array purposes as a multi-select control', () => {
+    const metadata = {
+      ...playerMetadata,
+      swagger_schema: {
+        ...playerMetadata.swagger_schema,
+        required: ['purposes'],
+        properties: {
+          ...playerMetadata.swagger_schema.properties,
+          purposes: {
+            title: 'Purposes',
+            type: 'array',
+            items: { type: 'string', enum: ['contact', 'login'] },
+          },
+        },
+      },
+    };
+
+    render(
+      <ResourceFieldEdit
+        fieldKey="purposes"
+        fieldValue={['contact']}
+        metadata={metadata}
+        onChange={jest.fn()}
+        onBlur={jest.fn()}
+      />
+    );
+
+    expect(screen.getByText('Purposes')).toBeTruthy();
+    expect(screen.getByText('contact')).toBeTruthy();
+  });
+
   it('does not render excluded fields', () => {
     render(
       <ResourceFieldEdit

@@ -26,4 +26,6 @@ export interface ApiFilterFieldDefinition {
   values?: (string | number | boolean)[] | Record<string, string>;
   related_schema_name?: string;
   related_schema_field?: string;
+  /** Directory role for User FKs (from backend metadata). */
+  related_user_role?: 'player' | 'manager';
 }

@@ -5,6 +5,7 @@
 
 import ManagerFileUpload from '@/components/ui/ManagerFileUpload';
 import { ApiResourceMetadata } from '@/types/api/metadata';
+import { isEnumStringArray } from '@/utils/enumStringArray';
 import { formatField } from '@/utils/fieldFormatter';
 import { getUploadConfig } from '@/utils/uploadMetadata';
 import React from 'react';
@@ -55,7 +56,7 @@ export default function ResourceFieldDisplay({
     );
   }
 
-  if (fieldDefinition.type === 'array') {
+  if (fieldDefinition.type === 'array' && !isEnumStringArray(fieldDefinition)) {
     return null;
   }
 

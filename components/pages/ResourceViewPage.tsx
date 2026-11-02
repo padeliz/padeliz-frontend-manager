@@ -18,6 +18,7 @@ import { formatField } from '@/utils/fieldFormatter';
 import { getResourceDisplayLabel, formatResourceHeaderTitle } from '@/utils/getResourceDisplayLabel';
 import { buildResourceBreadcrumbs } from '@/utils/buildResourceBreadcrumbs';
 import { LinkedEntityService } from '@/utils/linkedEntityService';
+import { isEnumStringArray } from '@/utils/enumStringArray';
 import { isNestedRelationProperty } from '@/utils/nestedRelationProperty';
 import { getUploadConfig } from '@/utils/uploadMetadata';
 import { validateFormWithSubmission } from '@/utils/validationRules';
@@ -482,7 +483,7 @@ export default function ResourceViewPage<
       if (excludeFields.includes(key)) return false;
       const def = metadata.swagger_schema.properties[key];
       if (getUploadConfig(def)) return true;
-      if (def?.type === 'array') return false;
+      if (def?.type === 'array' && !isEnumStringArray(def)) return false;
       if (isNestedRelationProperty(def)) return false;
       return true;
     }

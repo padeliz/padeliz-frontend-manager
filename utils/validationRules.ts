@@ -126,7 +126,12 @@ export function validateRule(
 ): FormValidationError | null {
   switch (rule.type) {
     case 'required':
-      if (value === null || value === undefined || value === '') {
+      if (
+        value === null ||
+        value === undefined ||
+        value === '' ||
+        (Array.isArray(value) && value.length === 0)
+      ) {
         return {
           field: fieldName,
           message: rule.message,
@@ -274,8 +279,17 @@ export function validateFormWithSubmission(
     return { isValid: true, errors: [] };
   }
 
+  const requiredFields = new Set<string>(
+    Array.isArray(schema.required) ? schema.required : []
+  );
+
   for (const [fieldName, field] of Object.entries(schema.properties)) {
-    const fieldSchema = field as FormFieldSchema;
+    const base = field as FormFieldSchema;
+    const fieldSchema: FormFieldSchema = {
+      ...base,
+      name: fieldName,
+      required: base.required === true || requiredFields.has(fieldName),
+    };
     const value = values[fieldName];
 
     // Format value for validation using unified formatter

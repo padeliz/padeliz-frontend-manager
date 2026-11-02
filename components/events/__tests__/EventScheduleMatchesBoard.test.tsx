@@ -1,8 +1,8 @@
 import EventScheduleMatchesBoard, {
-  ScheduleBoardMetricsCards,
   completeRoundCount,
   isSparseMatch,
 } from '@/components/events/EventScheduleMatchesBoard';
+import { ScheduleBoardMetricsCards } from '@/components/events/ScheduleBoardMetricsCards';
 import { PageChromeProvider, usePageChrome } from '@/components/chrome/PageChromeProvider';
 import { QueryClientProvider } from '@tanstack/react-query';
 import {

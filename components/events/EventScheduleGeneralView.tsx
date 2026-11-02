@@ -3,7 +3,7 @@
  */
 
 import { EventGeneralEditHint } from '@/components/events/eventGeneralHint';
-import { ScheduleBoardMetricsCards } from '@/components/events/EventScheduleMatchesBoard';
+import { ScheduleBoardMetricsCards } from '@/components/events/ScheduleBoardMetricsCards';
 import { queryKeys } from '@/lib/queryClient';
 import { scheduleApi } from '@/services/api/scheduleApi';
 import { ApiEventDivision } from '@/types/api/entities';

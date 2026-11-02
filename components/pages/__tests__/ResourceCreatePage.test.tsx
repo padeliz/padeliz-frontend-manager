@@ -197,6 +197,48 @@ describe('ResourceCreatePage', () => {
       expect(screen.getByTestId('resource-create-save-error')).toBeTruthy();
     });
   });
+
+  it('includes enum string array purposes and excludes relation arrays', () => {
+    mockMetadata = {
+      display_field: 'email',
+      resource_path: 'player-emails',
+      swagger_schema: {
+        required: ['email', 'purposes'],
+        properties: {
+          id_user_email: { type: 'integer', readOnly: true },
+          email: { type: 'string', title: 'Email' },
+          purposes: {
+            type: 'array',
+            title: 'Purposes',
+            items: { type: 'string', enum: ['contact', 'login'] },
+          },
+          identities: {
+            type: 'array',
+            title: 'Identities',
+            items: { $ref: '#/components/schemas/UserIdentity' },
+          },
+        },
+      },
+      filterable_fields: {},
+      searchable_fields: ['email'],
+      sortable_fields: ['email'],
+    };
+
+    render(
+      <ResourceCreatePage
+        config={{
+          resourceName: 'UserEmail',
+          resourceDisplayName: 'Email',
+          createResource: jest.fn(),
+          title: 'Add Email',
+        }}
+      />
+    );
+
+    expect(screen.getByText('field:email')).toBeTruthy();
+    expect(screen.getByText('field:purposes')).toBeTruthy();
+    expect(screen.queryByText('field:identities')).toBeNull();
+  });
 });
 
 describe('ResourceCreatePage required upload gate', () => {
