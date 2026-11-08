@@ -18,6 +18,8 @@ Deploy uses `scripts/ci/deploy-app-platform.sh`: fetch the **live** App Platform
 
 Router origin follows `EXPO_PUBLIC_BASE_URL` via `app.config.js` (staging/production set as Docker build-args).
 
+`EXPO_PUBLIC_NOINDEX=true` on **staging and production** image builds (manager is never search-indexable). Meta: `noindex, nofollow, noarchive, nosnippet, noimageindex`. Dockerfile runs `scripts/write-robots.sh` (Disallow `/` + AI UA blocks).
+
 `app/` is Expo Router routes only. Route and API tests live under `__tests__/app/` (not colocated under `app/`), so production `expo export` never treats tests as routes.
 
 ## App identity
